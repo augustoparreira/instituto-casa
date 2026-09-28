@@ -6,7 +6,6 @@ public class Adolescente extends Pessoa {
     private String corRaca;
     private String status;
 
-    // Getters e Setters
     public String getNaturalidade() { return naturalidade; }
     public void setNaturalidade(String naturalidade) { this.naturalidade = naturalidade; }
     public String getGenero() { return genero; }

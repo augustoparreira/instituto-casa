@@ -8,7 +8,6 @@ public class Pessoa {
     private String contato;
     private String email;
 
-    // Getters e Setters
     public long getCpf() { return cpf; }
     public void setCpf(long cpf) { this.cpf = cpf; }
     public String getNomeCompleto() { return nomeCompleto; }

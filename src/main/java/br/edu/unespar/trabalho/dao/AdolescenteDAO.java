@@ -3,10 +3,9 @@ package br.edu.unespar.trabalho.dao;
 import br.edu.unespar.trabalho.model.Adolescente;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AdolescenteDAO {
 
@@ -18,10 +17,8 @@ public class AdolescenteDAO {
 
         try {
             conn = ConnectionFactory.getConnection();
-            // Desliga a gravação automática para criar a Transação
             conn.setAutoCommit(false);
 
-            // 1. Insere na tabela Pessoa
             try (PreparedStatement stmtPessoa = conn.prepareStatement(sqlPessoa)) {
                 stmtPessoa.setLong(1, adolescente.getCpf());
                 stmtPessoa.setString(2, adolescente.getNomeCompleto());
@@ -31,7 +28,6 @@ public class AdolescenteDAO {
                 stmtPessoa.executeUpdate();
             }
 
-            // 2. Insere na tabela Adolescente
             try (PreparedStatement stmtAdolescente = conn.prepareStatement(sqlAdolescente)) {
                 stmtAdolescente.setLong(1, adolescente.getCpf()); // O CPF é a chave que liga as duas tabelas
                 stmtAdolescente.setString(2, adolescente.getNaturalidade());
@@ -41,7 +37,6 @@ public class AdolescenteDAO {
                 stmtAdolescente.executeUpdate();
             }
 
-            // Se chegou até aqui sem dar erro, efetiva a gravação nas duas tabelas
             conn.commit();
             return true;
 
@@ -49,7 +44,6 @@ public class AdolescenteDAO {
             System.err.println("Erro ao salvar adolescente: " + e.getMessage());
             try {
                 if (conn != null) {
-                    // Se deu qualquer erro, desfaz tudo (Rollback)
                     conn.rollback();
                 }
             } catch (SQLException ex) {
@@ -66,5 +60,40 @@ public class AdolescenteDAO {
                 System.err.println("Erro ao fechar conexão: " + e.getMessage());
             }
         }
+    }
+
+    public List<Adolescente> listar() {
+        List<Adolescente> lista = new ArrayList<>();
+
+        String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +
+                "a.naturalidade, a.genero, a.cor_raca, a.status " +
+                "FROM Pessoa p " +
+                "INNER JOIN Adolescente a ON p.cpf = a.cpf_adolescente";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Adolescente jovem = new Adolescente();
+
+                jovem.setCpf(rs.getLong("cpf"));
+                jovem.setNomeCompleto(rs.getString("nome_completo"));
+                jovem.setDataNascimento(rs.getDate("data_nascimento").toLocalDate()); // Converte de volta para LocalDate
+                jovem.setContato(rs.getString("contato"));
+                jovem.setEmail(rs.getString("email"));
+
+                jovem.setNaturalidade(rs.getString("naturalidade"));
+                jovem.setGenero(rs.getString("genero"));
+                jovem.setCorRaca(rs.getString("cor_raca"));
+                jovem.setStatus(rs.getString("status"));
+
+                lista.add(jovem);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar adolescentes: " + e.getMessage());
+        }
+
+        return lista;
     }
 }

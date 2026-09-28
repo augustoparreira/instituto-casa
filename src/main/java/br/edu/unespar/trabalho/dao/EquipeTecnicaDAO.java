@@ -26,6 +26,6 @@ public class EquipeTecnicaDAO {
             System.err.println("Erro ao buscar usuário: " + e.getMessage());
         }
 
-        return null; // Retorna null se não achar o login/senha
+        return null;
     }
 }

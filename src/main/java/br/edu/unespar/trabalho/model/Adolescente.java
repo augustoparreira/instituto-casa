@@ -1,0 +1,18 @@
+package br.edu.unespar.trabalho.model;
+
+public class Adolescente extends Pessoa {
+    private String naturalidade;
+    private String genero;
+    private String corRaca;
+    private String status;
+
+    // Getters e Setters
+    public String getNaturalidade() { return naturalidade; }
+    public void setNaturalidade(String naturalidade) { this.naturalidade = naturalidade; }
+    public String getGenero() { return genero; }
+    public void setGenero(String genero) { this.genero = genero; }
+    public String getCorRaca() { return corRaca; }
+    public void setCorRaca(String corRaca) { this.corRaca = corRaca; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+}

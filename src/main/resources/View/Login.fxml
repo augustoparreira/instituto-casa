@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
+
+<HBox prefHeight="600.0" prefWidth="1000.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.LoginController">
+
+    <VBox styleClass="left-pane" HBox.hgrow="ALWAYS" prefWidth="500.0" spacing="20.0">
+        <padding>
+            <Insets bottom="40.0" left="60.0" right="60.0" top="40.0" />
+        </padding>
+        <Label text="INSTITUTO&#10;C.A.S.A." styleClass="text-logo" />
+        <Region VBox.vgrow="ALWAYS" />
+        <VBox spacing="5.0">
+            <Label text="Apoio social" styleClass="text-title-left" />
+            <Label text="com responsabilidade" styleClass="text-title-italic-left" />
+        </VBox>
+        <Label text="Sistema de gestão integrada para o&#10;acompanhamento de adolescentes em&#10;medidas socioeducativas em meio aberto." styleClass="text-subtitle-left">
+            <VBox.margin>
+                <Insets top="20.0" bottom="20.0" />
+            </VBox.margin>
+        </Label>
+        <Region VBox.vgrow="ALWAYS" />
+        <HBox spacing="30.0">
+            <Label text="PSC · Prestação de Serviços à Comunidade" styleClass="text-footer-left" />
+            <Label text="LA · Liberdade Assistida" styleClass="text-footer-left" />
+        </HBox>
+    </VBox>
+
+    <VBox styleClass="right-pane" HBox.hgrow="ALWAYS" prefWidth="500.0" spacing="15.0" alignment="CENTER_LEFT">
+        <padding>
+            <Insets bottom="60.0" left="80.0" right="80.0" top="60.0" />
+        </padding>
+        <VBox spacing="5.0">
+            <Label text="Bem-vindo" styleClass="text-title-right" />
+            <Label text="Acesse com suas credenciais institucionais" styleClass="text-subtitle-right" />
+            <VBox.margin>
+                <Insets bottom="30.0" />
+            </VBox.margin>
+        </VBox>
+        <VBox spacing="8.0">
+            <Label text="LOGIN" styleClass="label-form" />
+            <TextField fx:id="txtLogin" promptText="seu.usuario" styleClass="input-field" />
+        </VBox>
+        <VBox spacing="8.0">
+            <Label text="SENHA" styleClass="label-form" />
+            <PasswordField fx:id="txtSenha" promptText="********" styleClass="input-field" />
+        </VBox>
+        <Button fx:id="btnEntrar" text="Entrar no sistema" styleClass="btn-login" maxWidth="Infinity" onAction="#fazerLogin">
+            <VBox.margin>
+                <Insets top="20.0" />
+            </VBox.margin>
+        </Button>
+        <Region VBox.vgrow="ALWAYS" />
+        <HBox alignment="CENTER" maxWidth="Infinity">
+            <Label text="Centro de Apoio Social ao Adolescente · Apucarana - PR" styleClass="text-footer-right" />
+        </HBox>
+    </VBox>
+</HBox>

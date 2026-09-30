@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@adolescentes-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.AdolescentesController">
+
+    <!-- MENU LATERAL ESQUERDO -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="240.0" spacing="10.0">
+            <padding>
+                <Insets top="25.0" bottom="25.0" left="20.0" right="20.0" />
+            </padding>
+            <VBox spacing="2.0">
+                <Label text="INSTITUTO" styleClass="sidebar-logo-sub" />
+                <Label text="C.A.S.A." styleClass="sidebar-logo-main" />
+                <VBox.margin><Insets bottom="30.0" /></VBox.margin>
+            </VBox>
+            <Button text="Painel" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaPainel" />
+            <Button text="Adolescentes" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
+            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <VBox spacing="15.0" styleClass="user-box">
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <Circle radius="18.0" styleClass="user-avatar" />
+                    <VBox spacing="2.0">
+                        <Label text="Ana Paula Costa" styleClass="user-name" />
+                        <Label text="Assistente Social" styleClass="user-role" />
+                    </VBox>
+                </HBox>
+                <Button text="Sair do sistema" styleClass="logout-button" onAction="#fazerLogout" maxWidth="Infinity" alignment="CENTER_LEFT" />
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- CONTEÚDO CENTRAL -->
+    <center>
+        <VBox styleClass="main-content" spacing="20.0">
+            <padding>
+                <Insets top="30.0" bottom="30.0" left="40.0" right="40.0" />
+            </padding>
+
+            <!-- Topo: Título e Botão Novo -->
+            <HBox alignment="CENTER_LEFT">
+                <VBox spacing="4.0">
+                    <Label text="Adolescentes" styleClass="page-title" />
+                    <Label fx:id="lblTotalRegistros" text="6 registro(s) encontrado(s)" styleClass="page-subtitle" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <Button text="+ Novo adolescente" styleClass="btn-novo" />
+            </HBox>
+
+            <!-- Barra de Filtros e Pesquisa -->
+            <HBox spacing="15.0" alignment="CENTER_LEFT" styleClass="filter-bar">
+                <TextField fx:id="txtPesquisa" promptText="Buscar por nome, CPF ou bairro..." styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#filtrarAdolescentes" />
+
+                <!-- Filtros por Tipo (Todos / PSC / LA) -->
+                <HBox spacing="5.0" styleClass="filter-group">
+                    <Button fx:id="btnTipoTodos" text="Todos" styleClass="filter-btn-active" onAction="#filtrarTipoTodos" />
+                    <Button fx:id="btnTipoPsc" text="PSC" styleClass="filter-btn" onAction="#filtrarTipoPsc" />
+                    <Button fx:id="btnTipoLa" text="LA" styleClass="filter-btn" onAction="#filtrarTipoLa" />
+                </HBox>
+
+                <!-- Filtros por Status (Todos / Ativo / Suspenso / Encerrado) -->
+                <HBox spacing="5.0" styleClass="filter-group">
+                    <Button fx:id="btnStatusTodos" text="Todos" styleClass="filter-btn-active" onAction="#filtrarStatusTodos" />
+                    <Button fx:id="btnStatusAtivo" text="Ativo" styleClass="filter-btn" onAction="#filtrarStatusAtivo" />
+                    <Button fx:id="btnStatusSuspenso" text="Suspenso" styleClass="filter-btn" onAction="#filtrarStatusSuspenso" />
+                    <Button fx:id="btnStatusEncerrado" text="Encerrado" styleClass="filter-btn" onAction="#filtrarStatusEncerrado" />
+                </HBox>
+            </HBox>
+
+            <!-- Lista de Adolescentes -->
+            <ListView fx:id="listAdolescentes" styleClass="custom-list-view" VBox.vgrow="ALWAYS" onMouseClicked="#clicarAdolescente" />
+        </VBox>
+    </center>
+</BorderPane>

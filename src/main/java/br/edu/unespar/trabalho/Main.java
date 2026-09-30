@@ -1,18 +1,31 @@
 package br.edu.unespar.trabalho;
 
-import br.edu.unespar.trabalho.dao.AdolescenteDAO;
-import br.edu.unespar.trabalho.model.Adolescente;
-import java.util.List;
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
-public class Main {
-    public static void main(String[] args) {
-        AdolescenteDAO dao = new AdolescenteDAO();
+public class Main extends Application {
 
-        System.out.println("Buscando adolescentes no banco db_instituto_casa...");
-        List<Adolescente> jovens = dao.listar();
+    @Override
+    public void start(Stage primaryStage) {
+        try {
+            Parent root = FXMLLoader.load(getClass().getResource("/View/Login.fxml"));
 
-        for (Adolescente j : jovens) {
-            System.out.println("Nome: " + j.getNomeCompleto() + " | Status: " + j.getStatus());
+            primaryStage.setTitle("Instituto C.A.S.A. - Sistema de Gestão");
+            primaryStage.setScene(new Scene(root));
+
+            // Configura a janela para iniciar maximizada em tela cheia
+            primaryStage.setMaximized(true);
+            primaryStage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }

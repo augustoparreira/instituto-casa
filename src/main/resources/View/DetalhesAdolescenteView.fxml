@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@adolescentes-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.DetalhesAdolescenteController">
+
+    <left>
+        <VBox styleClass="sidebar" prefWidth="240.0" spacing="10.0">
+            <padding>
+                <Insets top="25.0" bottom="25.0" left="20.0" right="20.0" />
+            </padding>
+            <VBox spacing="2.0">
+                <Label text="INSTITUTO" styleClass="sidebar-logo-sub" />
+                <Label text="C.A.S.A." styleClass="sidebar-logo-main" />
+                <VBox.margin><Insets bottom="30.0" /></VBox.margin>
+            </VBox>
+            <Button text="Painel" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaPainel" />
+            <Button text="Adolescentes" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#voltarParaLista" />
+            <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <VBox spacing="15.0" styleClass="user-box">
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <Circle radius="18.0" styleClass="user-avatar" />
+                    <VBox spacing="2.0">
+                        <Label text="Ana Paula Costa" styleClass="user-name" />
+                        <Label text="Assistente Social" styleClass="user-role" />
+                    </VBox>
+                </HBox>
+                <Button text="Sair do sistema" styleClass="logout-button" maxWidth="Infinity" alignment="CENTER_LEFT" />
+            </VBox>
+        </VBox>
+    </left>
+
+    <center>
+        <VBox styleClass="main-content" spacing="20.0">
+            <padding>
+                <Insets top="30.0" bottom="30.0" left="40.0" right="40.0" />
+            </padding>
+
+            <!-- Botão Voltar -->
+            <HBox>
+                <Button text="&lt; Voltar para lista" styleClass="back-link" onAction="#voltarParaLista" />
+            </HBox>
+
+            <!-- Card Superior do Perfil -->
+            <HBox styleClass="profile-header-card" alignment="CENTER_LEFT" spacing="30.0">
+                <Circle radius="32.0" styleClass="profile-avatar-large" />
+                <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                    <HBox spacing="12.0" alignment="CENTER_LEFT">
+                        <Label fx:id="lblNome" text="Nome do Adolescente" styleClass="profile-name" />
+                        <Label fx:id="lblStatus" text="Ativo" styleClass="badge-ativo" />
+                        <Label fx:id="lblTipoMedida" text="PSC" styleClass="badge-psc" />
+                    </HBox>
+                    <Label fx:id="lblCpf" text="123.456.789-00" styleClass="profile-sub" />
+                    <Label fx:id="lblResponsavel" text="Responsável: Dra. Ana Paula Costa" styleClass="profile-sub" />
+                </VBox>
+
+                <!-- Progresso Direita -->
+                <VBox alignment="CENTER_RIGHT" spacing="4.0">
+                    <Label text="Progresso da medida" styleClass="progress-title-top" />
+                    <Label fx:id="lblPorcentagem" text="40%" styleClass="progress-percentage-large" />
+                    <Label fx:id="lblHoras" text="48/120 horas" styleClass="progress-sub-top" />
+                </VBox>
+            </HBox>
+
+            <!-- Abas de Navegação interna -->
+            <HBox spacing="8.0" styleClass="tabs-bar">
+                <Button text="Dados Pessoais" styleClass="tab-btn-active" />
+                <Button text="Medida Socioeducativa" styleClass="tab-btn" />
+                <Button text="Frequência e Horas" styleClass="tab-btn" />
+                <Button text="PIA" styleClass="tab-btn" />
+                <Button text="Família e Social" styleClass="tab-btn" />
+            </HBox>
+
+            <!-- Caixa de Conteúdo da Aba (Informações Pessoais) -->
+            <VBox styleClass="content-box" spacing="20.0">
+                <Label text="Informações pessoais" styleClass="box-title" />
+
+                <HBox spacing="50.0">
+                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                        <Label text="NOME COMPLETO" styleClass="form-label-mini" />
+                        <Label fx:id="lblInfoNome" text="-" styleClass="form-value" />
+                    </VBox>
+                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                        <Label text="CPF" styleClass="form-label-mini" />
+                        <Label fx:id="lblInfoCpf" text="-" styleClass="form-value" />
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="50.0">
+                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                        <Label text="DATA DE NASCIMENTO" styleClass="form-label-mini" />
+                        <Label fx:id="lblInfoNascimento" text="-" styleClass="form-value" />
+                    </VBox>
+                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                        <Label text="GÊNERO" styleClass="form-label-mini" />
+                        <Label fx:id="lblInfoGenero" text="-" styleClass="form-value" />
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="50.0">
+                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                        <Label text="BAIRRO / COMUNIDADE" styleClass="form-label-mini" />
+                        <Label fx:id="lblInfoBairro" text="-" styleClass="form-value" />
+                    </VBox>
+                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                        <Label text="STATUS NO SISTEMA" styleClass="form-label-mini" />
+                        <Label fx:id="lblInfoStatus" text="-" styleClass="form-value" />
+                    </VBox>
+                </HBox>
+            </VBox>
+        </VBox>
+    </center>
+</BorderPane>

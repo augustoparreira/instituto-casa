@@ -1,0 +1,93 @@
+.sidebar { -fx-background-color: #ffffff; -fx-border-color: #eaeaea; -fx-border-width: 0 1px 0 0; }
+.sidebar-logo-sub { -fx-text-fill: #555555; -fx-font-size: 11px; -fx-font-weight: bold; }
+.sidebar-logo-main { -fx-text-fill: #19523e; -fx-font-size: 18px; -fx-font-weight: bold; }
+.nav-button { -fx-background-color: transparent; -fx-text-fill: #666666; -fx-font-size: 14px; -fx-padding: 10px 12px; -fx-background-radius: 6px; -fx-cursor: hand; }
+.nav-button:hover { -fx-background-color: #f4f4f2; -fx-text-fill: #19523e; }
+.nav-button-active { -fx-background-color: #19523e; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10px 12px; -fx-background-radius: 6px; }
+.user-box { -fx-border-color: #eaeaea; -fx-border-width: 1px 0 0 0; -fx-padding: 15px 0 0 0; }
+.user-avatar { -fx-fill: #19523e; }
+.user-name { -fx-text-fill: #333333; -fx-font-weight: bold; -fx-font-size: 13px; }
+.user-role { -fx-text-fill: #888888; -fx-font-size: 11px; }
+.logout-button { -fx-background-color: transparent; -fx-text-fill: #d9534f; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 5px 0; }
+
+.main-content { -fx-background-color: #f9f8f4; }
+.page-title { -fx-font-family: "Georgia", serif; -fx-font-size: 26px; -fx-text-fill: #2b2b2b; }
+.page-subtitle { -fx-text-fill: #888888; -fx-font-size: 12px; }
+
+.btn-novo-evento { -fx-background-color: #19523e; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6px; -fx-padding: 10px 15px; -fx-cursor: hand; }
+.btn-novo-evento:hover { -fx-background-color: #123d2e; }
+
+.calendar-container { -fx-background-color: white; -fx-background-radius: 8px; -fx-padding: 20px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; }
+.calendar-header { -fx-padding: 0 10px 10px 10px; }
+.month-title { -fx-font-family: "Georgia"; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #333333; }
+.month-nav-btn { -fx-background-color: #f4f4f2; -fx-text-fill: #555555; -fx-background-radius: 6px; -fx-cursor: hand; -fx-padding: 5px 12px; }
+.month-nav-btn:hover { -fx-background-color: #e5e5e0; }
+
+.calendar-grid { -fx-background-color: #e5e5e0; -fx-background-radius: 6px; -fx-border-color: #e5e5e0; }
+.week-day-label { -fx-alignment: center; -fx-font-weight: bold; -fx-text-fill: #777777; -fx-font-size: 11px; -fx-background-color: white; }
+
+.day-cell { -fx-background-color: white; -fx-padding: 5px; -fx-alignment: top-left; }
+.day-cell-today { -fx-background-color: #f2f7f4; -fx-border-color: #19523e; -fx-border-width: 2px; -fx-padding: 5px; }
+
+.day-number { -fx-font-weight: bold; -fx-text-fill: #333333; -fx-font-size: 12px; }
+.day-number-today { -fx-font-weight: bold; -fx-text-fill: white; -fx-background-color: #19523e; -fx-background-radius: 10px; -fx-padding: 2px 6px; -fx-font-size: 12px; }
+
+.event-tag-green { -fx-background-color: #e8f8f0; -fx-text-fill: #27ae60; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 2px 4px; -fx-background-radius: 4px; }
+.event-tag-blue { -fx-background-color: #e3edf7; -fx-text-fill: #2a75bb; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 2px 4px; -fx-background-radius: 4px; }
+.event-tag-purple { -fx-background-color: #f3e8f9; -fx-text-fill: #7b4397; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 2px 4px; -fx-background-radius: 4px; }
+.event-tag-orange { -fx-background-color: #fef5e7; -fx-text-fill: #d9822b; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 2px 4px; -fx-background-radius: 4px; }
+.event-tag-red { -fx-background-color: #fdeaea; -fx-text-fill: #c0392b; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 2px 4px; -fx-background-radius: 4px; }
+
+.today-bar { -fx-background-color: white; -fx-background-radius: 8px; -fx-padding: 12px 15px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; }
+.today-text { -fx-font-weight: bold; -fx-text-fill: #19523e; -fx-font-size: 12px; }
+
+.content-box { -fx-background-color: white; -fx-background-radius: 8px; -fx-padding: 20px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; }
+.selected-date-title { -fx-font-family: "Georgia"; -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #333333; }
+.selected-date-sub { -fx-text-fill: #888888; -fx-font-size: 11px; }
+
+.event-card-purple { -fx-background-color: #f3e8f9; -fx-background-radius: 6px; -fx-padding: 10px; -fx-border-color: #e0cced; -fx-border-radius: 6px; }
+.event-time-purple { -fx-text-fill: #7b4397; -fx-font-size: 11px; -fx-font-weight: bold; }
+
+.event-card-green { -fx-background-color: #e8f8f0; -fx-background-radius: 6px; -fx-padding: 10px; -fx-border-color: #c8ebd8; -fx-border-radius: 6px; }
+.event-time-green { -fx-text-fill: #27ae60; -fx-font-size: 11px; -fx-font-weight: bold; }
+
+.event-title-bold { -fx-font-weight: bold; -fx-text-fill: #2b2b2b; -fx-font-size: 12px; }
+.event-desc-sub { -fx-text-fill: #666666; -fx-font-size: 10px; }
+
+.box-title-mini { -fx-font-weight: bold; -fx-text-fill: #888888; -fx-font-size: 10px; }
+.legend-text { -fx-text-fill: #555555; -fx-font-size: 11px; }
+.dot-green { -fx-fill: #27ae60; }
+.dot-blue { -fx-fill: #2a75bb; }
+.dot-purple { -fx-fill: #7b4397; }
+.dot-orange { -fx-fill: #d9822b; }
+.dot-red { -fx-fill: #c0392b; }
+
+.month-combo {
+    -fx-background-color: white;
+    -fx-border-color: #e5e5e0;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-family: "Georgia";
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-mark-color: #19523e;
+}
+.month-combo .list-cell {
+    -fx-text-fill: #333333;
+    -fx-background-color: white;
+}
+
+.year-combo {
+    -fx-background-color: white;
+    -fx-border-color: #e5e5e0;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-font-family: "Georgia";
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-mark-color: #19523e;
+}
+.year-combo .list-cell {
+    -fx-text-fill: #333333;
+    -fx-background-color: white;
+}

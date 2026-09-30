@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@agenda-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.AgendaController">
+
+    <!-- MENU LATERAL ESQUERDO -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="240.0" spacing="10.0">
+            <padding>
+                <Insets top="25.0" bottom="25.0" left="20.0" right="20.0" />
+            </padding>
+            <VBox spacing="2.0">
+                <Label text="INSTITUTO" styleClass="sidebar-logo-sub" />
+                <Label text="C.A.S.A." styleClass="sidebar-logo-main" />
+                <VBox.margin><Insets bottom="30.0" /></VBox.margin>
+            </VBox>
+            <Button text="Painel" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaPainel" />
+            <Button text="Adolescentes" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAdolescentes" />
+            <Button text="Agenda" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <VBox spacing="15.0" styleClass="user-box">
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <Circle radius="18.0" styleClass="user-avatar" />
+                    <VBox spacing="2.0">
+                        <Label text="Ana Paula Costa" styleClass="user-name" />
+                        <Label text="Assistente Social" styleClass="user-role" />
+                    </VBox>
+                </HBox>
+                <Button text="Sair do sistema" styleClass="logout-button" onAction="#fazerLogout" maxWidth="Infinity" alignment="CENTER_LEFT" />
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- CONTEÚDO CENTRAL -->
+    <center>
+        <VBox styleClass="main-content" spacing="20.0">
+            <padding>
+                <Insets top="30.0" bottom="30.0" left="40.0" right="40.0" />
+            </padding>
+
+            <!-- Topo: Título e Botão Novo Evento -->
+            <HBox alignment="CENTER_LEFT">
+                <VBox spacing="4.0">
+                    <Label text="Agenda institucional" styleClass="page-title" />
+                    <Label text="Calendário de atividades e compromissos" styleClass="page-subtitle" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <Button text="+ Novo evento" styleClass="btn-novo-evento" onAction="#abrirModalNovoEvento" />
+            </HBox>
+
+            <!-- Estrutura Principal -->
+            <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+
+                <!-- CALENDÁRIO MENSAL -->
+                <VBox styleClass="calendar-container" HBox.hgrow="ALWAYS" spacing="15.0">
+                    <!-- Navegação do Mês e Ano Limpa -->
+                    <HBox alignment="CENTER" styleClass="calendar-header" spacing="12.0">
+                        <Button text="&lt;" styleClass="month-nav-btn" onAction="#mesAnterior" />
+                        <Label fx:id="lblMesAno" text="Junho" styleClass="month-title" />
+                        <ComboBox fx:id="cmbAno" styleClass="year-combo" onAction="#mudarAnoCombo" prefWidth="95.0" />
+                        <Button text="&gt;" styleClass="month-nav-btn" onAction="#proximoMes" />
+                    </HBox>
+
+                    <!-- Grade do Calendário -->
+                    <GridPane fx:id="gridCalendario" gridLinesVisible="true" styleClass="calendar-grid" VBox.vgrow="ALWAYS">
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="14.28" />
+                            <ColumnConstraints percentWidth="14.28" />
+                            <ColumnConstraints percentWidth="14.28" />
+                            <ColumnConstraints percentWidth="14.28" />
+                            <ColumnConstraints percentWidth="14.28" />
+                            <ColumnConstraints percentWidth="14.28" />
+                            <ColumnConstraints percentWidth="14.28" />
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints percentHeight="10.0" />
+                            <RowConstraints percentHeight="18.0" />
+                            <RowConstraints percentHeight="18.0" />
+                            <RowConstraints percentHeight="18.0" />
+                            <RowConstraints percentHeight="18.0" />
+                            <RowConstraints percentHeight="18.0" />
+                        </rowConstraints>
+
+                        <Label text="DOM" styleClass="week-day-label" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label text="SEG" styleClass="week-day-label" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="TER" styleClass="week-day-label" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                        <Label text="QUA" styleClass="week-day-label" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                        <Label text="QUI" styleClass="week-day-label" GridPane.columnIndex="4" GridPane.rowIndex="0" />
+                        <Label text="SEX" styleClass="week-day-label" GridPane.columnIndex="5" GridPane.rowIndex="0" />
+                        <Label text="SÁB" styleClass="week-day-label" GridPane.columnIndex="6" GridPane.rowIndex="0" />
+                    </GridPane>
+                </VBox>
+
+                <!-- PAINEL LATERAL DIREITO -->
+                <VBox spacing="20.0" prefWidth="320.0">
+                    <!-- Atalho "Ir para hoje" -->
+                    <HBox styleClass="today-bar" alignment="CENTER_LEFT" spacing="10.0" onMouseClicked="#irParaHoje" style="-fx-cursor: hand;">
+                        <Label text="📅" />
+                        <Label fx:id="lblIrParaHojeTexto" text="Ir para hoje" styleClass="today-text" />
+                    </HBox>
+
+                    <!-- Compromissos do Dia Selecionado -->
+                    <VBox styleClass="content-box" spacing="15.0" fx:id="boxCompromissosDia">
+                        <VBox spacing="2.0">
+                            <Label fx:id="lblDataSelecionada" text="25 de Junho de 2026" styleClass="selected-date-title" />
+                            <Label fx:id="lblDiaSemanaSelecionado" text="Terça-feira" styleClass="selected-date-sub" />
+                        </VBox>
+
+                        <VBox fx:id="listaEventosPainel" spacing="10.0">
+                            <!-- Preenchido dinamicamente -->
+                        </VBox>
+                    </VBox>
+
+                    <!-- Legenda de Cores -->
+                    <VBox styleClass="content-box" spacing="12.0">
+                        <Label text="LEGENDA" styleClass="box-title-mini" />
+                        <VBox spacing="8.0">
+                            <HBox spacing="10.0" alignment="CENTER_LEFT"><Circle radius="5.0" styleClass="dot-green" /><Label text="Frequência / visita" styleClass="legend-text" /></HBox>
+                            <HBox spacing="10.0" alignment="CENTER_LEFT"><Circle radius="5.0" styleClass="dot-blue" /><Label text="Atendimento individual" styleClass="legend-text" /></HBox>
+                            <HBox spacing="10.0" alignment="CENTER_LEFT"><Circle radius="5.0" styleClass="dot-purple" /><Label text="Reunião / relatório" styleClass="legend-text" /></HBox>
+                            <HBox spacing="10.0" alignment="CENTER_LEFT"><Circle radius="5.0" styleClass="dot-orange" /><Label text="PIA" styleClass="legend-text" /></HBox>
+                            <HBox spacing="10.0" alignment="CENTER_LEFT"><Circle radius="5.0" styleClass="dot-red" /><Label text="Audiência judicial" styleClass="legend-text" /></HBox>
+                        </VBox>
+                    </VBox>
+
+                </VBox>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

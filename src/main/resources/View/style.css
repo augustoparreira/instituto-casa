@@ -1,0 +1,75 @@
+.left-pane {
+    -fx-background-color: #19523e;
+}
+.text-logo {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+.text-title-left {
+    -fx-text-fill: white;
+    -fx-font-family: "Georgia", serif;
+    -fx-font-size: 38px;
+}
+.text-title-italic-left {
+    -fx-text-fill: white;
+    -fx-font-family: "Georgia", serif;
+    -fx-font-size: 38px;
+    -fx-font-style: italic;
+}
+.text-subtitle-left {
+    -fx-text-fill: #9ebbae;
+    -fx-font-size: 14px;
+    -fx-line-spacing: 5px;
+}
+.text-footer-left {
+    -fx-text-fill: #6c9381;
+    -fx-font-size: 11px;
+}
+.right-pane {
+    -fx-background-color: #f7f6f1;
+}
+.text-title-right {
+    -fx-text-fill: #2b2b2b;
+    -fx-font-family: "Georgia", serif;
+    -fx-font-size: 34px;
+}
+.text-subtitle-right {
+    -fx-text-fill: #7d7d7d;
+    -fx-font-size: 14px;
+}
+.label-form {
+    -fx-text-fill: #8c8c8c;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-letter-spacing: 1px;
+}
+.input-field {
+    -fx-background-color: white;
+    -fx-border-color: #e2e2e2;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 12px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #333333;
+}
+.input-field:focused {
+    -fx-border-color: #19523e;
+    -fx-border-width: 1.5px;
+}
+.btn-login {
+    -fx-background-color: #19523e;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 12px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+.btn-login:hover {
+    -fx-background-color: #123d2e;
+}
+.text-footer-right {
+    -fx-text-fill: #a3a3a3;
+    -fx-font-size: 12px;
+}

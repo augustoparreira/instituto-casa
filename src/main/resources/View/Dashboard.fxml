@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@dashboard-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.DashboardController">
+
+    <!-- MENU LATERAL ESQUERDO -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="240.0" spacing="10.0">
+            <padding>
+                <Insets top="25.0" bottom="25.0" left="20.0" right="20.0" />
+            </padding>
+
+            <!-- Logo -->
+            <VBox spacing="2.0">
+                <Label text="INSTITUTO" styleClass="sidebar-logo-sub" />
+                <Label text="C.A.S.A." styleClass="sidebar-logo-main" />
+                <VBox.margin>
+                    <Insets bottom="30.0" />
+                </VBox.margin>
+            </VBox>
+
+            <!-- Botões de Navegação -->
+            <Button text="Painel" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Adolescentes" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAdolescentes" />
+            <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
+            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <!-- Rodapé do Menu (Perfil do Usuário Logado) -->
+            <VBox spacing="15.0" styleClass="user-box">
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <Circle radius="18.0" styleClass="user-avatar" />
+                    <VBox spacing="2.0">
+                        <Label fx:id="lblNomeUsuario" text="Ana Paula Costa" styleClass="user-name" />
+                        <Label fx:id="lblCargoUsuario" text="Assistente Social" styleClass="user-role" />
+                    </VBox>
+                </HBox>
+                <Button text="Sair do sistema" styleClass="logout-button" onAction="#fazerLogout" maxWidth="Infinity" alignment="CENTER_LEFT" />
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- CONTEÚDO PRINCIPAL (Direita) -->
+    <center>
+        <VBox styleClass="main-content" spacing="25.0">
+            <padding>
+                <Insets top="30.0" bottom="30.0" left="40.0" right="40.0" />
+            </padding>
+
+            <!-- Cabeçalho da Página -->
+            <VBox spacing="4.0">
+                <Label text="Painel de controle" styleClass="page-title" />
+                <Label text="Atualizado em 25 de junho de 2026" styleClass="page-subtitle" />
+            </VBox>
+
+            <!-- Cards de Estatísticas -->
+            <HBox spacing="20.0">
+                <!-- Card 1 -->
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
+                    <Label text="Total em acompanhamento" styleClass="card-title" />
+                    <Label text="4" styleClass="card-number-green" />
+                    <Label text="6 cadastrados" styleClass="card-footer-text" />
+                </VBox>
+                <!-- Card 2 -->
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
+                    <Label text="Prestação de Serviços" styleClass="card-title" />
+                    <Label text="3" styleClass="card-number-blue" />
+                    <Label text="PSC ativos" styleClass="card-footer-text" />
+                </VBox>
+                <!-- Card 3 -->
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
+                    <Label text="Liberdade Assistida" styleClass="card-title" />
+                    <Label text="1" styleClass="card-number-purple" />
+                    <Label text="LA ativos" styleClass="card-footer-text" />
+                </VBox>
+                <!-- Card 4 -->
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
+                    <Label text="Medidas concluídas" styleClass="card-title" />
+                    <Label text="2" styleClass="card-number-orange" />
+                    <Label text="neste ciclo" styleClass="card-footer-text" />
+                </VBox>
+            </HBox>
+
+            <!-- Seção Inferior: Lista e Painéis de Alerta -->
+            <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                <!-- Lista de Adolescentes (Esquerda) -->
+                <VBox styleClass="content-box" HBox.hgrow="ALWAYS" spacing="15.0">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="Adolescentes em acompanhamento" styleClass="box-title" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label text="Ver todos &gt;" styleClass="link-text" onMouseClicked="#irParaListaAdolescentes" />
+                    </HBox>
+
+                    <!-- Item 1: Lucas Henrique (Com fx:id e evento de clique) -->
+                    <HBox fx:id="cardLucas" styleClass="adolescent-item" alignment="CENTER_LEFT" spacing="15.0" onMouseClicked="#clicarAdolescentePainel" style="-fx-cursor: hand;">
+                        <Circle radius="20.0" styleClass="item-avatar" />
+                        <VBox spacing="2.0" HBox.hgrow="ALWAYS">
+                            <Label text="Lucas Henrique Oliveira" styleClass="item-name" />
+                            <Label text="Dra. Ana Paula Costa" styleClass="item-tech" />
+                        </VBox>
+                        <Label text="PSC" styleClass="badge-psc" />
+                    </HBox>
+
+                    <!-- Item 2: Mariana dos Santos (Com fx:id e evento de clique) -->
+                    <HBox fx:id="cardMariana" styleClass="adolescent-item" alignment="CENTER_LEFT" spacing="15.0" onMouseClicked="#clicarAdolescentePainel" style="-fx-cursor: hand;">
+                        <Circle radius="20.0" styleClass="item-avatar" />
+                        <VBox spacing="2.0" HBox.hgrow="ALWAYS">
+                            <Label text="Mariana dos Santos Silva" styleClass="item-name" />
+                            <Label text="Psic. Bruno Ferreira" styleClass="item-tech" />
+                        </VBox>
+                        <Label text="LA" styleClass="badge-la" />
+                    </HBox>
+                </VBox>
+
+                <!-- Painéis Laterais (Direita: Prazos e Agenda) -->
+                <VBox spacing="20.0" prefWidth="320.0">
+                    <!-- Alerta de Prazos (Com fx:id e evento de clique para o Gabriel) -->
+                    <VBox fx:id="cardPrazoGabriel" styleClass="alert-card" spacing="6.0" onMouseClicked="#clicarAdolescentePainel" style="-fx-cursor: hand;">
+                        <HBox spacing="8.0" alignment="CENTER_LEFT">
+                            <Label text="⚠" styleClass="alert-icon" />
+                            <Label text="Prazos próximos" styleClass="alert-title" />
+                        </HBox>
+                        <Label text="Gabriel Alves" styleClass="alert-name" />
+                        <Label text="Vence: 04/06/2026" styleClass="alert-date" />
+                    </VBox>
+
+                    <!-- Agenda da Semana -->
+                    <VBox styleClass="content-box" spacing="12.0">
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="Agenda da semana" styleClass="box-title" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label text="Ver mais" styleClass="link-text" onMouseClicked="#irParaAgendaPeloLink" />
+                        </HBox>
+                        <VBox spacing="8.0">
+                            <Label text="25 Jun · Visita domiciliar&#10;09h00 · Lucas Oliveira" styleClass="agenda-item" />
+                            <Label text="26 Jun · Reunião PIA&#10;10h30 · Mariana Santos" styleClass="agenda-item" />
+                        </VBox>
+                    </VBox>
+                </VBox>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

@@ -50,36 +50,6 @@ public class DashboardController {
     }
 
     @FXML
-    public void irParaRelatorios(ActionEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/RelatoriosView.fxml", "Relatórios");
-    }
-
-    @FXML
-    public void irParaEquipeTecnica(ActionEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/EquipeTecnicaView.fxml", "Equipe Técnica");
-    }
-
-    @FXML
-    public void irParaAdolescentes(ActionEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes");
-    }
-
-    @FXML
-    public void irParaListaAdolescentes(MouseEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes");
-    }
-
-    @FXML
-    public void irParaAgenda(ActionEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/AgendaView.fxml", "Agenda institucional");
-    }
-
-    @FXML
-    public void irParaAgendaPeloLink(MouseEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/AgendaView.fxml", "Agenda institucional");
-    }
-
-    @FXML
     public void clicarAdolescentePainel(MouseEvent event) {
         try {
             javafx.scene.Node node = (javafx.scene.Node) event.getSource();
@@ -104,7 +74,18 @@ public class DashboardController {
             e.printStackTrace();
         }
     }
-
+    @FXML
+    public void irParaRelatorios(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/RelatoriosView.fxml", "Relatórios"); }
+    @FXML
+    public void irParaEquipeTecnica(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
+    @FXML
+    public void irParaAdolescentes(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes"); }
+    @FXML
+    public void irParaListaAdolescentes(MouseEvent event) { NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes"); }
+    @FXML
+    public void irParaAgenda(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/AgendaView.fxml", "Agenda institucional"); }
+    @FXML
+    public void irParaAgendaPeloLink(MouseEvent event) { NavegacaoUtil.mudarTela(event, "/View/AgendaView.fxml", "Agenda institucional"); }
     @FXML
     public void fazerLogout(ActionEvent event) {
         NavegacaoUtil.mudarTela(event, "/View/Login.fxml", "Login");

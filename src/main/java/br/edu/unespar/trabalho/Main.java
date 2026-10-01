@@ -2,9 +2,9 @@ package br.edu.unespar.trabalho;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.dao.FrequenciaDAO;
+import br.edu.unespar.trabalho.dao.ResponsavelDAO;
 import br.edu.unespar.trabalho.model.Adolescente;
-import br.edu.unespar.trabalho.model.Frequencia;
-import java.time.LocalDate;
+import br.edu.unespar.trabalho.model.Responsavel;
 import java.util.List;
 
 public class Main {
@@ -12,30 +12,28 @@ public class Main {
         AdolescenteDAO adoDao = new AdolescenteDAO();
         List<Adolescente> jovens = adoDao.listar();
 
-        if (jovens.isEmpty()) {
-            System.out.println("Nenhum jovem cadastrado para receber presença.");
-            return;
-        }
+        if (jovens.isEmpty()) return;
 
         Adolescente jovem = jovens.get(0);
+        long cpfJovem = jovem.getCpf();
+        System.out.println("Relatório do Jovem: " + jovem.getNomeCompleto() + "\n");
 
-        // Montando o objeto de Frequência
-        Frequencia presenca = new Frequencia();
-        presenca.setCpfAdolescente(jovem.getCpf());
-        presenca.setIdAtividade(1); // O ID da atividade que acabamos de inserir no banco
-        presenca.setDataPresenca(LocalDate.now());
-        presenca.setStatusPresenca("Presente");
-        presenca.setHorasCumpridas(4);
+        // 1. Testando a listagem de responsáveis
+        ResponsavelDAO respDao = new ResponsavelDAO();
+        List<Responsavel> familia = respDao.listarResponsaveis(cpfJovem);
 
-        FrequenciaDAO freqDao = new FrequenciaDAO();
-        System.out.println("Registrando presença na oficina para: " + jovem.getNomeCompleto());
-
-        boolean sucesso = freqDao.registrar(presenca);
-
-        if (sucesso) {
-            System.out.println("-> Sucesso! Presença contabilizada no banco.");
-        } else {
-            System.out.println("-> Falha ao registrar presença. Verifique o console.");
+        System.out.println("--- COMPOSIÇÃO FAMILIAR ---");
+        for (Responsavel r : familia) {
+            System.out.println("Nome: " + r.getNomeCompleto());
+            System.out.println("Vínculo: " + r.getParentesco() + (r.isContatoPrincipal() ? " (Contato Principal)" : ""));
+            System.out.println("Telefone: " + r.getContato() + "\n");
         }
+
+        // 2. Testando a contagem de faltas
+        FrequenciaDAO freqDao = new FrequenciaDAO();
+        int totalFaltas = freqDao.consultarFaltas(cpfJovem);
+
+        System.out.println("--- CONTROLE DE MEDIDA ---");
+        System.out.println("Faltas acumuladas: " + totalFaltas);
     }
 }

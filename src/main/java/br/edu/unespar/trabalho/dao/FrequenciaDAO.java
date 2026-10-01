@@ -31,4 +31,26 @@ public class FrequenciaDAO {
             return false;
         }
     }
+
+    public int consultarFaltas(long cpfAdolescente) {
+        String sql = "SELECT COUNT(*) AS total_faltas FROM Frequencia WHERE cpf_adolescente = ? AND status_presenca = 'Falta'";
+        int faltas = 0;
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, cpfAdolescente);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    faltas = rs.getInt("total_faltas");
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao consultar faltas: " + e.getMessage());
+        }
+
+        return faltas;
+    }
 }

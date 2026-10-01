@@ -4,6 +4,8 @@ import br.edu.unespar.trabalho.model.Responsavel;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ResponsavelDAO {
 
@@ -64,5 +66,45 @@ public class ResponsavelDAO {
                 System.err.println("Erro ao fechar conexão: " + e.getMessage());
             }
         }
+    }
+
+    public List<Responsavel> listarResponsaveis(long cpfAdolescente) {
+        List<Responsavel> lista = new ArrayList<>();
+
+        String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +
+                "r.parentesco, r.contato_principal " +
+                "FROM Pessoa p " +
+                "INNER JOIN Responsavel r ON p.cpf = r.cpf_responsavel " +
+                "INNER JOIN Responsabiliza v ON r.cpf_responsavel = v.cpf_responsavel " +
+                "WHERE v.cpf_adolescente = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, cpfAdolescente);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Responsavel resp = new Responsavel();
+
+                    // Dados da tabela Pessoa
+                    resp.setCpf(rs.getLong("cpf"));
+                    resp.setNomeCompleto(rs.getString("nome_completo"));
+                    resp.setDataNascimento(rs.getDate("data_nascimento").toLocalDate());
+                    resp.setContato(rs.getString("contato"));
+                    resp.setEmail(rs.getString("email"));
+
+                    // Dados da tabela Responsavel
+                    resp.setParentesco(rs.getString("parentesco"));
+                    resp.setContatoPrincipal(rs.getBoolean("contato_principal"));
+
+                    lista.add(resp);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar responsáveis: " + e.getMessage());
+        }
+
+        return lista;
     }
 }

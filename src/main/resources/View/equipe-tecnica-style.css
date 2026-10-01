@@ -1,0 +1,264 @@
+/* ==========================================================================
+   1. ESTRUTURA GERAL E MENU LATERAL (SIDEBAR)
+   ========================================================================== */
+
+.main-content {
+    -fx-background-color: #f9f8f4;
+}
+
+.sidebar {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #eaeaea;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.sidebar-logo-sub {
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.sidebar-logo-main {
+    -fx-text-fill: #19523e;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #666666;
+    -fx-font-size: 14px;
+    -fx-padding: 10px 12px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.nav-button:hover {
+    -fx-background-color: #f4f4f2;
+    -fx-text-fill: #19523e;
+}
+
+.nav-button-active {
+    -fx-background-color: #19523e;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 12px;
+    -fx-background-radius: 6px;
+}
+
+/* Usuário Logado no Rodapé */
+.user-box {
+    -fx-border-color: #eaeaea;
+    -fx-border-width: 1px 0 0 0;
+    -fx-padding: 15px 0 0 0;
+}
+
+.user-avatar {
+    -fx-fill: #19523e;
+}
+
+.user-name {
+    -fx-text-fill: #333333;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.user-role {
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+}
+
+.logout-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #d9534f;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 5px 0;
+}
+
+
+/* ==========================================================================
+   2. CABEÇALHO E BOTÕES DE AÇÃO
+   ========================================================================== */
+
+.page-title {
+    -fx-font-family: "Georgia", serif;
+    -fx-font-size: 26px;
+    -fx-text-fill: #2b2b2b;
+}
+
+.page-subtitle {
+    -fx-text-fill: #888888;
+    -fx-font-size: 12px;
+}
+
+.btn-novo {
+    -fx-background-color: #19523e;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 10px 15px;
+    -fx-cursor: hand;
+}
+
+.btn-novo:hover {
+    -fx-background-color: #123d2e;
+}
+
+
+/* ==========================================================================
+   3. CAMPO DE PESQUISA E BOTÕES DE FILTRO
+   ========================================================================== */
+
+.search-field {
+    -fx-background-color: white;
+    -fx-border-color: #e5e5e0;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 10px;
+}
+
+.filter-btn {
+    -fx-background-color: white;
+    -fx-border-color: #e5e5e0;
+    -fx-text-fill: #555555;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-padding: 8px 12px;
+    -fx-cursor: hand;
+}
+
+.filter-btn:hover {
+    -fx-background-color: #f4f4f2;
+    -fx-border-color: #d0d0c8;
+    -fx-text-fill: #333333;
+}
+
+.filter-btn-active {
+    -fx-background-color: #19523e;
+    -fx-border-color: #19523e;
+    -fx-text-fill: white;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-padding: 8px 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.filter-btn-active:hover {
+    -fx-background-color: #123d2e;
+    -fx-border-color: #123d2e;
+    -fx-text-fill: white;
+}
+
+
+/* ==========================================================================
+   4. LISTVIEW E RENDERIZAÇÃO DOS CARDS DE MEMBROS
+   ========================================================================== */
+
+.custom-list-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 4px 0;
+}
+
+/* Card individual do membro */
+.membro-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8px;
+    -fx-border-color: #e5e5e0;
+    -fx-border-radius: 8px;
+    -fx-padding: 12px 16px;
+    -fx-cursor: hand;
+}
+
+.membro-card:hover {
+    -fx-border-color: #d0d0c8;
+}
+
+.avatar-bg {
+    -fx-fill: #d1dcd5;
+}
+
+.avatar-text {
+    -fx-fill: #19523e;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+.membro-nome {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: #2b2b2b;
+}
+
+.membro-cargo {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+}
+
+.membro-detalhe {
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+}
+
+/* Badges / Chips de perfil de acesso */
+.badge-admin {
+    -fx-background-color: #ececec;
+    -fx-text-fill: #555555;
+    -fx-font-weight: bold;
+    -fx-font-size: 10px;
+    -fx-padding: 3px 8px;
+    -fx-background-radius: 10px;
+}
+
+.badge-equipe {
+    -fx-background-color: #e8f3ee;
+    -fx-text-fill: #19523e;
+    -fx-font-weight: bold;
+    -fx-font-size: 10px;
+    -fx-padding: 3px 8px;
+    -fx-background-radius: 10px;
+}
+
+.badge-educador {
+    -fx-background-color: #f3e8f8;
+    -fx-text-fill: #8a30b5;
+    -fx-font-weight: bold;
+    -fx-font-size: 10px;
+    -fx-padding: 3px 8px;
+    -fx-background-radius: 10px;
+}
+
+
+/* ==========================================================================
+   5. COMPONENTES COMPLEMENTARES E PAINÉIS DE CONTEÚDO
+   ========================================================================== */
+
+.content-box {
+    -fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-padding: 20px;
+    -fx-border-color: #e5e5e0;
+    -fx-border-radius: 8px;
+}
+
+.box-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+    -fx-font-size: 15px;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}

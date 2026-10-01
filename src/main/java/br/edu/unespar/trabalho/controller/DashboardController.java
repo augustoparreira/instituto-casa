@@ -50,6 +50,16 @@ public class DashboardController {
     }
 
     @FXML
+    public void irParaRelatorios(ActionEvent event) {
+        NavegacaoUtil.mudarTela(event, "/View/RelatoriosView.fxml", "Relatórios");
+    }
+
+    @FXML
+    public void irParaEquipeTecnica(ActionEvent event) {
+        NavegacaoUtil.mudarTela(event, "/View/EquipeTecnicaView.fxml", "Equipe Técnica");
+    }
+
+    @FXML
     public void irParaAdolescentes(ActionEvent event) {
         NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes");
     }

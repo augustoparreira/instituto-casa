@@ -30,7 +30,7 @@
             <Button text="Adolescentes" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAdolescentes" />
             <Button text="Agenda" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" />
             <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
-            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica"/>
 
             <Region VBox.vgrow="ALWAYS" />
 

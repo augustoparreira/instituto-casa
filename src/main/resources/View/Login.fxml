@@ -9,7 +9,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.Region?>
 
-<HBox prefHeight="600.0" prefWidth="1000.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.LoginController">
+<HBox prefHeight="600.0" prefWidth="1000.0" stylesheets="@login-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.LoginController">
 
     <VBox styleClass="left-pane" HBox.hgrow="ALWAYS" prefWidth="500.0" spacing="20.0">
         <padding>

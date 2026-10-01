@@ -11,7 +11,12 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.shape.Circle?>
 
-<BorderPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@adolescentes-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.AdolescentesController">
+<BorderPane prefHeight="700.0"
+            prefWidth="1200.0"
+            stylesheets="@adolescentes-style.css"
+            xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="br.edu.unespar.trabalho.controller.AdolescentesController">
 
     <!-- MENU LATERAL ESQUERDO -->
     <left>
@@ -27,8 +32,8 @@
             <Button text="Painel" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaPainel" />
             <Button text="Adolescentes" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" />
             <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
-            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
-            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
 
             <Region VBox.vgrow="ALWAYS" />
 

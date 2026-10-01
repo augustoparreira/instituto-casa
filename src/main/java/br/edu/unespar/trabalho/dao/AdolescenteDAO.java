@@ -150,7 +150,8 @@ public class AdolescenteDAO {
         }
     }
 
-    public boolean inativar(long cpf) {
+    public boolean excluir(long cpf) {
+        // Mantemos a query de Exclusão Lógica (Soft Delete) para proteger os dados da ONG
         String sql = "UPDATE Adolescente SET status = 'Inativo' WHERE cpf_adolescente = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -162,7 +163,7 @@ public class AdolescenteDAO {
             return linhasAfetadas > 0;
 
         } catch (SQLException e) {
-            System.err.println("Erro ao inativar adolescente: " + e.getMessage());
+            System.err.println("Erro ao excluir adolescente: " + e.getMessage());
             return false;
         }
     }

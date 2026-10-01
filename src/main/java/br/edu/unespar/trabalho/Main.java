@@ -1,9 +1,9 @@
 package br.edu.unespar.trabalho;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
-import br.edu.unespar.trabalho.dao.MedidaSocioeducativaDAO;
+import br.edu.unespar.trabalho.dao.PIADAO;
 import br.edu.unespar.trabalho.model.Adolescente;
-import br.edu.unespar.trabalho.model.MedidaSocioeducativa;
+import br.edu.unespar.trabalho.model.PIA;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,47 +14,33 @@ public class Main {
         List<Adolescente> jovens = adoDao.listar();
 
         if (jovens.isEmpty()) {
-            System.out.println("Nenhum adolescente encontrado no banco.");
+            System.out.println("Nenhum adolescente encontrado.");
             return;
         }
 
         Adolescente jovem = jovens.get(0);
         long cpfJovem = jovem.getCpf();
 
-        System.out.println("--- TESTE DE MEDIDA SOCIOEDUCATIVA ---");
+        System.out.println("--- ELABORAÇÃO DO PIA ---");
         System.out.println("Adolescente: " + jovem.getNomeCompleto());
 
-        // 1. Configurando a Medida Judicial de 120 horas
-        MedidaSocioeducativa medida = new MedidaSocioeducativa();
-        medida.setIdMedida(1);
-        medida.setCpfAdolescente(cpfJovem);
-        medida.setReincidencia(false);
-        medida.setTipoMedida("PSC"); // Prestação de Serviços à Comunidade
-        medida.setDataInicio(LocalDate.now());
-        medida.setHistoricoInfracional("Ato infracional leve");
-        medida.setDuracaoMeses(null); // PSC usa apenas horas
-        medida.setDuracaoHoras(120);
+        PIA pia = new PIA();
+        pia.setIdPia(1);
+        pia.setDataElaboracao(LocalDate.now());
+        pia.setDiagnostico("Adolescente apresenta boa comunicação, mas evade o ambiente escolar.");
+        pia.setVulnerabilidades("Baixa renda familiar e convívio em área de risco social.");
+        pia.setPotencialidades("Interesse por tecnologia e facilidade com montagem de computadores.");
+        pia.setEstrategias("Inserção obrigatória na Oficina de Informática e acompanhamento pedagógico.");
+        pia.setDocumentoEnviado(false);
+        pia.setCpfAdolescente(cpfJovem);
 
-        MedidaSocioeducativaDAO medidaDao = new MedidaSocioeducativaDAO();
+        PIADAO piaDao = new PIADAO();
+        System.out.println("Salvando o Plano Individual de Atendimento no banco...");
 
-        System.out.println("Gravando medida no PostgreSQL...");
-        boolean sucesso = medidaDao.inserir(medida);
-
-        if (sucesso) {
-            System.out.println("-> Sucesso! Medida de PSC (120h) registrada.");
+        if (piaDao.inserir(pia)) {
+            System.out.println("-> Sucesso! PIA registrado com sucesso.");
         } else {
-            System.out.println("-> Aviso: Medida falhou (ou o ID 1 já foi cadastrado).");
+            System.out.println("-> Falha ao registrar PIA. Verifique o console.");
         }
-
-        // 2. O Método de Ouro: Calculando o Progresso
-        System.out.println("\n--- CÁLCULO DE PROGRESSO JUDICIAL ---");
-        int horasCumpridas = medidaDao.consultarHorasCumpridas(cpfJovem);
-
-        System.out.println("-> Horas cumpridas em oficinas: " + horasCumpridas + "h");
-        System.out.println("-> Meta estipulada pelo juiz: " + medida.getDuracaoHoras() + "h");
-
-        // Calculando a porcentagem exata que o Gabriel e o João Vitor precisam para a tela
-        double porcentagem = ((double) horasCumpridas / medida.getDuracaoHoras()) * 100;
-        System.out.println("-> Progresso Total: " + String.format("%.1f", porcentagem) + "%");
     }
 }

@@ -1,48 +1,41 @@
 package br.edu.unespar.trabalho;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
+import br.edu.unespar.trabalho.dao.FrequenciaDAO;
 import br.edu.unespar.trabalho.model.Adolescente;
+import br.edu.unespar.trabalho.model.Frequencia;
+import java.time.LocalDate;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        AdolescenteDAO dao = new AdolescenteDAO();
-
-        System.out.println("1. BUSCANDO ADOLESCENTES...");
-        List<Adolescente> jovens = dao.listar();
+        AdolescenteDAO adoDao = new AdolescenteDAO();
+        List<Adolescente> jovens = adoDao.listar();
 
         if (jovens.isEmpty()) {
-            System.out.println("Nenhum jovem encontrado no banco para realizar o teste.");
+            System.out.println("Nenhum jovem cadastrado para receber presença.");
             return;
         }
 
-        // Pega o primeiro jovem da lista (provavelmente o Carlos Eduardo que inserimos antes)
-        Adolescente alvo = jovens.get(0);
-        long cpfTeste = alvo.getCpf();
+        Adolescente jovem = jovens.get(0);
 
-        System.out.println("Jovem selecionado: " + alvo.getNomeCompleto());
-        System.out.println("Contato original: " + alvo.getContato());
-        System.out.println("Status original: " + alvo.getStatus());
+        // Montando o objeto de Frequência
+        Frequencia presenca = new Frequencia();
+        presenca.setCpfAdolescente(jovem.getCpf());
+        presenca.setIdAtividade(1); // O ID da atividade que acabamos de inserir no banco
+        presenca.setDataPresenca(LocalDate.now());
+        presenca.setStatusPresenca("Presente");
+        presenca.setHorasCumpridas(4);
 
-        System.out.println("\n2. TESTANDO ATUALIZAÇÃO (UPDATE)...");
-        alvo.setContato("(43) 99999-8888"); // Simulando uma mudança de telefone
-        alvo.setCorRaca("Parda"); // Simulando correção de um dado
+        FrequenciaDAO freqDao = new FrequenciaDAO();
+        System.out.println("Registrando presença na oficina para: " + jovem.getNomeCompleto());
 
-        boolean atualizou = dao.atualizar(alvo);
-        System.out.println(atualizou ? "-> Dados atualizados com sucesso!" : "-> Falha ao atualizar.");
+        boolean sucesso = freqDao.registrar(presenca);
 
-        System.out.println("\n3. TESTANDO INATIVAÇÃO (EXCLUSÃO LÓGICA)...");
-        boolean inativou = dao.inativar(cpfTeste);
-        System.out.println(inativou ? "-> Jovem inativado com sucesso!" : "-> Falha ao inativar.");
-
-        System.out.println("\n4. CONFERINDO O RESULTADO FINAL DIRETO DO BANCO...");
-        List<Adolescente> conferir = dao.listar();
-        for (Adolescente j : conferir) {
-            if (j.getCpf() == cpfTeste) {
-                System.out.println("Nome: " + j.getNomeCompleto());
-                System.out.println("Novo Contato: " + j.getContato());
-                System.out.println("Novo Status: " + j.getStatus()); // Deve imprimir "Inativo"
-            }
+        if (sucesso) {
+            System.out.println("-> Sucesso! Presença contabilizada no banco.");
+        } else {
+            System.out.println("-> Falha ao registrar presença. Verifique o console.");
         }
     }
 }

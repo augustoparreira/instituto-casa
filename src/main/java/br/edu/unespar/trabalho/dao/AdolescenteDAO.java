@@ -96,4 +96,74 @@ public class AdolescenteDAO {
 
         return lista;
     }
+
+    public boolean atualizar(Adolescente adolescente) {
+        String sqlPessoa = "UPDATE Pessoa SET nome_completo = ?, data_nascimento = ?, contato = ?, email = ? WHERE cpf = ?";
+        String sqlAdolescente = "UPDATE Adolescente SET naturalidade = ?, genero = ?, cor_raca = ?, status = ? WHERE cpf_adolescente = ?";
+
+        Connection conn = null;
+
+        try {
+            conn = ConnectionFactory.getConnection();
+            conn.setAutoCommit(false); // Inicia a transação
+
+            // Atualiza os dados na tabela pai (Pessoa)
+            try (PreparedStatement stmtPessoa = conn.prepareStatement(sqlPessoa)) {
+                stmtPessoa.setString(1, adolescente.getNomeCompleto());
+                stmtPessoa.setDate(2, Date.valueOf(adolescente.getDataNascimento()));
+                stmtPessoa.setString(3, adolescente.getContato());
+                stmtPessoa.setString(4, adolescente.getEmail());
+                stmtPessoa.setLong(5, adolescente.getCpf());
+                stmtPessoa.executeUpdate();
+            }
+
+            // Atualiza os dados na tabela filha (Adolescente)
+            try (PreparedStatement stmtAdolescente = conn.prepareStatement(sqlAdolescente)) {
+                stmtAdolescente.setString(1, adolescente.getNaturalidade());
+                stmtAdolescente.setString(2, adolescente.getGenero());
+                stmtAdolescente.setString(3, adolescente.getCorRaca());
+                stmtAdolescente.setString(4, adolescente.getStatus());
+                stmtAdolescente.setLong(5, adolescente.getCpf());
+                stmtAdolescente.executeUpdate();
+            }
+
+            conn.commit(); // Confirma as duas alterações
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao atualizar adolescente: " + e.getMessage());
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Erro ao fazer rollback: " + ex.getMessage());
+            }
+            return false;
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("Erro ao fechar conexão: " + e.getMessage());
+            }
+        }
+    }
+
+    public boolean inativar(long cpf) {
+        String sql = "UPDATE Adolescente SET status = 'Inativo' WHERE cpf_adolescente = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, cpf);
+            int linhasAfetadas = stmt.executeUpdate();
+
+            return linhasAfetadas > 0;
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao inativar adolescente: " + e.getMessage());
+            return false;
+        }
+    }
 }

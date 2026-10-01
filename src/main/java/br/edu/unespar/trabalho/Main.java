@@ -1,10 +1,11 @@
 package br.edu.unespar.trabalho;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
-import br.edu.unespar.trabalho.dao.FrequenciaDAO;
-import br.edu.unespar.trabalho.dao.ResponsavelDAO;
+import br.edu.unespar.trabalho.dao.MedidaSocioeducativaDAO;
 import br.edu.unespar.trabalho.model.Adolescente;
-import br.edu.unespar.trabalho.model.Responsavel;
+import br.edu.unespar.trabalho.model.MedidaSocioeducativa;
+
+import java.time.LocalDate;
 import java.util.List;
 
 public class Main {
@@ -12,28 +13,48 @@ public class Main {
         AdolescenteDAO adoDao = new AdolescenteDAO();
         List<Adolescente> jovens = adoDao.listar();
 
-        if (jovens.isEmpty()) return;
+        if (jovens.isEmpty()) {
+            System.out.println("Nenhum adolescente encontrado no banco.");
+            return;
+        }
 
         Adolescente jovem = jovens.get(0);
         long cpfJovem = jovem.getCpf();
-        System.out.println("Relatório do Jovem: " + jovem.getNomeCompleto() + "\n");
 
-        // 1. Testando a listagem de responsáveis
-        ResponsavelDAO respDao = new ResponsavelDAO();
-        List<Responsavel> familia = respDao.listarResponsaveis(cpfJovem);
+        System.out.println("--- TESTE DE MEDIDA SOCIOEDUCATIVA ---");
+        System.out.println("Adolescente: " + jovem.getNomeCompleto());
 
-        System.out.println("--- COMPOSIÇÃO FAMILIAR ---");
-        for (Responsavel r : familia) {
-            System.out.println("Nome: " + r.getNomeCompleto());
-            System.out.println("Vínculo: " + r.getParentesco() + (r.isContatoPrincipal() ? " (Contato Principal)" : ""));
-            System.out.println("Telefone: " + r.getContato() + "\n");
+        // 1. Configurando a Medida Judicial de 120 horas
+        MedidaSocioeducativa medida = new MedidaSocioeducativa();
+        medida.setIdMedida(1);
+        medida.setCpfAdolescente(cpfJovem);
+        medida.setReincidencia(false);
+        medida.setTipoMedida("PSC"); // Prestação de Serviços à Comunidade
+        medida.setDataInicio(LocalDate.now());
+        medida.setHistoricoInfracional("Ato infracional leve");
+        medida.setDuracaoMeses(null); // PSC usa apenas horas
+        medida.setDuracaoHoras(120);
+
+        MedidaSocioeducativaDAO medidaDao = new MedidaSocioeducativaDAO();
+
+        System.out.println("Gravando medida no PostgreSQL...");
+        boolean sucesso = medidaDao.inserir(medida);
+
+        if (sucesso) {
+            System.out.println("-> Sucesso! Medida de PSC (120h) registrada.");
+        } else {
+            System.out.println("-> Aviso: Medida falhou (ou o ID 1 já foi cadastrado).");
         }
 
-        // 2. Testando a contagem de faltas
-        FrequenciaDAO freqDao = new FrequenciaDAO();
-        int totalFaltas = freqDao.consultarFaltas(cpfJovem);
+        // 2. O Método de Ouro: Calculando o Progresso
+        System.out.println("\n--- CÁLCULO DE PROGRESSO JUDICIAL ---");
+        int horasCumpridas = medidaDao.consultarHorasCumpridas(cpfJovem);
 
-        System.out.println("--- CONTROLE DE MEDIDA ---");
-        System.out.println("Faltas acumuladas: " + totalFaltas);
+        System.out.println("-> Horas cumpridas em oficinas: " + horasCumpridas + "h");
+        System.out.println("-> Meta estipulada pelo juiz: " + medida.getDuracaoHoras() + "h");
+
+        // Calculando a porcentagem exata que o Gabriel e o João Vitor precisam para a tela
+        double porcentagem = ((double) horasCumpridas / medida.getDuracaoHoras()) * 100;
+        System.out.println("-> Progresso Total: " + String.format("%.1f", porcentagem) + "%");
     }
 }

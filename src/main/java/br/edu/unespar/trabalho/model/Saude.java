@@ -5,7 +5,7 @@ public class Saude {
     private String ubsReferencia;
     private boolean usoSpa;
     private String observacoes;
-    private String substanciasUtilizadas;
+    private String substanciasUtilizadas; // somente se usoSpa = true
     private long cpfAdolescente;
 
     public int getIdFichaSaude() { return idFichaSaude; }
@@ -20,4 +20,9 @@ public class Saude {
     public void setSubstanciasUtilizadas(String substanciasUtilizadas) { this.substanciasUtilizadas = substanciasUtilizadas; }
     public long getCpfAdolescente() { return cpfAdolescente; }
     public void setCpfAdolescente(long cpfAdolescente) { this.cpfAdolescente = cpfAdolescente; }
+
+    public void validar() {
+        if (!usoSpa && substanciasUtilizadas != null && !substanciasUtilizadas.isBlank())
+            throw new IllegalArgumentException("Substâncias só podem ser informadas quando há uso de SPA.");
+    }
 }

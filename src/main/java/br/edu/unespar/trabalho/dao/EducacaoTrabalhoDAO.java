@@ -8,41 +8,20 @@ import java.sql.*;
 public class EducacaoTrabalhoDAO {
 
     public boolean inserir(EducacaoTrabalho et) {
-        String sql = "INSERT INTO EducacaoTrabalho (id_educacao_trabalho, estuda, escola, serie, trabalha, funcao, vinculo_empregaticio, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO EducacaoTrabalho (id_educacaoTrabalho, estuda, escola, ano_serie, trabalha, local_trabalho, funcao, vinculo_empregaticio, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, et.getIdEducacaoTrabalho());
             stmt.setBoolean(2, et.isEstuda());
-
-            if (et.isEstuda() && et.getEscola() != null) {
-                stmt.setString(3, et.getEscola());
-            } else {
-                stmt.setNull(3, Types.VARCHAR);
-            }
-
-            if (et.isEstuda() && et.getSerie() != null) {
-                stmt.setString(4, et.getSerie());
-            } else {
-                stmt.setNull(4, Types.VARCHAR);
-            }
-
+            setStringOuNulo(stmt, 3, et.isEstuda() ? et.getEscola() : null);
+            setStringOuNulo(stmt, 4, et.isEstuda() ? et.getSerie() : null);
             stmt.setBoolean(5, et.isTrabalha());
-
-            if (et.isTrabalha() && et.getFuncao() != null) {
-                stmt.setString(6, et.getFuncao());
-            } else {
-                stmt.setNull(6, Types.VARCHAR);
-            }
-
-            if (et.isTrabalha() && et.getVinculoEmpregaticio() != null) {
-                stmt.setString(7, et.getVinculoEmpregaticio());
-            } else {
-                stmt.setNull(7, Types.VARCHAR);
-            }
-
-            stmt.setLong(8, et.getCpfAdolescente());
+            setStringOuNulo(stmt, 6, et.isTrabalha() ? et.getLocalTrabalho() : null);
+            setStringOuNulo(stmt, 7, et.isTrabalha() ? et.getFuncao() : null);
+            setStringOuNulo(stmt, 8, et.isTrabalha() ? et.getVinculoEmpregaticio() : null);
+            stmt.setLong(9, et.getCpfAdolescente());
 
             stmt.executeUpdate();
             return true;
@@ -53,7 +32,6 @@ public class EducacaoTrabalhoDAO {
         }
     }
 
-    // Buscar dados de educação e trabalho
     public EducacaoTrabalho buscarPorCpf(long cpfAdolescente) {
         String sql = "SELECT * FROM EducacaoTrabalho WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -62,11 +40,12 @@ public class EducacaoTrabalhoDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     EducacaoTrabalho et = new EducacaoTrabalho();
-                    et.setIdEducacaoTrabalho(rs.getInt("id_educacao_trabalho"));
+                    et.setIdEducacaoTrabalho(rs.getInt("id_educacaoTrabalho"));
                     et.setEstuda(rs.getBoolean("estuda"));
                     et.setEscola(rs.getString("escola"));
-                    et.setSerie(rs.getString("serie"));
+                    et.setSerie(rs.getString("ano_serie"));
                     et.setTrabalha(rs.getBoolean("trabalha"));
+                    et.setLocalTrabalho(rs.getString("local_trabalho"));
                     et.setFuncao(rs.getString("funcao"));
                     et.setVinculoEmpregaticio(rs.getString("vinculo_empregaticio"));
                     et.setCpfAdolescente(rs.getLong("cpf_adolescente"));
@@ -79,24 +58,29 @@ public class EducacaoTrabalhoDAO {
         return null;
     }
 
-    // Atualizar dados de educação e trabalho
     public boolean atualizar(EducacaoTrabalho et) {
-        String sql = "UPDATE EducacaoTrabalho SET estuda = ?, escola = ?, serie = ?, trabalha = ?, funcao = ?, vinculo_empregaticio = ? WHERE cpf_adolescente = ?";
+        String sql = "UPDATE EducacaoTrabalho SET estuda = ?, escola = ?, ano_serie = ?, trabalha = ?, local_trabalho = ?, funcao = ?, vinculo_empregaticio = ? WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+
             stmt.setBoolean(1, et.isEstuda());
-            if (et.isEstuda() && et.getEscola() != null) stmt.setString(2, et.getEscola()); else stmt.setNull(2, Types.VARCHAR);
-            if (et.isEstuda() && et.getSerie() != null) stmt.setString(3, et.getSerie()); else stmt.setNull(3, Types.VARCHAR);
-
+            setStringOuNulo(stmt, 2, et.isEstuda() ? et.getEscola() : null);
+            setStringOuNulo(stmt, 3, et.isEstuda() ? et.getSerie() : null);
             stmt.setBoolean(4, et.isTrabalha());
-            if (et.isTrabalha() && et.getFuncao() != null) stmt.setString(5, et.getFuncao()); else stmt.setNull(5, Types.VARCHAR);
-            if (et.isTrabalha() && et.getVinculoEmpregaticio() != null) stmt.setString(6, et.getVinculoEmpregaticio()); else stmt.setNull(6, Types.VARCHAR);
+            setStringOuNulo(stmt, 5, et.isTrabalha() ? et.getLocalTrabalho() : null);
+            setStringOuNulo(stmt, 6, et.isTrabalha() ? et.getFuncao() : null);
+            setStringOuNulo(stmt, 7, et.isTrabalha() ? et.getVinculoEmpregaticio() : null);
+            stmt.setLong(8, et.getCpfAdolescente());
 
-            stmt.setLong(7, et.getCpfAdolescente());
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Erro ao atualizar educação/trabalho: " + e.getMessage());
             return false;
         }
+    }
+
+    private void setStringOuNulo(PreparedStatement stmt, int idx, String valor) throws SQLException {
+        if (valor != null) stmt.setString(idx, valor);
+        else stmt.setNull(idx, Types.VARCHAR);
     }
 }

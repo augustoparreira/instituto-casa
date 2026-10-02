@@ -5,8 +5,11 @@ import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ComposicaoFamiliarDAO {
 
@@ -45,5 +48,40 @@ public class ComposicaoFamiliarDAO {
             System.err.println("Erro ao salvar composição familiar: " + e.getMessage());
             return false;
         }
+    }
+
+    public List<ComposicaoFamiliar> listarPorAdolescente(long cpfAdolescente) {
+        List<ComposicaoFamiliar> lista = new ArrayList<>();
+        String sql = "SELECT id_composicaoFamiliar, nome, parentesco, idade, renda, escolaridade, profissao, cpf_adolescente " +
+                "FROM ComposicaoFamiliar WHERE cpf_adolescente = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, cpfAdolescente);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    ComposicaoFamiliar cf = new ComposicaoFamiliar();
+                    cf.setIdComposicaoFamiliar(rs.getInt("id_composicaoFamiliar"));
+                    cf.setNome(rs.getString("nome"));
+                    cf.setParentesco(rs.getString("parentesco"));
+
+                    int idade = rs.getInt("idade");
+                    cf.setIdade(rs.wasNull() ? null : idade);
+
+                    double renda = rs.getDouble("renda");
+                    cf.setRenda(rs.wasNull() ? null : renda);
+
+                    cf.setEscolaridade(rs.getString("escolaridade"));
+                    cf.setProfissao(rs.getString("profissao"));
+                    cf.setCpfAdolescente(rs.getLong("cpf_adolescente"));
+                    lista.add(cf);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar composição familiar: " + e.getMessage());
+        }
+        return lista;
     }
 }

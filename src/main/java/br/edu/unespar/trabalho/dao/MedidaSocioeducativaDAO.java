@@ -15,7 +15,7 @@ public class MedidaSocioeducativaDAO {
 
             stmt.setInt(1, medida.getIdMedida());
             stmt.setBoolean(2, medida.isReincidencia());
-            stmt.setString(3, medida.getTipoMedida());
+            stmt.setString(3, medida.getTipoMedida() != null ? medida.getTipoMedida().getCodigo() : null); // Enum corrigido
             stmt.setDate(4, Date.valueOf(medida.getDataInicio()));
             stmt.setString(5, medida.getHistoricoInfracional());
 
@@ -35,10 +35,8 @@ public class MedidaSocioeducativaDAO {
         }
     }
 
-    // O método de negócio exigido no diagrama de classes!
     public int consultarHorasCumpridas(long cpfAdolescente) {
-        // Soma as horas de todas as presenças do jovem
-        String sql = "SELECT SUM(horas_cumpridas) AS total_horas FROM Frequencia WHERE cpf_adolescente = ? AND status_presenca = 'Presente'";
+        String sql = "SELECT SUM(horas_cumpridas) AS total_horas FROM Frequencia WHERE cpf_adolescente = ? AND status_presenca = 'PRESENTE'";
 
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

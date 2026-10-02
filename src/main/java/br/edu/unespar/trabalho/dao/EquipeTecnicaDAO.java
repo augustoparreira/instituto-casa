@@ -1,6 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
 import br.edu.unespar.trabalho.model.EquipeTecnica;
+import br.edu.unespar.trabalho.model.NivelAcesso;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.*;
@@ -28,7 +29,7 @@ public class EquipeTecnicaDAO {
                     user.setNomeCompleto(rs.getString("nome_completo"));
                     user.setLogin(rs.getString("login"));
                     user.setCargoFuncao(rs.getString("cargo_funcao"));
-                    user.setNivelAcesso(rs.getString("nivel_acesso"));
+                    user.setNivelAcesso(NivelAcesso.fromCodigo(rs.getString("nivel_acesso"))); // Enum corrigido
                     return user;
                 }
             }
@@ -62,7 +63,7 @@ public class EquipeTecnicaDAO {
                 stmtEquipe.setString(2, membro.getLogin());
                 stmtEquipe.setString(3, membro.getSenha());
                 stmtEquipe.setString(4, membro.getCargoFuncao());
-                stmtEquipe.setString(5, membro.getNivelAcesso());
+                stmtEquipe.setString(5, membro.getNivelAcesso() != null ? membro.getNivelAcesso().getCodigo() : null); // Enum corrigido
                 stmtEquipe.executeUpdate();
             }
 
@@ -78,7 +79,6 @@ public class EquipeTecnicaDAO {
         }
     }
 
-    // Nunca retorna a senha.
     public List<EquipeTecnica> listar() {
         List<EquipeTecnica> lista = new ArrayList<>();
         String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +
@@ -116,7 +116,6 @@ public class EquipeTecnicaDAO {
         return null;
     }
 
-    // Se a senha vier nula/vazia, a senha atual é mantida.
     public boolean atualizar(EquipeTecnica membro) {
         String sqlPessoa = "UPDATE Pessoa SET nome_completo = ?, data_nascimento = ?, contato = ?, email = ? WHERE cpf = ?";
         boolean trocaSenha = membro.getSenha() != null && !membro.getSenha().isBlank();
@@ -141,7 +140,8 @@ public class EquipeTecnicaDAO {
             try (PreparedStatement stmtEquipe = conn.prepareStatement(sqlEquipe)) {
                 stmtEquipe.setString(1, membro.getLogin());
                 stmtEquipe.setString(2, membro.getCargoFuncao());
-                stmtEquipe.setString(3, membro.getNivelAcesso());
+                stmtEquipe.setString(3, membro.getNivelAcesso() != null ? membro.getNivelAcesso().getCodigo() : null); // Enum corrigido
+
                 if (trocaSenha) {
                     stmtEquipe.setString(4, membro.getSenha());
                     stmtEquipe.setLong(5, membro.getCpf());
@@ -163,7 +163,6 @@ public class EquipeTecnicaDAO {
         }
     }
 
-    // Exclusão física. Falha (rollback) se o membro já tiver acompanhamentos, PIAs ou documentos (FK).
     public boolean excluir(long cpf) {
         Connection conn = null;
         try {
@@ -203,7 +202,7 @@ public class EquipeTecnicaDAO {
         e.setEmail(rs.getString("email"));
         e.setLogin(rs.getString("login"));
         e.setCargoFuncao(rs.getString("cargo_funcao"));
-        e.setNivelAcesso(rs.getString("nivel_acesso"));
+        e.setNivelAcesso(NivelAcesso.fromCodigo(rs.getString("nivel_acesso"))); // Enum corrigido
         return e;
     }
 

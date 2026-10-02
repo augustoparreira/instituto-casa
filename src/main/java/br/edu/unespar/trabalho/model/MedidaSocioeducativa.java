@@ -3,10 +3,6 @@ package br.edu.unespar.trabalho.model;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-/**
- * Reincidência NÃO é campo: é derivada (adolescente com mais de uma medida).
- * Calcule no service/DAO contando as medidas do adolescente.
- */
 public class MedidaSocioeducativa {
     private int idMedida;
     private long cpfAdolescente;
@@ -16,25 +12,36 @@ public class MedidaSocioeducativa {
     private Integer duracaoMeses; // somente LA
     private Integer duracaoHoras; // somente PSC
 
+    // Campo de reincidência mantido (informado pela equipa técnica)
+    private boolean reincidencia;
+
+    public boolean isReincidencia() { return reincidencia; }
+    public void setReincidencia(boolean reincidencia) { this.reincidencia = reincidencia; }
+
     public int getIdMedida() { return idMedida; }
     public void setIdMedida(int idMedida) { this.idMedida = idMedida; }
+
     public long getCpfAdolescente() { return cpfAdolescente; }
     public void setCpfAdolescente(long cpfAdolescente) { this.cpfAdolescente = cpfAdolescente; }
+
     public TipoMedida getTipoMedida() { return tipoMedida; }
     public void setTipoMedida(TipoMedida tipoMedida) { this.tipoMedida = tipoMedida; }
+
     public LocalDate getDataInicio() { return dataInicio; }
     public void setDataInicio(LocalDate dataInicio) { this.dataInicio = dataInicio; }
+
     public String getHistoricoInfracional() { return historicoInfracional; }
     public void setHistoricoInfracional(String historicoInfracional) { this.historicoInfracional = historicoInfracional; }
+
     public Integer getDuracaoMeses() { return duracaoMeses; }
     public void setDuracaoMeses(Integer duracaoMeses) { this.duracaoMeses = duracaoMeses; }
+
     public Integer getDuracaoHoras() { return duracaoHoras; }
     public void setDuracaoHoras(Integer duracaoHoras) { this.duracaoHoras = duracaoHoras; }
 
     public boolean isLA() { return tipoMedida == TipoMedida.LA; }
     public boolean isPSC() { return tipoMedida == TipoMedida.PSC; }
 
-    /** Meses corridos desde o início da medida (0 se ainda não começou). */
     public int getMesesCorridos() {
         return getMesesCorridos(LocalDate.now());
     }

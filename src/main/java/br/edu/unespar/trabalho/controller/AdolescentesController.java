@@ -1,5 +1,6 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import javafx.collections.FXCollections;
@@ -9,7 +10,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -44,16 +44,14 @@ public class AdolescentesController {
     private String filtroTipoAtual = "Todos";
     private String filtroStatusAtual = "Todos";
 
+    private AdolescenteDAO adolescenteDAO;
+
     @FXML
     public void initialize() {
-        listaOriginal = FXCollections.observableArrayList(
-                new AdolescenteDTO("Lucas Henrique Oliveira", "123.456.789-00", "PSC", 0.40, "48/120h", "Dra. Ana Paula Costa", "Ativo", "Balneário Praia Grande", "14/03/2007", "Masculino"),
-                new AdolescenteDTO("Mariana dos Santos Silva", "234.567.890-11", "LA", 0.25, "3/12h", "Psic. Bruno Ferreira", "Ativo", "Centro", "22/09/2008", "Feminino"),
-                new AdolescenteDTO("Gabriel Alves Pereira", "345.678.901-22", "PSC", 1.00, "90/90h", "Ass. Soc. Carla Mendes", "Ativo", "Jardim Progresso", "05/11/2006", "Masculino"),
-                new AdolescenteDTO("Isabela Rocha Cardoso", "456.789.012-33", "LA", 0.41, "5/12h", "Dra. Ana Paula Costa", "Suspenso", "Vila Operária", "18/01/2007", "Feminino"),
-                new AdolescenteDTO("Felipe Martins Souza", "567.890.123-44", "PSC", 0.36, "22/60h", "Psic. Bruno Ferreira", "Ativo", "Parque da Fonte", "30/07/2008", "Masculino"),
-                new AdolescenteDTO("Rafaela Lima Torres", "678.901.234-55", "PSC", 1.00, "60/60h", "Ass. Soc. Carla Mendes", "Encerrado", "Centro", "12/12/2006", "Feminino")
-        );
+        adolescenteDAO = new AdolescenteDAO();
+
+        // Controller limpo: Pede a lista pronta para o DAO!
+        listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());
 
         listaFiltrada = new FilteredList<>(listaOriginal, p -> true);
 
@@ -107,6 +105,8 @@ public class AdolescentesController {
                 }
             }
         });
+
+        atualizarContador();
     }
 
     @FXML
@@ -125,7 +125,13 @@ public class AdolescentesController {
             return combinaTexto && combinaTipo && combinaStatus;
         });
 
-        lblTotalRegistros.setText(listaFiltrada.size() + " registro(s) encontrado(s)");
+        atualizarContador();
+    }
+
+    private void atualizarContador() {
+        if (lblTotalRegistros != null) {
+            lblTotalRegistros.setText(listaFiltrada.size() + " registro(s) encontrado(s)");
+        }
     }
 
     @FXML public void filtrarTipoTodos(ActionEvent e) { filtroTipoAtual = "Todos"; atualizarEstiloBotoesTipo(btnTipoTodos); filtrarAdolescentes(); }
@@ -176,5 +182,8 @@ public class AdolescentesController {
     @FXML public void fazerLogout(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Login.fxml", "Login"); }
     @FXML public void irParaRelatorios(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/RelatoriosView.fxml", "Relatórios"); }
     @FXML public void irParaEquipeTecnica(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
-
+    @FXML
+    public void abrirTelaCadastro(ActionEvent event) {
+        NavegacaoUtil.mudarTela(event, "/View/CadastroAdolescenteView.fxml", "Novo Cadastro");
+    }
 }

@@ -8,6 +8,10 @@ import java.sql.*;
 public class MedidaSocioeducativaDAO {
 
     public boolean inserir(MedidaSocioeducativa medida) {
+        // Valida as regras de negócio ANTES de tentar salvar no banco.
+        // Se falhar, lança IllegalArgumentException e o Controller captura.
+        medida.validar();
+
         String sql = "INSERT INTO MedidaSocioeducativa (id_medida, reincidencia, tipo_medida, data_inicio, historico_infracional, duracao_meses, duracao_horas, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -15,7 +19,7 @@ public class MedidaSocioeducativaDAO {
 
             stmt.setInt(1, medida.getIdMedida());
             stmt.setBoolean(2, medida.isReincidencia());
-            stmt.setString(3, medida.getTipoMedida() != null ? medida.getTipoMedida().getCodigo() : null); // Enum corrigido
+            stmt.setString(3, medida.getTipoMedida() != null ? medida.getTipoMedida().getCodigo() : null);
             stmt.setDate(4, Date.valueOf(medida.getDataInicio()));
             stmt.setString(5, medida.getHistoricoInfracional());
 

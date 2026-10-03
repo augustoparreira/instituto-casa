@@ -75,3 +75,51 @@
 
 .form-label-mini { -fx-text-fill: #888888; -fx-font-size: 10px; -fx-font-weight: bold; }
 .form-value { -fx-text-fill: #333333; -fx-font-size: 14px; -fx-font-weight: bold; }
+
+.combo-box-popup .list-view .list-cell {
+    -fx-text-fill: #2b2b2b;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #e8f3ee; /* Fundo verde bem clarinho */
+    -fx-text-fill: #19523e; /* Texto verde escuro */
+    -fx-cursor: hand;
+}
+
+.combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #19523e; /* Fundo verde escuro do Instituto */
+    -fx-text-fill: white; /* Texto branco para dar contraste */
+}
+
+/* ===== Perfil do adolescente: abas Frequência, PIA e Família/Social ===== */
+.btn-outline { -fx-background-color: white; -fx-border-color: #cfcfc8; -fx-border-radius: 18px; -fx-background-radius: 18px; -fx-text-fill: #333333; -fx-font-size: 12px; -fx-padding: 7px 16px; -fx-cursor: hand; }
+.btn-outline:hover { -fx-background-color: #f1f1ec; }
+
+.divider { -fx-background-color: #e5e5e0; -fx-min-height: 1px; -fx-max-height: 1px; }
+.section-label { -fx-text-fill: #666666; -fx-font-size: 11px; -fx-font-weight: bold; }
+.empty-text { -fx-text-fill: #888888; -fx-font-size: 13px; -fx-padding: 10px 0; }
+.error-text { -fx-text-fill: #c0392b; -fx-font-size: 12px; }
+
+.stat-box { -fx-background-color: #f4f4f0; -fx-background-radius: 10px; -fx-padding: 18px 10px; }
+.stat-number-green { -fx-font-family: "Georgia"; -fx-font-size: 28px; -fx-text-fill: #1e9e6a; }
+.stat-number-red { -fx-font-family: "Georgia"; -fx-font-size: 28px; -fx-text-fill: #e0343a; }
+.stat-number-dark { -fx-font-family: "Georgia"; -fx-font-size: 28px; -fx-text-fill: #19523e; }
+.stat-number-orange { -fx-font-family: "Georgia"; -fx-font-size: 28px; -fx-text-fill: #d4881c; }
+.stat-label { -fx-text-fill: #777777; -fx-font-size: 11px; }
+
+.table-head { -fx-text-fill: #666666; -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 10px 11px; -fx-border-color: transparent transparent #333333 transparent; }
+.table-cell-box { -fx-padding: 12px 11px; -fx-border-color: transparent transparent #e5e5e0 transparent; }
+.table-cell-text { -fx-text-fill: #333333; -fx-font-size: 12px; }
+.table-cell-mono { -fx-text-fill: #333333; -fx-font-size: 12px; -fx-font-family: "Consolas", "Courier New", monospace; }
+
+.badge-presente { -fx-background-color: #e8f8f0; -fx-text-fill: #1e9e6a; -fx-font-size: 10px; -fx-padding: 2px 8px; -fx-background-radius: 10px; }
+.badge-falta { -fx-background-color: #fdeaea; -fx-text-fill: #c0392b; -fx-font-size: 10px; -fx-padding: 2px 8px; -fx-background-radius: 10px; }
+.badge-justificada { -fx-background-color: #fff3d6; -fx-text-fill: #9a6a00; -fx-font-size: 10px; -fx-padding: 2px 8px; -fx-background-radius: 10px; }
+.badge-pendente { -fx-background-color: #fdf0c8; -fx-text-fill: #8a5a00; -fx-font-size: 10px; -fx-padding: 4px 12px; -fx-background-radius: 12px; }
+.badge-enviado { -fx-background-color: #e8f8f0; -fx-text-fill: #1e9e6a; -fx-font-size: 10px; -fx-padding: 4px 12px; -fx-background-radius: 12px; }
+.badge-principal { -fx-background-color: #dce8e0; -fx-text-fill: #19523e; -fx-font-size: 10px; -fx-padding: 3px 10px; -fx-background-radius: 10px; }
+
+.pessoa-card { -fx-background-color: #f4f4f0; -fx-background-radius: 8px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; -fx-padding: 12px 14px; }
+.pessoa-nome { -fx-text-fill: #222222; -fx-font-size: 13px; -fx-font-weight: bold; }
+.pessoa-sub { -fx-text-fill: #777777; -fx-font-size: 11px; }
+.form-value-normal { -fx-text-fill: #333333; -fx-font-size: 13px; }

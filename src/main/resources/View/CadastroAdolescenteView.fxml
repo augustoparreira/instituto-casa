@@ -109,6 +109,16 @@
                     </VBox>
                 </HBox>
 
+                <HBox spacing="20.0">
+                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                        <Label text="BAIRRO / COMUNIDADE" styleClass="form-label-mini" />
+                        <TextField fx:id="txtBairro" promptText="Ex: Jardim Paulista" styleClass="search-field" />
+                    </VBox>
+                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                        <!-- Espaço vazio para manter o alinhamento de 2 colunas -->
+                    </VBox>
+                </HBox>
+
                 <Region VBox.vgrow="ALWAYS" />
 
                 <!-- Botões de Ação -->

@@ -11,6 +11,12 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
+import br.edu.unespar.trabalho.model.AdolescenteDTO;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.stage.Stage;
+import java.time.LocalDate;
 
 public class CadastroAdolescenteController {
 
@@ -23,16 +29,15 @@ public class CadastroAdolescenteController {
     @FXML private TextField txtNaturalidade;
     @FXML private ComboBox<String> cmbGenero;
     @FXML private ComboBox<String> cmbCorRaca;
+    @FXML private TextField txtBairro; // NOVO CAMPO BAIRRO LIGADO AO FXML
 
     private AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
 
     @FXML
     public void initialize() {
-        // Opção "Não informado" ajustada para respeitar o limite de VARCHAR(15) da base de dados
         cmbGenero.setItems(FXCollections.observableArrayList("Masculino", "Feminino", "Outro", "Não informado"));
         cmbCorRaca.setItems(FXCollections.observableArrayList("Branca", "Preta", "Parda", "Amarela", "Indígena"));
 
-        // Aplica as máscaras de formatação em tempo real
         aplicarMascaraCPF(txtCpf);
         aplicarMascaraTelefone(txtContato);
     }
@@ -40,12 +45,9 @@ public class CadastroAdolescenteController {
     private void aplicarMascaraCPF(TextField textField) {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null) return;
-
-            // Remove tudo o que não for número
             String limpo = newValue.replaceAll("[^0-9]", "");
             if (limpo.length() > 11) limpo = limpo.substring(0, 11);
 
-            // Reconstrói a string com a pontuação
             StringBuilder formatado = new StringBuilder();
             for (int i = 0; i < limpo.length(); i++) {
                 if (i == 3 || i == 6) formatado.append(".");
@@ -53,7 +55,6 @@ public class CadastroAdolescenteController {
                 formatado.append(limpo.charAt(i));
             }
 
-            // Atualiza o campo e mantém o cursor no fim
             if (!newValue.equals(formatado.toString())) {
                 textField.setText(formatado.toString());
                 textField.positionCaret(formatado.length());
@@ -64,7 +65,6 @@ public class CadastroAdolescenteController {
     private void aplicarMascaraTelefone(TextField textField) {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null) return;
-
             String limpo = newValue.replaceAll("[^0-9]", "");
             if (limpo.length() > 11) limpo = limpo.substring(0, 11);
 
@@ -72,11 +72,8 @@ public class CadastroAdolescenteController {
             for (int i = 0; i < limpo.length(); i++) {
                 if (i == 0) formatado.append("(");
                 if (i == 2) formatado.append(") ");
-
-                // Lógica dinâmica: ajusta o traço se for telemóvel (11 dígitos) ou telefone fixo (10 dígitos)
                 if (limpo.length() == 11 && i == 7) formatado.append("-");
                 if (limpo.length() < 11 && i == 6) formatado.append("-");
-
                 formatado.append(limpo.charAt(i));
             }
 
@@ -95,10 +92,24 @@ public class CadastroAdolescenteController {
                 return;
             }
 
-            Adolescente novo = new Adolescente();
+            if (dpNascimento.getValue().isAfter(LocalDate.now())) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Data Inválida", "A data de nascimento não pode ser no futuro.");
+                return;
+            }
 
-            // Como agora usamos máscara, limpamos a pontuação antes de gravar no PostgreSQL (que espera um BIGINT)
+            String emailDigitado = txtEmail.getText();
+            if (emailDigitado != null && !emailDigitado.trim().isEmpty() && !emailDigitado.contains("@")) {
+                mostrarAlerta(Alert.AlertType.WARNING, "E-mail Inválido", "O campo de e-mail deve obrigatoriamente conter um '@'.");
+                return;
+            }
+
             String cpfNumeros = txtCpf.getText().replaceAll("[^0-9]", "");
+            if (cpfNumeros.length() != 11) {
+                mostrarAlerta(Alert.AlertType.WARNING, "CPF inválido", "O CPF deve ter 11 dígitos.");
+                return;
+            }
+
+            Adolescente novo = new Adolescente();
             novo.setCpf(Long.parseLong(cpfNumeros));
 
             novo.setNomeCompleto(txtNome.getText());
@@ -109,28 +120,56 @@ public class CadastroAdolescenteController {
             novo.setNaturalidade(txtNaturalidade.getText() != null && !txtNaturalidade.getText().isEmpty() ? txtNaturalidade.getText() : "Não informada");
             novo.setGenero(cmbGenero.getValue() != null ? cmbGenero.getValue() : "Não informado");
             novo.setCorRaca(cmbCorRaca.getValue() != null ? cmbCorRaca.getValue() : "Não informada");
+            novo.setBairro(txtBairro.getText()); // SALVA O BAIRRO NO MODELO
             novo.setStatus(StatusAdolescente.ATIVO);
 
             boolean sucesso = adolescenteDAO.inserir(novo);
 
             if (sucesso) {
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Adolescente cadastrado com sucesso!");
-                voltarParaLista(event);
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso",
+                        "Adolescente cadastrado! Agora cadastre a medida socioeducativa e o técnico de referência.");
+                abrirPerfil(event, novo.getCpf());
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Não foi possível cadastrar na base de dados. Verifique se o CPF já existe.");
             }
         } catch (NumberFormatException e) {
             mostrarAlerta(Alert.AlertType.ERROR, "Erro de Formatação", "O CPF é inválido.");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             e.printStackTrace();
-            mostrarAlerta(Alert.AlertType.ERROR, "Erro Inesperado", e.getMessage());
+            mostrarAlerta(Alert.AlertType.ERROR, "Banco de dados indisponível",
+                    "Não foi possível acessar o banco de dados.\nVerifique se o PostgreSQL está ligado e tente novamente.");
         }
     }
 
-    @FXML
-    public void voltarParaLista(ActionEvent event) {
-        NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes");
+    private void abrirPerfil(ActionEvent event, long cpf) {
+        try {
+            String cpfDigitos = String.format("%011d", cpf);
+            AdolescenteDTO dto = null;
+            for (AdolescenteDTO d : adolescenteDAO.listarResumoDTO()) {
+                if (d.getCpf().replaceAll("\\D", "").equals(cpfDigitos)) {
+                    dto = d;
+                    break;
+                }
+            }
+            if (dto == null) {
+                voltarParaLista(event);
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/View/DetalhesAdolescenteView.fxml"));
+            Parent root = loader.load();
+            DetalhesAdolescenteController controller = loader.getController();
+            controller.carregarDados(dto);
+
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            NavegacaoUtil.trocarRaiz(stage, root, "Instituto C.A.S.A. - Perfil de " + dto.getNome());
+        } catch (Exception e) {
+            e.printStackTrace();
+            voltarParaLista(event);
+        }
     }
+
+    @FXML public void voltarParaLista(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes"); }
 
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensagem) {
         Alert alert = new Alert(tipo);

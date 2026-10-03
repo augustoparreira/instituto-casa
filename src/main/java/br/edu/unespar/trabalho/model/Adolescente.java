@@ -4,6 +4,7 @@ public class Adolescente extends Pessoa {
     private String naturalidade;
     private String genero;
     private String corRaca;
+    private String bairro;
     private StatusAdolescente status = StatusAdolescente.ATIVO;
 
     public String getNaturalidade() { return naturalidade; }
@@ -12,6 +13,8 @@ public class Adolescente extends Pessoa {
     public void setGenero(String genero) { this.genero = genero; }
     public String getCorRaca() { return corRaca; }
     public void setCorRaca(String corRaca) { this.corRaca = corRaca; }
+    public String getBairro() { return bairro; }
+    public void setBairro(String bairro) { this.bairro = bairro; }
     public StatusAdolescente getStatus() { return status; }
     public void setStatus(StatusAdolescente status) { this.status = status; }
 }

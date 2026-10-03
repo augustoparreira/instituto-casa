@@ -17,6 +17,8 @@ public class AdolescenteDAO {
     public boolean inserir(Adolescente adolescente) {
         String sqlPessoa = "INSERT INTO Pessoa (cpf, nome_completo, data_nascimento, contato, email) VALUES (?, ?, ?, ?, ?)";
         String sqlAdolescente = "INSERT INTO Adolescente (cpf_adolescente, naturalidade, genero, cor_raca, status) VALUES (?, ?, ?, ?, ?)";
+        // Garante que o registo inicial da Situação Social seja criado com os campos NOT NULL preenchidos e o bairro correto.
+        String sqlSituacao = "INSERT INTO SituacaoSocial (id_situacaoSocial, renda, endereco, bairro, telefone, numero_nis, cras_referencia, cpf_adolescente) VALUES ((SELECT COALESCE(MAX(id_situacaoSocial), 0) + 1 FROM SituacaoSocial), 0, 'Não informado', ?, ?, 0, NULL, ?)";
 
         Connection conn = null;
 
@@ -40,6 +42,14 @@ public class AdolescenteDAO {
                 stmtAdolescente.setString(4, adolescente.getCorRaca());
                 stmtAdolescente.setString(5, adolescente.getStatus() != null ? adolescente.getStatus().getCodigo() : null);
                 stmtAdolescente.executeUpdate();
+            }
+
+            // Insere a Situação Social inicial para guardar o Bairro
+            try (PreparedStatement stmtSituacao = conn.prepareStatement(sqlSituacao)) {
+                stmtSituacao.setString(1, adolescente.getBairro() != null && !adolescente.getBairro().trim().isEmpty() ? adolescente.getBairro() : "Não informado");
+                stmtSituacao.setString(2, adolescente.getContato() != null ? adolescente.getContato() : "Não informado");
+                stmtSituacao.setLong(3, adolescente.getCpf());
+                stmtSituacao.executeUpdate();
             }
 
             conn.commit();
@@ -135,7 +145,6 @@ public class AdolescenteDAO {
         }
     }
 
-    // NOVO MÉTODO PARA A TELA: Executa a lógica complexa mantendo o Controller limpo
     public List<AdolescenteDTO> listarResumoDTO() {
         List<AdolescenteDTO> lista = new ArrayList<>();
         String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, a.genero, a.status, " +

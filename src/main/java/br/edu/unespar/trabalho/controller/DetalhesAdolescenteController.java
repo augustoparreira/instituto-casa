@@ -1,6 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
+import br.edu.unespar.trabalho.model.FrequenciaMensalDTO;
 import br.edu.unespar.trabalho.dao.AtividadeDAO;
 import br.edu.unespar.trabalho.dao.ComposicaoFamiliarDAO;
 import br.edu.unespar.trabalho.dao.EquipeTecnicaDAO;
@@ -128,6 +129,9 @@ public class DetalhesAdolescenteController {
     @FXML private Label lblFreqPresencas;
     @FXML private Label lblFreqFaltas;
     @FXML private Label lblFreqHoras;
+    @FXML private Label lblFreqMeses;
+    @FXML private VBox cardFreqHoras;
+    @FXML private VBox cardFreqMeses;
     @FXML private Label lblFreqPercentual;
     @FXML private ListView<Frequencia> listaFrequenciaPerfil;
     @FXML private Button btnCorrigirFrequencia;
@@ -202,11 +206,16 @@ public class DetalhesAdolescenteController {
                 setText(vazio || frequencia == null ? null : frequencia.getDataPresenca().format(FORMATO_DATA)
                         + " · " + frequencia + "\n" + Formatadores.textoOuTraco(frequencia.getObservacoes())
                         + (frequencia.getIdMedida() == null && frequencia.getHorasContabilizadas() > 0
-                            ? " · Horas sem vínculo com PSC: revise." : ""));
+                        ? " · Horas sem vínculo com PSC: revise." : ""));
             }
         });
         cmbMedidaPerfil.valueProperty().addListener((o,a,b)->exibirMedidaSelecionada());
         cmbTipoMedida.setItems(FXCollections.observableArrayList(TipoMedida.values()));
+
+        // Aplicando máscaras nos DatePickers de Medidas e PIA
+        aplicarMascaraData(dpInicioMedida);
+        aplicarMascaraData(dpFimMedida);
+        aplicarMascaraData(dpPiaData);
 
         cmbTecnico.setConverter(new StringConverter<>() {
             @Override
@@ -219,6 +228,29 @@ public class DetalhesAdolescenteController {
             @Override
             public EquipeTecnica fromString(String texto) {
                 return null;
+            }
+        });
+    }
+
+    private void aplicarMascaraData(DatePicker datePicker) {
+        if (datePicker == null) return;
+        TextField editor = datePicker.getEditor();
+        editor.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) return;
+            String limpo = newValue.replaceAll("[^0-9]", "");
+            if (limpo.length() > 8) limpo = limpo.substring(0, 8);
+
+            StringBuilder formatado = new StringBuilder();
+            for (int i = 0; i < limpo.length(); i++) {
+                if (i == 2 || i == 4) {
+                    formatado.append("/");
+                }
+                formatado.append(limpo.charAt(i));
+            }
+
+            if (!newValue.equals(formatado.toString())) {
+                editor.setText(formatado.toString());
+                editor.positionCaret(formatado.length());
             }
         });
     }
@@ -322,7 +354,6 @@ public class DetalhesAdolescenteController {
     }
     @FXML public void abrirFrequenciaMensal(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/FrequenciaView.fxml","Frequência mensal"); }
 
-    /** Depois de salvar algo, busca o resumo atualizado e redesenha o cabeçalho e as abas. */
     private void recarregarPerfil() {
         try {
             String cpfDigitos = String.format("%011d", cpfAtual);
@@ -336,8 +367,6 @@ public class DetalhesAdolescenteController {
             erroBanco(e);
         }
     }
-
-    // ===================== ABAS =====================
 
     @FXML
     public void mostrarAba(ActionEvent event) {
@@ -368,8 +397,6 @@ public class DetalhesAdolescenteController {
         caixa.setManaged(mostrar);
     }
 
-    // ===================== MEDIDA SOCIOEDUCATIVA =====================
-
     @FXML
     public void tipoMedidaSelecionado() {
         TipoMedida tipo = cmbTipoMedida.getValue();
@@ -385,7 +412,10 @@ public class DetalhesAdolescenteController {
     @FXML
     public void salvarMedida() {
         try { dpInicioMedida.commitValue(); dpFimMedida.commitValue(); }
-        catch(RuntimeException e) { mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","Confira as datas informadas."); return; }
+        catch(RuntimeException e) {
+            mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","A data informada está incompleta ou inválida. Verifique o dia, mês e ano.");
+            return;
+        }
         TipoMedida tipo = cmbTipoMedida.getValue();
         if (tipo == null || dpInicioMedida.getValue() == null || txtDuracao.getText().trim().isEmpty()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Campos obrigatórios",
@@ -425,7 +455,6 @@ public class DetalhesAdolescenteController {
                         "Não foi possível salvar a medida. Verifique os dados e tente novamente.");
             }
         } catch (IllegalArgumentException e) {
-            // regras de negócio do model (MedidaSocioeducativa.validar)
             mostrarAlerta(Alert.AlertType.WARNING, "Dados inválidos", e.getMessage());
         } catch (RuntimeException e) {
             erroBanco(e);
@@ -452,8 +481,6 @@ public class DetalhesAdolescenteController {
         }
     }
 
-    // ===================== FREQUÊNCIA E HORAS =====================
-
     @FXML public void atualizarFrequenciaMes() {
         try { dpMesFrequencia.commitValue(); carregarAbaFrequencia(); }
         catch(RuntimeException e) { erroBanco(e); }
@@ -468,7 +495,16 @@ public class DetalhesAdolescenteController {
         long injustificadas=registros.stream().filter(f->f.getStatusPresenca()==StatusPresenca.FALTA_INJUSTIFICADA).map(Frequencia::getDataPresenca).distinct().count();
         int horas=registros.stream().filter(f->f.getIdMedida()!=null).mapToInt(Frequencia::getHorasContabilizadas).sum();
         lblFreqPresencas.setText(Long.toString(presencas)); lblFreqFaltas.setText(Long.toString(faltas));
-        lblFreqHoras.setText(horas+"h"); lblFreqPercentual.setText(injustificadas>=2?"Irregular":"Regular");
+        lblFreqHoras.setText(horas+"h");
+        lblFreqPercentual.setText(injustificadas>=FrequenciaMensalDTO.LIMITE_FALTAS_INJUSTIFICADAS?"Irregular":"Regular");
+        // O indicador de medida depende do que o adolescente cumpre naquele mês: PSC conta horas, LA conta meses,
+        // e quem tem as duas medidas vê os dois cards.
+        var resumoMes=new FrequenciaMensalDTO(null,medidaDAO.listarPorAdolescente(cpfAtual),registros,mes,false);
+        boolean temPsc=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isPSC);
+        boolean temLa=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isLA);
+        lblFreqMeses.setText(resumoMes.getMeses().isBlank()?"-":resumoMes.getMeses());
+        alternar(cardFreqHoras,temPsc);
+        alternar(cardFreqMeses,temLa);
         listaFrequenciaPerfil.setItems(FXCollections.observableArrayList(registros));
     }
 
@@ -480,8 +516,6 @@ public class DetalhesAdolescenteController {
     @FXML public void registrarPresenca() {
         RegistroFrequenciaController.abrir(cpfAtual,LocalDate.now(),this::recarregarPerfil);
     }
-
-    // ===================== PIA =====================
 
     private void carregarAbaPia() {
         piaAtual = piaDAO.buscarPorCpf(cpfAtual);
@@ -517,12 +551,11 @@ public class DetalhesAdolescenteController {
         btnMarcarEnviado.setDisable(enviado);
     }
 
-    /** Preenche o formulário: vazio para um PIA novo, ou com os dados do PIA que está sendo editado. */
     private void prepararFormularioPia(PIA modelo) {
         boolean edicao = modelo != null;
         lblPiaFormTitulo.setText(edicao ? "Editar PIA" : "Elaborar PIA");
         dpPiaData.setValue(edicao ? modelo.getDataElaboracao() : LocalDate.now());
-        dpPiaData.setDisable(edicao); // a data de elaboração não muda depois de gravada
+        dpPiaData.setDisable(edicao);
         txtPiaDiagnostico.setText(edicao ? textoOuVazio(modelo.getDiagnostico()) : "");
         txtPiaVulnerabilidades.setText(edicao ? textoOuVazio(modelo.getVulnerabilidades()) : "");
         txtPiaPotencialidades.setText(edicao ? textoOuVazio(modelo.getPotencialidades()) : "");
@@ -598,8 +631,7 @@ public class DetalhesAdolescenteController {
                 carregarAbaPia();
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
-                        "Não foi possível salvar o PIA.\nSe o erro for de tamanho de texto, execute o script "
-                                + "ajustes_ddl.sql no banco.");
+                        "Não foi possível salvar o PIA.");
             }
         } catch (RuntimeException e) {
             erroBanco(e);
@@ -684,10 +716,7 @@ public class DetalhesAdolescenteController {
         }
     }
 
-    // ===================== FAMÍLIA E SOCIAL =====================
-
     private void carregarAbaFamilia() {
-        // Responsáveis legais
         boxResponsaveis.getChildren().clear();
         List<Responsavel> responsaveis = responsavelDAO.listarResponsaveis(cpfAtual);
         if (responsaveis.isEmpty()) {
@@ -705,7 +734,6 @@ public class DetalhesAdolescenteController {
             cartao.getChildren().addAll(editar,remover); boxResponsaveis.getChildren().add(cartao);
         }
 
-        // Demais membros da família
         boxComposicao.getChildren().clear();
         List<ComposicaoFamiliar> familiares = composicaoDAO.listarPorAdolescente(cpfAtual);
         if (familiares.isEmpty()) {
@@ -726,7 +754,6 @@ public class DetalhesAdolescenteController {
             cartao.getChildren().addAll(editar,remover); boxComposicao.getChildren().add(cartao);
         }
 
-        // Situação social + UBS (tabela Saude)
         SituacaoSocial social = situacaoSocialDAO.buscarPorCpf(cpfAtual);
         Saude saude = saudeDAO.buscarPorCpf(cpfAtual);
         boolean temDados = social != null || saude != null;
@@ -787,6 +814,8 @@ public class DetalhesAdolescenteController {
         txtCpf.setPromptText("Somente números");
         DatePicker dpNascimento = new DatePicker();
         dpNascimento.setMaxWidth(Double.MAX_VALUE);
+        aplicarMascaraData(dpNascimento);
+
         TextField txtContato = new TextField();
         txtContato.setPromptText("(41) 99999-9999");
         TextField txtEmail = new TextField();
@@ -823,7 +852,6 @@ public class DetalhesAdolescenteController {
                 } catch(RuntimeException e) { erro.setText(e.getMessage()); }
             }
         });
-
 
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
             String nome = txtNome.getText().trim();
@@ -892,7 +920,6 @@ public class DetalhesAdolescenteController {
             txtEscolaridade.setText(existente.getEscolaridade()); txtProfissao.setText(existente.getProfissao());
         }
 
-
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
             String nome = txtNome.getText().trim();
             if (nome.isEmpty() || nome.length() > 80) return "Informe o nome (até 80 caracteres).";
@@ -956,10 +983,6 @@ public class DetalhesAdolescenteController {
         return dialogo;
     }
 
-    /**
-     * Mostra o diálogo com botões Salvar/Cancelar. O validador devolve a mensagem de erro (e o diálogo
-     * continua aberto) ou null quando está tudo certo. Retorna true se o usuário confirmou.
-     */
     private boolean exibirFormulario(Dialog<ButtonType> dialogo, Node conteudo, Label erro, Supplier<String> validador) {
         VBox raiz = new VBox(12, conteudo, erro);
         raiz.setPrefWidth(500);
@@ -972,7 +995,7 @@ public class DetalhesAdolescenteController {
             String mensagem = validador.get();
             if (mensagem != null) {
                 erro.setText(mensagem);
-                evento.consume(); // mantém o diálogo aberto
+                evento.consume();
             }
         });
 
@@ -1015,13 +1038,10 @@ public class DetalhesAdolescenteController {
         return texto == null || texto.isBlank() ? null : texto.trim();
     }
 
-    /** "Lucas Henrique Oliveira" -> "Lucas_Henrique_Oliveira" (sem acentos, seguro para nome de arquivo). */
     private String nomeParaArquivo(String nome) {
         String semAcento = Normalizer.normalize(nome, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         return semAcento.trim().replaceAll("[^A-Za-z0-9]+", "_");
     }
-
-    // ===================== NAVEGAÇÃO E ALERTAS =====================
 
     @FXML public void voltarParaLista(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/AdolescentesView.fxml", "Adolescentes"); }
     @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Dashboard.fxml", "Painel de Controle"); }

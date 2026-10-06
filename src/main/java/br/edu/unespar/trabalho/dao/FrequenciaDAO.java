@@ -33,6 +33,8 @@ public class FrequenciaDAO {
                     s.setLong(1,f.getCpfAdolescente()); s.setObject(2,f.getDataPresenca()); s.setInt(3,edicao?f.getIdAtividade():-1);
                     try(ResultSet r=s.executeQuery()) { r.next(); if(r.getInt(1)+f.getHorasContabilizadas()>24) throw new IllegalArgumentException("A soma de horas do dia não pode ultrapassar 24."); }
                 }
+                YearMonth mesDoLancamento=YearMonth.from(f.getDataPresenca());
+                int faltasAntes=contarDatasComFaltaInjustificada(c,f.getCpfAdolescente(),mesDoLancamento);
                 String sql=edicao ? "UPDATE Frequencia SET status_presenca=?,horas_cumpridas=?,id_medida=?,observacoes=? WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=?"
                         : "INSERT INTO Frequencia(status_presenca,horas_cumpridas,id_medida,observacoes,cpf_adolescente,id_atividade,data_presenca) VALUES(?,?,?,?,?,?,?)";
                 try(PreparedStatement s=c.prepareStatement(sql)) {
@@ -41,6 +43,7 @@ public class FrequenciaDAO {
                     s.setInt(6,f.getIdAtividade()); s.setObject(7,f.getDataPresenca());
                     if(s.executeUpdate()!=1) throw new IllegalArgumentException("O lançamento não existe mais. Atualize a tela.");
                 }
+                sincronizarStatusAdolescente(c,f.getCpfAdolescente(),mesDoLancamento,faltasAntes);
                 c.commit(); return true;
             } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
         } catch(SQLException e) {
@@ -50,9 +53,56 @@ public class FrequenciaDAO {
     }
 
     public boolean excluir(Frequencia f) {
-        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM Frequencia WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=?")) {
-            s.setLong(1,f.getCpfAdolescente()); s.setInt(2,f.getIdAtividade()); s.setObject(3,f.getDataPresenca()); return s.executeUpdate()==1;
+        try(Connection c=ConnectionFactory.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                try(PreparedStatement s=c.prepareStatement("SELECT cpf_adolescente FROM Adolescente WHERE cpf_adolescente=? FOR UPDATE")) {
+                    s.setLong(1,f.getCpfAdolescente());
+                    s.executeQuery().close();
+                }
+                YearMonth mes=YearMonth.from(f.getDataPresenca());
+                int faltasAntes=contarDatasComFaltaInjustificada(c,f.getCpfAdolescente(),mes);
+                boolean excluiu;
+                try(PreparedStatement s=c.prepareStatement("DELETE FROM Frequencia WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=?")) {
+                    s.setLong(1,f.getCpfAdolescente()); s.setInt(2,f.getIdAtividade()); s.setObject(3,f.getDataPresenca());
+                    excluiu=s.executeUpdate()==1;
+                }
+                if(excluiu) sincronizarStatusAdolescente(c,f.getCpfAdolescente(),mes,faltasAntes);
+                c.commit(); return excluiu;
+            } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível excluir o lançamento.",e); }
+    }
+
+    /** Quantas datas distintas do mês têm falta injustificada (mesma regra da planilha mensal). */
+    private int contarDatasComFaltaInjustificada(Connection c,long cpf,YearMonth mes) throws SQLException {
+        java.util.Set<LocalDate> datas=new java.util.HashSet<>();
+        try(PreparedStatement s=c.prepareStatement("SELECT data_presenca,status_presenca FROM Frequencia WHERE cpf_adolescente=? AND data_presenca BETWEEN ? AND ?")) {
+            s.setLong(1,cpf); s.setObject(2,mes.atDay(1)); s.setObject(3,mes.atEndOfMonth());
+            try(ResultSet r=s.executeQuery()) {
+                while(r.next())
+                    if(StatusPresenca.fromCodigo(r.getString("status_presenca"))==StatusPresenca.FALTA_INJUSTIFICADA)
+                        datas.add(r.getDate("data_presenca").toLocalDate());
+            }
+        }
+        return datas.size();
+    }
+
+    /**
+     * Mantém o status do adolescente coerente com a frequência do mês do lançamento:
+     * - ao atingir o limite de faltas injustificadas, ATIVO passa para EM_DESCUMPRIMENTO;
+     * - se este mesmo lançamento (correção ou exclusão) desfez a irregularidade, EM_DESCUMPRIMENTO volta para ATIVO.
+     * INATIVO e EM_ANALISE_EXTINCAO nunca são alterados automaticamente.
+     */
+    private void sincronizarStatusAdolescente(Connection c,long cpf,YearMonth mes,int faltasAntes) throws SQLException {
+        int limite=FrequenciaMensalDTO.LIMITE_FALTAS_INJUSTIFICADAS;
+        int faltasDepois=contarDatasComFaltaInjustificada(c,cpf,mes);
+        String de,para;
+        if(faltasDepois>=limite) { de=StatusAdolescente.ATIVO.getCodigo(); para=StatusAdolescente.EM_DESCUMPRIMENTO.getCodigo(); }
+        else if(faltasAntes>=limite) { de=StatusAdolescente.EM_DESCUMPRIMENTO.getCodigo(); para=StatusAdolescente.ATIVO.getCodigo(); }
+        else return;
+        try(PreparedStatement s=c.prepareStatement("UPDATE Adolescente SET status=? WHERE cpf_adolescente=? AND upper(status)=?")) {
+            s.setString(1,para); s.setLong(2,cpf); s.setString(3,de); s.executeUpdate();
+        }
     }
 
     public List<Frequencia> listar(long cpf,LocalDate inicio,LocalDate fim) {

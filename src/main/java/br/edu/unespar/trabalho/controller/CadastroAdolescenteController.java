@@ -34,7 +34,7 @@ public class CadastroAdolescenteController {
     @FXML private TextField txtNaturalidade;
     @FXML private ComboBox<String> cmbGenero;
     @FXML private ComboBox<String> cmbCorRaca;
-    @FXML private TextField txtBairro; // NOVO CAMPO BAIRRO LIGADO AO FXML
+    @FXML private TextField txtBairro;
 
     @FXML private Label lblTitulo, lblIdade, lblAvisoIdade;
     @FXML private ComboBox<String> cmbMedidaProtetiva;
@@ -67,6 +67,7 @@ public class CadastroAdolescenteController {
         dpNascimento.valueProperty().addListener((o,a,b) -> atualizarIdade());
         aplicarMascaraCPF(txtCpf);
         aplicarMascaraTelefone(txtContato);
+        aplicarMascaraData(dpNascimento);
     }
 
     private void aplicarMascaraCPF(TextField textField) {
@@ -111,6 +112,27 @@ public class CadastroAdolescenteController {
         });
     }
 
+    private void aplicarMascaraData(DatePicker datePicker) {
+        TextField editor = datePicker.getEditor();
+        editor.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) return;
+            String limpo = newValue.replaceAll("[^0-9]", "");
+            if (limpo.length() > 8) limpo = limpo.substring(0, 8);
+
+            StringBuilder formatado = new StringBuilder();
+            for (int i = 0; i < limpo.length(); i++) {
+                if (i == 2 || i == 4) {
+                    formatado.append("/");
+                }
+                formatado.append(limpo.charAt(i));
+            }
+
+            if (!newValue.equals(formatado.toString())) {
+                editor.setText(formatado.toString());
+                editor.positionCaret(formatado.length());
+            }
+        });
+    }
 
     private void atualizarIdade() {
         LocalDate data=dpNascimento.getValue();
@@ -153,50 +175,75 @@ public class CadastroAdolescenteController {
     @FXML
     public void salvarAdolescente(ActionEvent event) {
         try {
-            // O DatePicker pode conter texto digitado ainda não confirmado com Enter.
             dpNascimento.commitValue();
+
+            // Valida se o DatePicker conseguiu converter a data ou se ficou inválida/incompleta
             if(txtNome.getText().isBlank() || dpNascimento.getValue()==null)
-                throw new IllegalArgumentException("Preencha nome, CPF e data de nascimento.");
+                throw new IllegalArgumentException("Preencha o nome e uma data de nascimento válida (ex: DD/MM/AAAA).");
+
             String cpf=txtCpf.getText().replaceAll("\\D","");
             if(cpf.length()!=11) throw new IllegalArgumentException("O CPF deve ter 11 dígitos.");
             if(dpNascimento.getValue().isAfter(LocalDate.now())) throw new IllegalArgumentException("Nascimento não pode estar no futuro.");
+
             String email=texto(txtEmail,90,"E-mail");
             if(!email.isBlank() && !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) throw new IllegalArgumentException("E-mail inválido.");
+
             Adolescente a=new Adolescente();
-            a.setCpf(Long.parseLong(cpf)); a.setNomeCompleto(texto(txtNome,80,"Nome")); a.setDataNascimento(dpNascimento.getValue());
-            a.setContato(texto(txtContato,30,"Telefone")); a.setEmail(email);
+            a.setCpf(Long.parseLong(cpf));
+            a.setNomeCompleto(texto(txtNome,80,"Nome"));
+            a.setDataNascimento(dpNascimento.getValue());
+            a.setContato(texto(txtContato,30,"Telefone"));
+            a.setEmail(email);
             a.setNaturalidade(texto(txtNaturalidade,120,"Naturalidade"));
             a.setGenero(cmbGenero.getValue()==null ? "Não informado" : cmbGenero.getValue());
             a.setCorRaca(cmbCorRaca.getValue()==null ? "Não informada" : cmbCorRaca.getValue());
-            a.setStatus(cmbStatus.getValue()); a.setObservacoes(txtObservacoes.getText().trim());
-            a.setImm(chkImm.isSelected()); a.setValeTransporte(chkValeTransporte.isSelected());
+            a.setStatus(cmbStatus.getValue());
+            a.setObservacoes(txtObservacoes.getText().trim());
+            a.setImm(chkImm.isSelected());
+            a.setValeTransporte(chkValeTransporte.isSelected());
             a.setPiaEnviado(chkPiaEnviado.isSelected());
             a.setMedidaProtetiva("Sim".equals(cmbMedidaProtetiva.getValue()));
+
             SituacaoSocial ss=new SituacaoSocial();
             ss.setRendaFamiliar(Double.parseDouble(txtRenda.getText().trim().replace(',','.')));
-            ss.setEndereco(texto(txtEndereco,60,"Endereço")); ss.setBairro(texto(txtBairro,60,"Bairro"));
-            ss.setBeneficioSocial(texto(txtBeneficios,256,"Benefícios")); ss.setCrasNome(texto(txtCras,120,"CRAS"));
+            ss.setEndereco(texto(txtEndereco,60,"Endereço"));
+            ss.setBairro(texto(txtBairro,60,"Bairro"));
+            ss.setBeneficioSocial(texto(txtBeneficios,256,"Benefícios"));
+            ss.setCrasNome(texto(txtCras,120,"CRAS"));
+
             String nis=txtNis.getText().trim();
             if(!nis.isEmpty() && !nis.matches("[0-9]{1,11}")) throw new IllegalArgumentException("NIS: informe até 11 dígitos.");
-            ss.setNumeroNis(nis.isEmpty()?0:Long.parseLong(nis)); a.setBairro(ss.getBairro());
+            ss.setNumeroNis(nis.isEmpty()?0:Long.parseLong(nis));
+            a.setBairro(ss.getBairro());
+
             Saude saude=saudeAtual==null ? new Saude() : saudeAtual;
-            saude.setUbsReferencia(texto(txtUbs,120,"UBS")); saude.setUsoSpa(chkSpa.isSelected());
+            saude.setUbsReferencia(texto(txtUbs,120,"UBS"));
+            saude.setUsoSpa(chkSpa.isSelected());
             saude.setSubstanciasUtilizadas(chkSpa.isSelected()?texto(txtSpa,90,"Substâncias"):null);
+
             EducacaoTrabalho et=new EducacaoTrabalho();
-            et.setEstuda(chkEstuda.isSelected()); et.setEscola(et.isEstuda()?texto(txtEscola,120,"Escola"):null);
-            et.setSerie(et.isEstuda()?texto(txtSerie,40,"Série"):null); et.setTrabalha(chkTrabalha.isSelected());
+            et.setEstuda(chkEstuda.isSelected());
+            et.setEscola(et.isEstuda()?texto(txtEscola,120,"Escola"):null);
+            et.setSerie(et.isEstuda()?texto(txtSerie,40,"Série"):null);
+            et.setTrabalha(chkTrabalha.isSelected());
             et.setLocalTrabalho(et.isTrabalha()?texto(txtLocalTrabalho,80,"Local de trabalho"):null);
             et.setFuncao(et.isTrabalha()?texto(txtFuncao,120,"Função"):null);
             et.setVinculoEmpregaticio(et.isTrabalha()?texto(txtVinculo,80,"Vínculo empregatício"):null);
+
             adolescenteDAO.salvarCadastro(a,ss,saude,et,edicao);
-            mostrarAlerta(Alert.AlertType.INFORMATION,"Cadastro salvo","Dados salvos. Responsáveis, integrantes da família, medidas e técnico de referência ficam no perfil.");
+            mostrarAlerta(Alert.AlertType.INFORMATION,"Cadastro salvo","Dados salvos com sucesso.");
             abrirPerfil(event,a.getCpf());
+
         } catch(NumberFormatException e) {
             mostrarAlerta(Alert.AlertType.WARNING,"Valor inválido","Confira os campos numéricos. Renda é informada em salários mínimos, por exemplo: 1,5.");
-        } catch(IllegalArgumentException | java.time.format.DateTimeParseException e) {
+        } catch(java.time.format.DateTimeParseException | NullPointerException e) {
+            // MENSAGEM AMIGÁVEL TRATADA AQUI:
+            mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","A data de nascimento informada é inválida ou está incompleta. Verifique o dia, mês e ano.");
+        } catch(IllegalArgumentException e) {
             mostrarAlerta(Alert.AlertType.WARNING,"Confira os dados",e.getMessage());
         } catch(RuntimeException e) {
-            e.printStackTrace(); mostrarAlerta(Alert.AlertType.ERROR,"Erro ao salvar",e.getMessage()+"\nConfira a conexão e o script sql/ajustes_cadastro_frequencia.sql.");
+            e.printStackTrace();
+            mostrarAlerta(Alert.AlertType.ERROR,"Erro ao salvar",e.getMessage());
         }
     }
 

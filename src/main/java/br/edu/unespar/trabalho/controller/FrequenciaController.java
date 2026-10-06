@@ -69,7 +69,7 @@ public class FrequenciaController {
     private void filtrar() {
         String termo=txtPesquisa.getText().trim().toLowerCase();
         var resultado=linhas.stream().filter(l->chkInativos.isSelected() || l.getAdolescente().getStatus()!=StatusAdolescente.INATIVO
-                || java.util.stream.IntStream.rangeClosed(1,mes.lengthOfMonth()).anyMatch(d->!l.getDia(d).isEmpty()))
+                        || java.util.stream.IntStream.rangeClosed(1,mes.lengthOfMonth()).anyMatch(d->!l.getDia(d).isEmpty()))
                 .filter(l->l.getAdolescente().getNomeCompleto().toLowerCase().contains(termo)
                         || l.getAdolescente().getCpfFormatado().contains(termo)
                         || (termo.matches("[0-9]+") && String.format("%011d",l.getAdolescente().getCpf()).contains(termo))).toList();
@@ -114,6 +114,7 @@ public class FrequenciaController {
 
     private TableColumn<FrequenciaMensalDTO,String> coluna(String titulo,int largura,Function<FrequenciaMensalDTO,String> valor) {
         TableColumn<FrequenciaMensalDTO,String> c=new TableColumn<>(titulo); c.setPrefWidth(largura);
+        c.setReorderable(false); // a planilha simula um calendário: a ordem das colunas não pode mudar
         c.setCellValueFactory(d->new ReadOnlyStringWrapper(valor.apply(d.getValue()))); tabela.getColumns().add(c); return c;
     }
 

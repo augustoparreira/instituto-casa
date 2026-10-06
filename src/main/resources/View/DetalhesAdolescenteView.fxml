@@ -231,7 +231,7 @@
                         </HBox>
 
                         <HBox spacing="12"><DatePicker fx:id="dpMesFrequencia"/><Button text="Consultar mês" onAction="#atualizarFrequenciaMes" styleClass="filter-btn"/><Button text="Planilha mensal" onAction="#abrirFrequenciaMensal" styleClass="btn-outline"/></HBox>
-                        <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. Os totais da PSC ficam no cabeçalho e na aba de medidas." wrapText="true" styleClass="page-subtitle"/>
+                        <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. PSC mostra as horas do mês e LA mostra os meses cumpridos; quem tem as duas vê os dois. Os totais ficam no cabeçalho e na aba de medidas." wrapText="true" styleClass="page-subtitle"/>
                         <HBox spacing="12.0">
                             <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqPresencas" text="0" styleClass="stat-number-green" />
@@ -241,9 +241,13 @@
                                 <Label fx:id="lblFreqFaltas" text="0" styleClass="stat-number-red" />
                                 <Label text="Faltas" styleClass="stat-label" />
                             </VBox>
-                            <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                            <VBox fx:id="cardFreqHoras" styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqHoras" text="0h" styleClass="stat-number-dark" />
                                 <Label text="Horas de PSC no mês" styleClass="stat-label" />
+                            </VBox>
+                            <VBox fx:id="cardFreqMeses" styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label fx:id="lblFreqMeses" text="0/0" styleClass="stat-number-dark" />
+                                <Label text="Meses de LA cumpridos" styleClass="stat-label" />
                             </VBox>
                             <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqPercentual" text="-" styleClass="stat-number-orange" />

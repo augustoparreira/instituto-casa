@@ -56,6 +56,7 @@ public class SituacaoSocialDAO {
                     ss.setEndereco(rs.getString("endereco")); // Campo novo adicionado
                     ss.setBairro(rs.getString("bairro")); // Campo novo adicionado
                     ss.setTelefone(rs.getString("telefone")); // Campo novo adicionado
+                    ss.setCrasNome(rs.getString("cras_nome"));
                     ss.setNumeroNis(rs.getLong("numero_nis")); // Campo novo adicionado
 
                     int cras = rs.getInt("cras_referencia");
@@ -66,7 +67,7 @@ public class SituacaoSocialDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Erro ao buscar situação social: " + e.getMessage());
+            throw new IllegalStateException("Não foi possível carregar os dados cadastrais.", e);
         }
         return null;
     }

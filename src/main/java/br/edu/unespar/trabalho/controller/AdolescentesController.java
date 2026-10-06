@@ -117,9 +117,10 @@ public class AdolescentesController {
             boolean combinaTexto = termo.isEmpty() ||
                     jovem.getNome().toLowerCase().contains(termo) ||
                     jovem.getCpf().contains(termo) ||
+                    (termo.matches("[0-9]+") && jovem.getCpf().replaceAll("\\D", "").contains(termo)) ||
                     jovem.getBairro().toLowerCase().contains(termo);
 
-            boolean combinaTipo = filtroTipoAtual.equals("Todos") || jovem.getMedida().equalsIgnoreCase(filtroTipoAtual);
+            boolean combinaTipo = filtroTipoAtual.equals("Todos") || jovem.getMedida().contains(filtroTipoAtual);
             boolean combinaStatus = filtroStatusAtual.equals("Todos") || jovem.getStatus().equalsIgnoreCase(filtroStatusAtual);
 
             return combinaTexto && combinaTipo && combinaStatus;
@@ -147,8 +148,8 @@ public class AdolescentesController {
 
     @FXML public void filtrarStatusTodos(ActionEvent e) { filtroStatusAtual = "Todos"; atualizarEstiloBotoesStatus(btnStatusTodos); filtrarAdolescentes(); }
     @FXML public void filtrarStatusAtivo(ActionEvent e) { filtroStatusAtual = "Ativo"; atualizarEstiloBotoesStatus(btnStatusAtivo); filtrarAdolescentes(); }
-    @FXML public void filtrarStatusSuspenso(ActionEvent e) { filtroStatusAtual = "Suspenso"; atualizarEstiloBotoesStatus(btnStatusSuspenso); filtrarAdolescentes(); }
-    @FXML public void filtrarStatusEncerrado(ActionEvent e) { filtroStatusAtual = "Encerrado"; atualizarEstiloBotoesStatus(btnStatusEncerrado); filtrarAdolescentes(); }
+    @FXML public void filtrarStatusSuspenso(ActionEvent e) { filtroStatusAtual = "Em descumprimento"; atualizarEstiloBotoesStatus(btnStatusSuspenso); filtrarAdolescentes(); }
+    @FXML public void filtrarStatusEncerrado(ActionEvent e) { filtroStatusAtual = "Em análise para extinção da medida"; atualizarEstiloBotoesStatus(btnStatusEncerrado); filtrarAdolescentes(); }
 
     private void atualizarEstiloBotoesStatus(Button ativo) {
         btnStatusTodos.getStyleClass().remove("filter-btn-active"); btnStatusTodos.getStyleClass().add("filter-btn");
@@ -176,6 +177,8 @@ public class AdolescentesController {
             }
         }
     }
+
+    @FXML public void abrirFrequencia(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/FrequenciaView.fxml", "Frequência mensal"); }
 
     @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Dashboard.fxml", "Painel de Controle"); }
     @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/AgendaView.fxml", "Agenda institucional"); }

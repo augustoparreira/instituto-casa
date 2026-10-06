@@ -51,9 +51,15 @@
 }
 
 .custom-list-view { -fx-background-color: transparent; -fx-border-color: transparent; }
-.list-cell { -fx-background-color: transparent; -fx-padding: 4px 0; }
+.custom-list-view .list-cell { -fx-background-color: transparent; -fx-padding: 4px 0; }
 
 .content-box { -fx-background-color: white; -fx-background-radius: 8px; -fx-padding: 20px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; }
+.content-box { -fx-text-background-color: #333333; -fx-text-base-color: #333333; }
+.content-box .check-box { -fx-text-fill: #333333; }
+.content-box .combo-box .list-cell { -fx-text-fill: #333333; }
+.frequencia-lista .list-cell { -fx-background-color: white; -fx-text-fill: #333333; -fx-padding: 10px 12px; }
+.frequencia-lista .list-cell:filled:hover { -fx-background-color: #e8f3ee; }
+.frequencia-lista .list-cell:filled:selected { -fx-background-color: #19523e; -fx-text-fill: white; }
 .box-title { -fx-font-weight: bold; -fx-text-fill: #333333; -fx-font-size: 15px; }
 
 .back-link { -fx-background-color: transparent; -fx-text-fill: #19523e; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 0; }

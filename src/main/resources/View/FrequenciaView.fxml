@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.geometry.Insets?>
+<BorderPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.FrequenciaController" prefWidth="1200" prefHeight="700" stylesheets="@adolescentes-style.css">
+    <left>
+        <VBox styleClass="sidebar" prefWidth="240.0" spacing="10.0">
+            <padding>
+                <Insets top="25.0" bottom="25.0" left="20.0" right="20.0" />
+            </padding>
+            <VBox spacing="2.0">
+                <Label text="INSTITUTO" styleClass="sidebar-logo-sub" />
+                <Label text="C.A.S.A." styleClass="sidebar-logo-main" />
+                <VBox.margin><Insets bottom="30.0" /></VBox.margin>
+            </VBox>
+            <Button text="Painel" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaPainel" />
+            <Button text="Adolescentes" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#voltarParaLista" />
+            <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
+            <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
+
+            <Region VBox.vgrow="ALWAYS" />
+
+            <VBox spacing="15.0" styleClass="user-box">
+                <HBox spacing="12.0" alignment="CENTER_LEFT">
+                    <Circle radius="18.0" styleClass="user-avatar" />
+                    <VBox spacing="2.0">
+                        <Label text="Usuário Logado" styleClass="user-name" />
+                        <Label text="Sessão Ativa" styleClass="user-role" />
+                    </VBox>
+                </HBox>
+                <Button text="Sair do sistema" styleClass="logout-button" onAction="#fazerLogout" maxWidth="Infinity" alignment="CENTER_LEFT" />
+            </VBox>
+        </VBox>
+    </left>
+<center><VBox spacing="16" styleClass="main-content">
+<padding><Insets top="25" left="25" right="25" bottom="25"/></padding>
+<Label text="Frequência mensal" styleClass="page-title"/>
+<Label text="P = presença · A = ausência injustificada · J = justificada. Dias sem lançamento ficam em branco." styleClass="page-subtitle" wrapText="true"/>
+<HBox spacing="10" alignment="CENTER_LEFT"><Button text="&lt;" onAction="#anterior"/><DatePicker fx:id="dpCompetencia"/><Button text="&gt;" onAction="#proximo"/><Button text="Consultar mês" onAction="#atualizar" styleClass="filter-btn"/><TextField fx:id="txtPesquisa" promptText="Nome ou CPF" HBox.hgrow="ALWAYS"/><Button text="Registrar / corrigir" onAction="#registrar" styleClass="btn-novo"/></HBox>
+<CheckBox fx:id="chkInativos" text="Mostrar também cadastros inativos sem lançamentos no mês"/>
+<TableView fx:id="tabela" VBox.vgrow="ALWAYS"/>
+<Label fx:id="lblResumo" wrapText="true"/>
+<Label text="Duplo clique em um dia para lançar ou corrigir. Horas são acumuladas por PSC até o fim do mês (ou hoje). Regularidade: duas datas com falta injustificada no mês. Faltas justificadas não entram nessa regra." styleClass="page-subtitle" wrapText="true"/>
+</VBox></center>
+</BorderPane>

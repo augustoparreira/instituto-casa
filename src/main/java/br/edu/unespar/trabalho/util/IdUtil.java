@@ -35,4 +35,17 @@ public class IdUtil {
             throw new RuntimeException("Erro ao gerar ID para " + tabela, e);
         }
     }
+
+    /** Reserva MAX + 1 dentro da mesma transação que fará a inclusão. */
+    public static int proximoId(Connection conn, String tabela) throws SQLException {
+        String coluna = COLUNA_ID.get(tabela);
+        if (coluna == null) throw new IllegalArgumentException("Tabela inválida: " + tabela);
+        if (conn.getAutoCommit()) throw new IllegalStateException("É necessária uma transação para reservar o ID.");
+        try (var s = conn.createStatement()) {
+            s.execute("LOCK TABLE " + tabela + " IN SHARE ROW EXCLUSIVE MODE");
+            try (var rs = s.executeQuery("SELECT COALESCE(MAX(" + coluna + "),0)+1 FROM " + tabela)) {
+                rs.next(); return rs.getInt(1);
+            }
+        }
+    }
 }

@@ -31,6 +31,7 @@
             </VBox>
             <Button text="Painel" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaPainel" />
             <Button text="Adolescentes" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" />
+            <Button text="Frequência mensal" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#abrirFrequencia" />
             <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
             <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
             <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
@@ -82,8 +83,8 @@
                 <HBox spacing="5.0" styleClass="filter-group">
                     <Button fx:id="btnStatusTodos" text="Todos" styleClass="filter-btn-active" onAction="#filtrarStatusTodos" />
                     <Button fx:id="btnStatusAtivo" text="Ativo" styleClass="filter-btn" onAction="#filtrarStatusAtivo" />
-                    <Button fx:id="btnStatusSuspenso" text="Suspenso" styleClass="filter-btn" onAction="#filtrarStatusSuspenso" />
-                    <Button fx:id="btnStatusEncerrado" text="Encerrado" styleClass="filter-btn" onAction="#filtrarStatusEncerrado" />
+                    <Button fx:id="btnStatusSuspenso" text="Descumprimento" styleClass="filter-btn" onAction="#filtrarStatusSuspenso" />
+                    <Button fx:id="btnStatusEncerrado" text="Aguardando extinção" styleClass="filter-btn" onAction="#filtrarStatusEncerrado" />
                 </HBox>
             </HBox>
 

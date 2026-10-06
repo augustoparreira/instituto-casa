@@ -54,7 +54,7 @@ public class SaudeDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Erro ao buscar saúde: " + e.getMessage());
+            throw new IllegalStateException("Não foi possível carregar os dados cadastrais.", e);
         }
         return null;
     }

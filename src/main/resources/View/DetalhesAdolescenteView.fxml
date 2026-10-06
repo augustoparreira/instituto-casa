@@ -6,6 +6,7 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
@@ -99,7 +100,8 @@
 
                     <!-- ABA: Dados Pessoais -->
                     <VBox fx:id="paneDados" styleClass="content-box" spacing="20.0">
-                        <Label text="Informações pessoais" styleClass="box-title" />
+                        <HBox spacing="15"><Label text="Informações pessoais" styleClass="box-title"/><Region HBox.hgrow="ALWAYS"/><Button text="Editar cadastro completo" onAction="#editarCadastro" styleClass="btn-outline"/></HBox>
+<Label fx:id="lblDadosComplementares" wrapText="true" styleClass="form-value"/>
 
                         <HBox spacing="50.0">
                             <VBox spacing="4.0" HBox.hgrow="ALWAYS">
@@ -138,7 +140,8 @@
                     <!-- ABA: Medida Socioeducativa -->
                     <VBox fx:id="paneMedida" spacing="20.0" visible="false" managed="false">
 
-                        <!-- Medida já cadastrada (somente leitura) -->
+                        <HBox spacing="12"><ComboBox fx:id="cmbMedidaPerfil" promptText="Medidas e histórico" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Nova medida" onAction="#novaMedida" styleClass="btn-novo"/><Button text="Editar / encerrar" onAction="#editarMedida" styleClass="btn-outline"/></HBox>
+                        <!-- Medida selecionada -->
                         <VBox fx:id="boxMedidaCadastrada" styleClass="content-box" spacing="20.0" visible="false" managed="false">
                             <Label text="Medida socioeducativa" styleClass="box-title" />
                             <HBox spacing="50.0">
@@ -198,8 +201,12 @@
                                 <TextArea fx:id="txtHistorico" promptText="Descreva o histórico infracional (opcional)" prefRowCount="3" wrapText="true" />
                             </VBox>
 
-                            <HBox alignment="CENTER_RIGHT">
-                                <Button text="Salvar medida" styleClass="btn-novo" onAction="#salvarMedida" />
+                            <VBox spacing="5.0">
+                                <Label text="DATA DE ENCERRAMENTO (OPCIONAL, APÓS CONFIRMAÇÃO)" styleClass="form-label-mini" />
+                                <DatePicker fx:id="dpFimMedida" styleClass="search-field" maxWidth="260.0" />
+                            </VBox>
+                            <HBox alignment="CENTER_RIGHT" spacing="12">
+                                <Button text="Cancelar" onAction="#cancelarMedida" styleClass="filter-btn"/><Button text="Salvar medida" styleClass="btn-novo" onAction="#salvarMedida" />
                             </HBox>
                         </VBox>
 
@@ -216,12 +223,15 @@
 
                     <!-- ABA: Frequência e Horas -->
                     <VBox fx:id="paneFrequencia" styleClass="content-box" spacing="20.0" visible="false" managed="false">
-                        <HBox alignment="CENTER_LEFT">
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
                             <Label text="Registro de frequência" styleClass="box-title" />
                             <Region HBox.hgrow="ALWAYS" />
+                            <Button fx:id="btnCorrigirFrequencia" text="Corrigir selecionado" styleClass="btn-outline" onAction="#corrigirFrequenciaSelecionada" />
                             <Button text="+  Registrar presença" styleClass="btn-outline" onAction="#registrarPresenca" />
                         </HBox>
 
+                        <HBox spacing="12"><DatePicker fx:id="dpMesFrequencia"/><Button text="Consultar mês" onAction="#atualizarFrequenciaMes" styleClass="filter-btn"/><Button text="Planilha mensal" onAction="#abrirFrequenciaMensal" styleClass="btn-outline"/></HBox>
+                        <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. Os totais da PSC ficam no cabeçalho e na aba de medidas." wrapText="true" styleClass="page-subtitle"/>
                         <HBox spacing="12.0">
                             <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqPresencas" text="0" styleClass="stat-number-green" />
@@ -233,15 +243,15 @@
                             </VBox>
                             <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqHoras" text="0h" styleClass="stat-number-dark" />
-                                <Label text="Horas acumuladas" styleClass="stat-label" />
+                                <Label text="Horas de PSC no mês" styleClass="stat-label" />
                             </VBox>
                             <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqPercentual" text="-" styleClass="stat-number-orange" />
-                                <Label text="Frequência" styleClass="stat-label" />
+                                <Label text="Situação mensal" styleClass="stat-label" />
                             </VBox>
                         </HBox>
 
-                        <VBox fx:id="boxTabelaFrequencia" />
+                        <ListView fx:id="listaFrequenciaPerfil" styleClass="frequencia-lista" prefHeight="260.0" />
                     </VBox>
 
                     <!-- ABA: PIA -->

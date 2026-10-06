@@ -8,6 +8,16 @@ public class MedidaSocioeducativa {
     private long cpfAdolescente;
     private TipoMedida tipoMedida;
     private LocalDate dataInicio;
+    private LocalDate dataFim;
+    public LocalDate getDataFim() { return dataFim; }
+    public void setDataFim(LocalDate v) { dataFim = v; }
+    public boolean vigenteEm(LocalDate data) {
+        return data != null && dataInicio != null && !data.isBefore(dataInicio)
+                && (dataFim == null || !data.isAfter(dataFim));
+    }
+    @Override public String toString() {
+        return tipoMedida + " · " + dataInicio + " · #" + idMedida + (dataFim == null ? "" : " (encerrada)");
+    }
     private String historicoInfracional;
     private Integer duracaoMeses; // somente LA
     private Integer duracaoHoras; // somente PSC
@@ -48,6 +58,7 @@ public class MedidaSocioeducativa {
 
     public int getMesesCorridos(LocalDate referencia) {
         if (dataInicio == null || referencia == null) return 0;
+        if (dataFim != null && referencia.isAfter(dataFim)) referencia = dataFim;
         return (int) Math.max(0, ChronoUnit.MONTHS.between(dataInicio, referencia));
     }
 
@@ -55,6 +66,8 @@ public class MedidaSocioeducativa {
     public void validar() {
         if (tipoMedida == null) throw new IllegalArgumentException("Informe o tipo da medida (LA ou PSC).");
         if (dataInicio == null) throw new IllegalArgumentException("Informe a data de início da medida.");
+        if (dataFim != null && dataFim.isBefore(dataInicio))
+            throw new IllegalArgumentException("O encerramento não pode ser anterior ao início.");
         if (isLA()) {
             if (duracaoMeses == null || duracaoMeses <= 0)
                 throw new IllegalArgumentException("LA exige duração em meses maior que zero.");

@@ -1,6 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
-import br.edu.unespar.trabalho.model.Adolescente;
+import br.edu.unespar.trabalho.model.*;
+import br.edu.unespar.trabalho.util.IdUtil;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.model.StatusAdolescente;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
@@ -146,76 +147,117 @@ public class AdolescenteDAO {
     }
 
     public List<AdolescenteDTO> listarResumoDTO() {
-        List<AdolescenteDTO> lista = new ArrayList<>();
-        String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, a.genero, a.status, " +
-                "ss.bairro, m.tipo_medida, m.duracao_horas, m.duracao_meses, m.data_inicio, " +
-                "peq.nome_completo AS nome_tecnico " +
-                "FROM Pessoa p " +
-                "INNER JOIN Adolescente a ON p.cpf = a.cpf_adolescente " +
-                "LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente = a.cpf_adolescente " +
-                "LEFT JOIN MedidaSocioeducativa m ON m.cpf_adolescente = a.cpf_adolescente " +
-                "LEFT JOIN Acompanhamento ac ON ac.cpf_adolescente = a.cpf_adolescente AND ac.tecnico_referencia = true " +
-                "LEFT JOIN Pessoa peq ON peq.cpf = ac.cpf_equipe " +
-                "WHERE a.status <> 'INATIVO'";
-
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            MedidaSocioeducativaDAO medidaDao = new MedidaSocioeducativaDAO();
-
-            while (rs.next()) {
-                long cpfRaw = rs.getLong("cpf");
-                String cpfFormatado = String.format("%011d", cpfRaw);
-                cpfFormatado = cpfFormatado.substring(0,3) + "." + cpfFormatado.substring(3,6) + "." + cpfFormatado.substring(6,9) + "-" + cpfFormatado.substring(9);
-
-                String nome = rs.getString("nome_completo");
-                java.sql.Date dbData = rs.getDate("data_nascimento");
-                String dtNasc = (dbData != null) ? dbData.toLocalDate().format(formatter) : "Não informada";
-                String genero = rs.getString("genero");
-                if (genero == null) genero = "Não informado";
-
-                String statusRaw = rs.getString("status");
-                String status = "Ativo";
-                if ("EM_DESCUMPRIMENTO".equalsIgnoreCase(statusRaw)) status = "Suspenso";
-                else if ("EM_ANALISE_EXTINCAO".equalsIgnoreCase(statusRaw)) status = "Encerrado";
-
-                String bairro = rs.getString("bairro");
-                if (bairro == null) bairro = "Não informado";
-
-                String tecnico = rs.getString("nome_tecnico");
-                if (tecnico == null) tecnico = "Sem técnico vinculado";
-
-                String medida = rs.getString("tipo_medida");
-                if (medida == null) medida = "N/A";
-
-                int duracaoHoras = rs.getInt("duracao_horas");
-                int duracaoMeses = rs.getInt("duracao_meses");
-                java.sql.Date dtInicio = rs.getDate("data_inicio");
-
-                double progresso = 0.0;
-                String txtProgresso = "--";
-
-                if ("PSC".equalsIgnoreCase(medida) && duracaoHoras > 0) {
-                    int horasCumpridas = medidaDao.consultarHorasCumpridas(cpfRaw);
-                    progresso = Math.min(1.0, (double) horasCumpridas / duracaoHoras);
-                    txtProgresso = horasCumpridas + "/" + duracaoHoras + "h";
-                } else if ("LA".equalsIgnoreCase(medida) && duracaoMeses > 0 && dtInicio != null) {
-                    int mesesCorridos = (int) ChronoUnit.MONTHS.between(dtInicio.toLocalDate(), LocalDate.now());
-                    mesesCorridos = Math.max(0, mesesCorridos);
-                    progresso = Math.min(1.0, (double) mesesCorridos / duracaoMeses);
-                    txtProgresso = mesesCorridos + "/" + duracaoMeses + "m";
-                }
-
-                lista.add(new AdolescenteDTO(
-                        nome, cpfFormatado, medida.toUpperCase(), progresso, txtProgresso,
-                        tecnico, status, bairro, dtNasc, genero
-                ));
-            }
-        } catch (SQLException e) {
-            System.err.println("Erro ao listar resumo de adolescentes: " + e.getMessage());
+        List<AdolescenteDTO> lista=new ArrayList<>();
+        var linhas=new FrequenciaMensalDAO().listar(java.time.YearMonth.now());
+        java.util.Map<Long,String> tecnicos=new java.util.HashMap<>();
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT ac.cpf_adolescente,p.nome_completo FROM Acompanhamento ac JOIN Pessoa p ON p.cpf=ac.cpf_equipe WHERE ac.tecnico_referencia=true ORDER BY ac.cpf_equipe"); ResultSet r=s.executeQuery()) {
+            while(r.next()) tecnicos.putIfAbsent(r.getLong(1),r.getString(2));
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar os técnicos.",e); }
+        for(var linha:linhas) {
+            Adolescente a=linha.getAdolescente();
+            String progresso=linha.getHorasPrevistas()>0 ? linha.getHorasCumpridas()+"/"+linha.getHorasPrevistas()+"h" : "";
+            if(!linha.getMeses().isBlank()) progresso+=(progresso.isEmpty()?"":" · ")+linha.getMeses()+"m";
+            double percentual=linha.getHorasPrevistas()>0 ? Math.min(1.0,(double)linha.getHorasCumpridas()/linha.getHorasPrevistas()) :
+                    linha.getMedidasDoMes().stream().filter(MedidaSocioeducativa::isLA).mapToDouble(m->Math.min(1.0,(double)m.getMesesCorridos()/m.getDuracaoMeses())).findFirst().orElse(0);
+            lista.add(new AdolescenteDTO(a.getNomeCompleto(),a.getCpfFormatado(),linha.getMse().isEmpty()?"Sem medida":linha.getMse(),percentual,
+                    progresso.isEmpty()?"—":progresso,tecnicos.getOrDefault(a.getCpf(),"Sem técnico vinculado"),a.getStatus().getDescricao(),
+                    a.getBairro()==null?"":a.getBairro(),a.getDataNascimento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),a.getGenero()));
         }
         return lista;
     }
+
+    public List<Adolescente> listarCadastros() {
+        List<Adolescente> lista=new ArrayList<>();
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT p.*,a.*,ss.bairro FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf ORDER BY p.nome_completo"); ResultSet r=s.executeQuery()) {
+            while(r.next()) {
+                Adolescente a=new Adolescente(); a.setCpf(r.getLong("cpf")); a.setNomeCompleto(r.getString("nome_completo"));
+                a.setDataNascimento(r.getDate("data_nascimento").toLocalDate()); a.setGenero(r.getString("genero"));
+                a.setBairro(r.getString("bairro")); a.setStatus(StatusAdolescente.fromCodigo(r.getString("status")));
+                a.setImm(r.getBoolean("imm")); a.setValeTransporte(r.getBoolean("vale_transporte"));
+                a.setPiaEnviado(r.getBoolean("pia_enviado"));
+                a.setMedidaProtetiva(r.getBoolean("medida_protetiva")); lista.add(a);
+            }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar adolescentes. Confira o ajuste SQL de cadastro e frequência.",e); }
+        return lista;
+    }
+
+    public Adolescente buscarPorCpf(long cpf) {
+        String sql = "SELECT p.*, a.*, ss.bairro FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf "
+                + "LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf WHERE p.cpf=?";
+        try (Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
+            s.setLong(1,cpf);
+            try (ResultSet r=s.executeQuery()) {
+                if (!r.next()) return null;
+                Adolescente a=new Adolescente();
+                a.setCpf(cpf); a.setNomeCompleto(r.getString("nome_completo"));
+                a.setDataNascimento(r.getDate("data_nascimento").toLocalDate());
+                a.setContato(r.getString("contato")); a.setEmail(r.getString("email"));
+                a.setNaturalidade(r.getString("naturalidade")); a.setGenero(r.getString("genero"));
+                a.setCorRaca(r.getString("cor_raca")); a.setBairro(r.getString("bairro"));
+                a.setStatus(StatusAdolescente.fromCodigo(r.getString("status")));
+                a.setObservacoes(r.getString("observacoes")); a.setImm(r.getBoolean("imm"));
+                a.setValeTransporte(r.getBoolean("vale_transporte"));
+                a.setPiaEnviado(r.getBoolean("pia_enviado"));
+                a.setMedidaProtetiva(r.getBoolean("medida_protetiva"));
+                return a;
+            }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível carregar o cadastro.",e); }
+    }
+
+    /** Dados pessoais, sociais, saúde e escolaridade são salvos juntos ou revertidos juntos. */
+    public boolean salvarCadastro(Adolescente a, SituacaoSocial social, Saude saude, EducacaoTrabalho estudo, boolean edicao) {
+        if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80)
+            throw new IllegalArgumentException("Informe o nome completo (até 80 caracteres).");
+        if(a.getCpf()<=0 || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))
+            throw new IllegalArgumentException("CPF ou data de nascimento inválidos.");
+        if(!Double.isFinite(social.getRendaFamiliar()) || social.getRendaFamiliar()<0)
+            throw new IllegalArgumentException("Renda deve ser um valor não negativo em salários mínimos.");
+        if (social.getEndereco()==null || social.getEndereco().isBlank()
+                || social.getBairro()==null || social.getBairro().isBlank()
+                || a.getContato()==null || a.getContato().isBlank())
+            throw new IllegalArgumentException("Endereço, bairro e telefone são obrigatórios.");
+        saude.validar(); estudo.validar();
+        try(Connection c=ConnectionFactory.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                if(edicao) {
+                    if(executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
+                            a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf())!=1)
+                        throw new SQLException("Cadastro não encontrado.");
+                    executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,status=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
+                            a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf());
+                } else {
+                    executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
+                            a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail());
+                    executarCadastro(c,"INSERT INTO Adolescente(cpf_adolescente,naturalidade,genero,cor_raca,status,observacoes,imm,vale_transporte,pia_enviado,medida_protetiva) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                            a.getCpf(),a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva());
+                }
+                executarCadastro(c,"INSERT INTO SituacaoSocial(id_situacaoSocial,renda,beneficios_sociais,endereco,bairro,telefone,numero_nis,cras_nome,cpf_adolescente) "
+                        + "VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(cpf_adolescente) DO UPDATE SET renda=excluded.renda,beneficios_sociais=excluded.beneficios_sociais,"
+                        + "endereco=excluded.endereco,bairro=excluded.bairro,telefone=excluded.telefone,numero_nis=excluded.numero_nis,cras_nome=excluded.cras_nome",
+                        IdUtil.proximoId(c,"SituacaoSocial"),social.getRendaFamiliar(),social.getBeneficioSocial(),social.getEndereco(),social.getBairro(),
+                        a.getContato(),social.getNumeroNis(),social.getCrasNome(),a.getCpf());
+                executarCadastro(c,"INSERT INTO Saude(id_fichaSaude,ubs_referencia,uso_spa,observacoes,substancias_utilizadas,cpf_adolescente) VALUES(?,?,?,?,?,?) "
+                        + "ON CONFLICT(cpf_adolescente) DO UPDATE SET ubs_referencia=excluded.ubs_referencia,uso_spa=excluded.uso_spa,observacoes=excluded.observacoes,substancias_utilizadas=excluded.substancias_utilizadas",
+                        IdUtil.proximoId(c,"Saude"),saude.getUbsReferencia(),saude.isUsoSpa(),saude.getObservacoes(),saude.getSubstanciasUtilizadas(),a.getCpf());
+                executarCadastro(c,"INSERT INTO EducacaoTrabalho(id_educacaoTrabalho,estuda,escola,ano_serie,trabalha,local_trabalho,funcao,vinculo_empregaticio,cpf_adolescente) VALUES(?,?,?,?,?,?,?,?,?) "
+                        + "ON CONFLICT(cpf_adolescente) DO UPDATE SET estuda=excluded.estuda,escola=excluded.escola,ano_serie=excluded.ano_serie,trabalha=excluded.trabalha,local_trabalho=excluded.local_trabalho,funcao=excluded.funcao,vinculo_empregaticio=excluded.vinculo_empregaticio",
+                        IdUtil.proximoId(c,"EducacaoTrabalho"),estudo.isEstuda(),estudo.getEscola(),estudo.getSerie(),estudo.isTrabalha(),estudo.getLocalTrabalho(),estudo.getFuncao(),estudo.getVinculoEmpregaticio(),a.getCpf());
+                c.commit(); return true;
+            } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
+        } catch(SQLException e) {
+            if("23505".equals(e.getSQLState())) throw new IllegalArgumentException("Este CPF já está cadastrado. Abra o cadastro existente para editar.",e);
+            throw new IllegalStateException("Não foi possível salvar o cadastro completo. Nenhuma alteração foi gravada.",e);
+        }
+    }
+
+    private int executarCadastro(Connection c,String sql,Object... valores) throws SQLException {
+        try(PreparedStatement s=c.prepareStatement(sql)) {
+            for(int i=0;i<valores.length;i++) s.setObject(i+1,valores[i]);
+            return s.executeUpdate();
+        }
+    }
+
 }

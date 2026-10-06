@@ -9,6 +9,9 @@ public class SituacaoSocial {
     private String telefone;           // NOT NULL
     private long numeroNis;            // NOT NULL (11 dígitos -> long)
     private Integer crasReferencia;    // INTEGER, opcional
+    private String crasNome;
+    public String getCrasNome() { return crasNome; }
+    public void setCrasNome(String v) { crasNome = v; }
     private long cpfAdolescente;
 
     public int getIdSituacaoSocial() { return idSituacaoSocial; }

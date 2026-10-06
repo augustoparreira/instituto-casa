@@ -5,6 +5,24 @@ public class Adolescente extends Pessoa {
     private String genero;
     private String corRaca;
     private String bairro;
+    private String observacoes;
+    private boolean imm;
+    private boolean valeTransporte;
+    private boolean piaEnviado;
+    private boolean medidaProtetiva;
+
+    public boolean isMedidaProtetiva() { return medidaProtetiva; }
+    public void setMedidaProtetiva(boolean medidaProtetiva) { this.medidaProtetiva = medidaProtetiva; }
+
+    public boolean isPiaEnviado() { return piaEnviado; }
+    public void setPiaEnviado(boolean piaEnviado) { this.piaEnviado = piaEnviado; }
+
+    public String getObservacoes() { return observacoes; }
+    public void setObservacoes(String v) { observacoes = v; }
+    public boolean isImm() { return imm; }
+    public void setImm(boolean v) { imm = v; }
+    public boolean isValeTransporte() { return valeTransporte; }
+    public void setValeTransporte(boolean v) { valeTransporte = v; }
     private StatusAdolescente status = StatusAdolescente.ATIVO;
 
     public String getNaturalidade() { return naturalidade; }

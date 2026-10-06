@@ -33,6 +33,11 @@ import br.edu.unespar.trabalho.util.Sessao;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.stage.Stage;
+import java.time.YearMonth;
+import br.edu.unespar.trabalho.dao.EducacaoTrabalhoDAO;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
@@ -44,6 +49,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.ColumnConstraints;
@@ -122,7 +129,8 @@ public class DetalhesAdolescenteController {
     @FXML private Label lblFreqFaltas;
     @FXML private Label lblFreqHoras;
     @FXML private Label lblFreqPercentual;
-    @FXML private VBox boxTabelaFrequencia;
+    @FXML private ListView<Frequencia> listaFrequenciaPerfil;
+    @FXML private Button btnCorrigirFrequencia;
 
     // ----- Aba: PIA -----
     @FXML private Label lblPiaStatus;
@@ -173,12 +181,31 @@ public class DetalhesAdolescenteController {
     /** Limite de texto de cada campo do PIA (exige rodar o ajustes_ddl.sql que amplia as colunas). */
     private static final int LIMITE_TEXTO_PIA = 1000;
 
+    @FXML private Label lblDadosComplementares;
+    @FXML private ComboBox<MedidaSocioeducativa> cmbMedidaPerfil;
+    @FXML private DatePicker dpFimMedida, dpMesFrequencia;
+    private Integer idMedidaEdicao;
     private long cpfAtual;
     private AdolescenteDTO jovemAtual;
     private PIA piaAtual;
+    private boolean piaEnviadoAtual;
 
     @FXML
     public void initialize() {
+        dpMesFrequencia.setValue(LocalDate.now().withDayOfMonth(1));
+        btnCorrigirFrequencia.disableProperty().bind(listaFrequenciaPerfil.getSelectionModel().selectedItemProperty().isNull());
+        listaFrequenciaPerfil.setPlaceholder(textoVazio("Nenhum lançamento neste mês. Dias sem lançamento não são faltas."));
+        listaFrequenciaPerfil.setCellFactory(lista -> new ListCell<>() {
+            @Override
+            protected void updateItem(Frequencia frequencia, boolean vazio) {
+                super.updateItem(frequencia, vazio);
+                setText(vazio || frequencia == null ? null : frequencia.getDataPresenca().format(FORMATO_DATA)
+                        + " · " + frequencia + "\n" + Formatadores.textoOuTraco(frequencia.getObservacoes())
+                        + (frequencia.getIdMedida() == null && frequencia.getHorasContabilizadas() > 0
+                            ? " · Horas sem vínculo com PSC: revise." : ""));
+            }
+        });
+        cmbMedidaPerfil.valueProperty().addListener((o,a,b)->exibirMedidaSelecionada());
         cmbTipoMedida.setItems(FXCollections.observableArrayList(TipoMedida.values()));
 
         cmbTecnico.setConverter(new StringConverter<>() {
@@ -218,6 +245,19 @@ public class DetalhesAdolescenteController {
         lblInfoStatus.setText(jovem.getStatus());
 
         try {
+            var cadastro=adolescenteDAO.buscarPorCpf(cpfAtual);
+            piaEnviadoAtual = cadastro.isPiaEnviado();
+            var estudo=new EducacaoTrabalhoDAO().buscarPorCpf(cpfAtual);
+            var saude=saudeDAO.buscarPorCpf(cpfAtual);
+            lblDadosComplementares.setText("Idade: "+cadastro.getIdade()+" anos · aniversário: "+cadastro.getDataNascimento().getMonthValue()
+                    +"\nNaturalidade: "+Formatadores.textoOuTraco(cadastro.getNaturalidade())+" · Cor/raça: "+Formatadores.textoOuTraco(cadastro.getCorRaca())
+                    +"\nTelefone: "+Formatadores.textoOuTraco(cadastro.getContato())+" · E-mail: "+Formatadores.textoOuTraco(cadastro.getEmail())
+                    +"\nEstuda: "+(estudo!=null && estudo.isEstuda()?"Sim · "+Formatadores.textoOuTraco(estudo.getEscola())+" · "+Formatadores.textoOuTraco(estudo.getSerie()):"Não")
+                    +"\nTrabalha: "+(estudo!=null && estudo.isTrabalha()?"Sim · "+Formatadores.textoOuTraco(estudo.getLocalTrabalho())+" · "+Formatadores.textoOuTraco(estudo.getFuncao())+" · "+Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"Não")
+                    +"\nUBS: "+(saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()))
+                    +" · Uso de SPA: "+(saude!=null && saude.isUsoSpa()?"Sim · "+Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"Não")
+                    +"\nIMM: "+(cadastro.isImm()?"Sim":"Não")+" · Vale-transporte: "+(cadastro.isValeTransporte()?"Sim":"Não")
+                    +"\nObservações: "+Formatadores.textoOuTraco(cadastro.getObservacoes()));
             carregarAbaMedida();
             carregarAbaFrequencia();
             carregarAbaPia();
@@ -228,23 +268,13 @@ public class DetalhesAdolescenteController {
     }
 
     private void carregarAbaMedida() {
-        MedidaSocioeducativa medida = perfilDAO.buscarMedidaAtual(cpfAtual);
-        boolean temMedida = medida != null;
-
-        alternar(boxMedidaCadastrada, temMedida);
-        alternar(boxMedidaForm, !temMedida);
-
-        if (temMedida) {
-            TipoMedida tipo = medida.getTipoMedida();
-            lblMedidaTipo.setText(tipo != null ? tipo.getDescricao() : "-");
-            lblMedidaInicio.setText(medida.getDataInicio().format(FORMATO_DATA));
-            lblMedidaDuracao.setText(medida.isPSC()
-                    ? medida.getDuracaoHoras() + " horas"
-                    : medida.getDuracaoMeses() + " meses");
-            lblMedidaReincidencia.setText(medida.isReincidencia() ? "Sim" : "Não");
-            String historico = medida.getHistoricoInfracional();
-            lblMedidaHistorico.setText(historico == null || historico.isBlank() ? "-" : historico);
-        }
+        var anterior=cmbMedidaPerfil.getValue();
+        var medidas=medidaDAO.listarPorAdolescente(cpfAtual);
+        cmbMedidaPerfil.setItems(FXCollections.observableArrayList(medidas));
+        cmbMedidaPerfil.setValue(medidas.stream().filter(m->anterior!=null && m.getIdMedida()==anterior.getIdMedida()).findFirst().orElse(medidas.isEmpty()?null:medidas.getFirst()));
+        alternar(boxMedidaForm,medidas.isEmpty());
+        alternar(boxMedidaCadastrada,!medidas.isEmpty());
+        exibirMedidaSelecionada();
 
         cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listar()));
         Long cpfReferencia = perfilDAO.buscarCpfTecnicoReferencia(cpfAtual);
@@ -260,6 +290,37 @@ public class DetalhesAdolescenteController {
         lblTecnicoAtual.setText(atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
         cmbTecnico.setValue(atual);
     }
+
+    private void exibirMedidaSelecionada() {
+        var m=cmbMedidaPerfil.getValue(); if(m==null) return;
+        lblMedidaTipo.setText(m.getTipoMedida().getDescricao());
+        lblMedidaInicio.setText(m.getDataInicio().format(FORMATO_DATA)+(m.getDataFim()==null?"":" · encerrada em "+m.getDataFim().format(FORMATO_DATA)));
+        lblMedidaDuracao.setText(m.isPSC()?medidaDAO.consultarHorasDaMedida(m.getIdMedida(),LocalDate.now())+" de "+m.getDuracaoHoras()+" horas cumpridas":m.getDuracaoMeses()+" meses");
+        lblMedidaReincidencia.setText(m.isReincidencia()?"Sim":"Não"); lblMedidaHistorico.setText(Formatadores.textoOuTraco(m.getHistoricoInfracional()));
+    }
+
+    @FXML public void novaMedida() {
+        idMedidaEdicao=null; cmbTipoMedida.setValue(null); dpInicioMedida.setValue(null); dpFimMedida.setValue(null);
+        txtDuracao.clear(); txtHistorico.clear(); chkReincidencia.setSelected(false); alternar(boxMedidaForm,true);
+    }
+    @FXML public void editarMedida() {
+        var m=cmbMedidaPerfil.getValue(); if(m==null) return;
+        idMedidaEdicao=m.getIdMedida(); cmbTipoMedida.setValue(m.getTipoMedida());
+        dpInicioMedida.setValue(m.getDataInicio()); dpFimMedida.setValue(m.getDataFim());
+        txtDuracao.setText(String.valueOf(m.isPSC()?m.getDuracaoHoras():m.getDuracaoMeses()));
+        txtHistorico.setText(m.getHistoricoInfracional()); chkReincidencia.setSelected(m.isReincidencia()); alternar(boxMedidaForm,true);
+    }
+    @FXML public void cancelarMedida() { idMedidaEdicao=null; alternar(boxMedidaForm,cmbMedidaPerfil.getItems().isEmpty()); }
+
+    @FXML public void editarCadastro() {
+        try {
+            FXMLLoader loader=new FXMLLoader(getClass().getResource("/View/CadastroAdolescenteView.fxml"));
+            Parent root=loader.load(); CadastroAdolescenteController controller=loader.getController();
+            controller.carregarParaEdicao(cpfAtual);
+            NavegacaoUtil.trocarRaiz((Stage)lblNome.getScene().getWindow(),root,"Instituto C.A.S.A. - Editar cadastro");
+        } catch(Exception e) { e.printStackTrace(); mostrarAlerta(Alert.AlertType.ERROR,"Erro ao abrir cadastro",e.getMessage()); }
+    }
+    @FXML public void abrirFrequenciaMensal(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/FrequenciaView.fxml","Frequência mensal"); }
 
     /** Depois de salvar algo, busca o resumo atualizado e redesenha o cabeçalho e as abas. */
     private void recarregarPerfil() {
@@ -323,6 +384,8 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void salvarMedida() {
+        try { dpInicioMedida.commitValue(); dpFimMedida.commitValue(); }
+        catch(RuntimeException e) { mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","Confira as datas informadas."); return; }
         TipoMedida tipo = cmbTipoMedida.getValue();
         if (tipo == null || dpInicioMedida.getValue() == null || txtDuracao.getText().trim().isEmpty()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Campos obrigatórios",
@@ -340,7 +403,8 @@ public class DetalhesAdolescenteController {
 
         try {
             MedidaSocioeducativa medida = new MedidaSocioeducativa();
-            medida.setIdMedida(IdUtil.proximoId("MedidaSocioeducativa"));
+            medida.setIdMedida(idMedidaEdicao==null?0:idMedidaEdicao);
+            medida.setDataFim(dpFimMedida.getValue());
             medida.setCpfAdolescente(cpfAtual);
             medida.setTipoMedida(tipo);
             medida.setDataInicio(dpInicioMedida.getValue());
@@ -352,8 +416,9 @@ public class DetalhesAdolescenteController {
                 medida.setDuracaoMeses(duracao);
             }
 
-            if (medidaDAO.inserir(medida)) {
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Medida cadastrada com sucesso!");
+            if (idMedidaEdicao==null ? medidaDAO.inserir(medida) : medidaDAO.atualizar(medida)) {
+                idMedidaEdicao=null;
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "Medida salva com sucesso!");
                 recarregarPerfil();
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
@@ -389,252 +454,45 @@ public class DetalhesAdolescenteController {
 
     // ===================== FREQUÊNCIA E HORAS =====================
 
+    @FXML public void atualizarFrequenciaMes() {
+        try { dpMesFrequencia.commitValue(); carregarAbaFrequencia(); }
+        catch(RuntimeException e) { erroBanco(e); }
+    }
+
     private void carregarAbaFrequencia() {
-        List<FrequenciaLinhaDTO> linhas = perfilDAO.listarFrequencia(cpfAtual);
-
-        int presencas = 0;
-        int faltas = 0;
-        int horas = 0;
-        for (FrequenciaLinhaDTO l : linhas) {
-            if (l.status() == StatusPresenca.PRESENTE) {
-                presencas++;
-                if (l.horas() != null) horas += l.horas();
-            } else {
-                faltas++;
-            }
-        }
-        int total = presencas + faltas;
-
-        lblFreqPresencas.setText(String.valueOf(presencas));
-        lblFreqFaltas.setText(String.valueOf(faltas));
-        lblFreqHoras.setText(horas + "h");
-        lblFreqPercentual.setText(total == 0 ? "-" : Math.round(presencas * 100.0 / total) + "%");
-
-        construirTabelaFrequencia(linhas);
+        if(dpMesFrequencia.getValue()==null) throw new IllegalArgumentException("Informe o mês da frequência.");
+        YearMonth mes=YearMonth.from(dpMesFrequencia.getValue());
+        List<Frequencia> registros=frequenciaDAO.listar(cpfAtual,mes.atDay(1),mes.atEndOfMonth());
+        long presencas=registros.stream().filter(Frequencia::isPresente).count();
+        long faltas=registros.stream().filter(f->!f.isPresente()).count();
+        long injustificadas=registros.stream().filter(f->f.getStatusPresenca()==StatusPresenca.FALTA_INJUSTIFICADA).map(Frequencia::getDataPresenca).distinct().count();
+        int horas=registros.stream().filter(f->f.getIdMedida()!=null).mapToInt(Frequencia::getHorasContabilizadas).sum();
+        lblFreqPresencas.setText(Long.toString(presencas)); lblFreqFaltas.setText(Long.toString(faltas));
+        lblFreqHoras.setText(horas+"h"); lblFreqPercentual.setText(injustificadas>=2?"Irregular":"Regular");
+        listaFrequenciaPerfil.setItems(FXCollections.observableArrayList(registros));
     }
 
-    private void construirTabelaFrequencia(List<FrequenciaLinhaDTO> linhas) {
-        boxTabelaFrequencia.getChildren().clear();
-
-        if (linhas.isEmpty()) {
-            Label vazio = new Label("Nenhuma frequência registrada ainda.");
-            vazio.getStyleClass().add("empty-text");
-            boxTabelaFrequencia.getChildren().add(vazio);
-            return;
-        }
-
-        GridPane grade = new GridPane();
-        for (double largura : new double[]{18, 30, 14, 38}) {
-            ColumnConstraints coluna = new ColumnConstraints();
-            coluna.setPercentWidth(largura);
-            grade.getColumnConstraints().add(coluna);
-        }
-
-        String[] titulos = {"DATA", "STATUS", "HORAS", "ATIVIDADE"};
-        for (int c = 0; c < titulos.length; c++) {
-            Label cabecalho = new Label(titulos[c]);
-            cabecalho.getStyleClass().add("table-head");
-            cabecalho.setMaxWidth(Double.MAX_VALUE);
-            grade.add(cabecalho, c, 0);
-        }
-
-        int linha = 1;
-        for (FrequenciaLinhaDTO l : linhas) {
-            grade.add(celulaTabela(textoTabela(Formatadores.dataCurta(l.data()), "table-cell-mono")), 0, linha);
-            grade.add(celulaTabela(selo(l.status())), 1, linha);
-
-            boolean mostraHoras = l.status() == StatusPresenca.PRESENTE && l.horas() != null;
-            grade.add(celulaTabela(textoTabela(mostraHoras ? l.horas() + "h" : "—", "table-cell-text")), 2, linha);
-            grade.add(celulaTabela(textoTabela(Formatadores.textoOuTraco(l.atividade()), "table-cell-text")), 3, linha);
-            linha++;
-        }
-        boxTabelaFrequencia.getChildren().add(grade);
+    @FXML public void corrigirFrequenciaSelecionada() {
+        Frequencia frequencia = listaFrequenciaPerfil.getSelectionModel().getSelectedItem();
+        if (frequencia != null) RegistroFrequenciaController.abrir(frequencia, this::recarregarPerfil);
     }
 
-    private Label selo(StatusPresenca status) {
-        Label selo = new Label(status.getDescricao());
-        switch (status) {
-            case PRESENTE -> selo.getStyleClass().add("badge-presente");
-            case FALTA_JUSTIFICADA -> selo.getStyleClass().add("badge-justificada");
-            default -> selo.getStyleClass().add("badge-falta");
-        }
-        return selo;
-    }
-
-    private Label textoTabela(String texto, String estilo) {
-        Label l = new Label(texto);
-        l.getStyleClass().add(estilo);
-        return l;
-    }
-
-    private HBox celulaTabela(Node conteudo) {
-        HBox caixa = new HBox(conteudo);
-        caixa.setAlignment(Pos.CENTER_LEFT);
-        caixa.getStyleClass().add("table-cell-box");
-        caixa.setMaxWidth(Double.MAX_VALUE);
-        return caixa;
-    }
-
-    @FXML
-    public void registrarPresenca() {
-        try {
-            Dialog<ButtonType> dialogo = criarDialogo("Registrar presença");
-
-            ComboBox<Atividade> cmbAtividade =
-                    new ComboBox<>(FXCollections.observableArrayList(atividadeDAO.listar()));
-            cmbAtividade.setPromptText("Selecione a atividade");
-            cmbAtividade.setMaxWidth(Double.MAX_VALUE);
-            cmbAtividade.setConverter(new StringConverter<>() {
-                @Override
-                public String toString(Atividade a) {
-                    return a == null ? "" : a.getNomeAtividade() + " (" + a.getCargaHoraria() + "h)";
-                }
-
-                @Override
-                public Atividade fromString(String texto) {
-                    return null;
-                }
-            });
-
-            Button btnNova = new Button("Nova atividade");
-            btnNova.getStyleClass().add("btn-outline");
-
-            DatePicker dpData = new DatePicker(LocalDate.now());
-            dpData.setMaxWidth(Double.MAX_VALUE);
-
-            ComboBox<StatusPresenca> cmbStatus =
-                    new ComboBox<>(FXCollections.observableArrayList(StatusPresenca.values()));
-            cmbStatus.setValue(StatusPresenca.PRESENTE);
-            cmbStatus.setMaxWidth(Double.MAX_VALUE);
-
-            TextField txtHoras = new TextField();
-            txtHoras.setPromptText("Ex.: 4");
-
-            Label erro = rotuloErro();
-
-            cmbAtividade.valueProperty().addListener((obs, antiga, nova) -> {
-                if (nova != null && cmbStatus.getValue() == StatusPresenca.PRESENTE) {
-                    txtHoras.setText(String.valueOf(nova.getCargaHoraria()));
-                }
-            });
-            cmbStatus.valueProperty().addListener((obs, antigo, novo) -> {
-                boolean presente = novo == StatusPresenca.PRESENTE;
-                txtHoras.setDisable(!presente);
-                if (!presente) {
-                    txtHoras.clear();
-                } else if (cmbAtividade.getValue() != null) {
-                    txtHoras.setText(String.valueOf(cmbAtividade.getValue().getCargaHoraria()));
-                }
-            });
-            btnNova.setOnAction(e -> {
-                Atividade criada = dialogoNovaAtividade();
-                if (criada != null) {
-                    cmbAtividade.getItems().add(criada);
-                    cmbAtividade.setValue(criada);
-                }
-            });
-
-            HBox linhaAtividade = new HBox(8, cmbAtividade, btnNova);
-            HBox.setHgrow(cmbAtividade, Priority.ALWAYS);
-
-            GridPane grade = formulario();
-            linhaFormulario(grade, 0, "ATIVIDADE *", linhaAtividade);
-            linhaFormulario(grade, 1, "DATA *", dpData);
-            linhaFormulario(grade, 2, "SITUAÇÃO *", cmbStatus);
-            linhaFormulario(grade, 3, "HORAS CUMPRIDAS", txtHoras);
-
-            boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
-                if (cmbAtividade.getValue() == null) return "Selecione a atividade (ou crie uma nova).";
-                if (dpData.getValue() == null) return "Informe a data.";
-                if (dpData.getValue().isAfter(LocalDate.now())) return "A data não pode ser futura.";
-                if (cmbStatus.getValue() == StatusPresenca.PRESENTE) {
-                    try {
-                        int h = Integer.parseInt(txtHoras.getText().trim());
-                        if (h <= 0 || h > 24) return "Informe as horas cumpridas (de 1 a 24).";
-                    } catch (NumberFormatException ex) {
-                        return "Informe as horas cumpridas (número inteiro).";
-                    }
-                }
-                return null;
-            });
-            if (!salvar) return;
-
-            Atividade atividade = cmbAtividade.getValue();
-            LocalDate data = dpData.getValue();
-
-            if (perfilDAO.existeFrequencia(cpfAtual, atividade.getIdAtividade(), data)) {
-                mostrarAlerta(Alert.AlertType.WARNING, "Registro duplicado",
-                        "Já existe um registro deste adolescente nesta atividade nesta data.");
-                return;
-            }
-
-            Frequencia f = new Frequencia();
-            f.setCpfAdolescente(cpfAtual);
-            f.setIdAtividade(atividade.getIdAtividade());
-            f.setDataPresenca(data);
-            f.setStatusPresenca(cmbStatus.getValue());
-            f.setHorasCumpridas(cmbStatus.getValue() == StatusPresenca.PRESENTE
-                    ? Integer.valueOf(txtHoras.getText().trim()) : null);
-
-            if (frequenciaDAO.registrar(f)) {
-                recarregarPerfil(); // atualiza a tabela, os totais e o progresso da medida no cabeçalho
-            } else {
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
-                        "Não foi possível registrar a frequência.");
-            }
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    /** Cadastra uma atividade (oficina, curso, local de PSC...) e devolve ela, ou null se cancelou/falhou. */
-    private Atividade dialogoNovaAtividade() {
-        Dialog<ButtonType> dialogo = criarDialogo("Nova atividade");
-
-        TextField txtNome = new TextField();
-        txtNome.setPromptText("Até 25 caracteres");
-        TextField txtCarga = new TextField();
-        txtCarga.setPromptText("Horas por encontro. Ex.: 4");
-        Label erro = rotuloErro();
-
-        GridPane grade = formulario();
-        linhaFormulario(grade, 0, "NOME *", txtNome);
-        linhaFormulario(grade, 1, "CARGA HORÁRIA (h) *", txtCarga);
-
-        boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
-            String nome = txtNome.getText().trim();
-            if (nome.isEmpty()) return "Informe o nome da atividade.";
-            if (nome.length() > 25) return "O nome pode ter no máximo 25 caracteres.";
-            try {
-                if (Integer.parseInt(txtCarga.getText().trim()) <= 0) return "A carga horária deve ser maior que zero.";
-            } catch (NumberFormatException ex) {
-                return "Informe a carga horária (número inteiro).";
-            }
-            return null;
-        });
-        if (!salvar) return null;
-
-        Atividade a = new Atividade();
-        a.setIdAtividade(IdUtil.proximoId("Atividade"));
-        a.setNomeAtividade(txtNome.getText().trim());
-        a.setCargaHoraria(Integer.parseInt(txtCarga.getText().trim()));
-
-        if (atividadeDAO.inserir(a)) {
-            return a;
-        }
-        mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar", "Não foi possível cadastrar a atividade.");
-        return null;
+    @FXML public void registrarPresenca() {
+        RegistroFrequenciaController.abrir(cpfAtual,LocalDate.now(),this::recarregarPerfil);
     }
 
     // ===================== PIA =====================
 
     private void carregarAbaPia() {
         piaAtual = piaDAO.buscarPorCpf(cpfAtual);
+        alternar(lblPiaStatus, true);
+        lblPiaStatus.setText(piaEnviadoAtual ? "Documento enviado" : "Documento pendente");
+        lblPiaStatus.getStyleClass().removeAll("badge-enviado", "badge-pendente");
+        lblPiaStatus.getStyleClass().add(piaEnviadoAtual ? "badge-enviado" : "badge-pendente");
 
         if (piaAtual == null) {
             alternar(boxPiaCadastrado, false);
             alternar(boxPiaForm, true);
-            alternar(lblPiaStatus, false);
             prepararFormularioPia(null);
             return;
         }
@@ -837,9 +695,14 @@ public class DetalhesAdolescenteController {
         }
         for (Responsavel r : responsaveis) {
             String contato = r.getContato() != null && !r.getContato().isBlank() ? " · " + r.getContato() : "";
-            boxResponsaveis.getChildren().add(cartaoPessoa(r.getNomeCompleto(),
-                    Formatadores.textoOuTraco(r.getParentesco()) + contato,
-                    r.isContatoPrincipal() ? "Contato principal" : null));
+            HBox cartao=cartaoPessoa(r.getNomeCompleto(),Formatadores.textoOuTraco(r.getParentesco())+contato,r.isContatoPrincipal()?"Contato principal":null);
+            Button editar=new Button("Editar"); editar.setOnAction(e->formularioResponsavel(r));
+            Button remover=new Button("Desvincular"); remover.setOnAction(e->{
+                if(confirmarRemocao("Remover o vínculo deste responsável? O cadastro da pessoa será preservado.")) {
+                    try { responsavelDAO.desvincular(cpfAtual,r.getCpf()); carregarAbaFamilia(); } catch(RuntimeException ex) { erroBanco(ex); }
+                }
+            });
+            cartao.getChildren().addAll(editar,remover); boxResponsaveis.getChildren().add(cartao);
         }
 
         // Demais membros da família
@@ -853,7 +716,14 @@ public class DetalhesAdolescenteController {
             if (f.getIdade() != null) sub.append(" · ").append(f.getIdade()).append(" anos");
             if (f.getProfissao() != null && !f.getProfissao().isBlank()) sub.append(" · ").append(f.getProfissao());
             if (f.getRenda() != null) sub.append(" · ").append(Formatadores.moeda(f.getRenda()));
-            boxComposicao.getChildren().add(cartaoPessoa(f.getNome(), sub.toString(), null));
+            HBox cartao=cartaoPessoa(f.getNome(),sub.toString(),null);
+            Button editar=new Button("Editar"); editar.setOnAction(e->formularioFamiliar(f));
+            Button remover=new Button("Excluir"); remover.setOnAction(e->{
+                if(confirmarRemocao("Excluir este integrante da composição familiar?")) {
+                    try { composicaoDAO.excluir(f.getIdComposicaoFamiliar(),cpfAtual); carregarAbaFamilia(); } catch(RuntimeException ex) { erroBanco(ex); }
+                }
+            });
+            cartao.getChildren().addAll(editar,remover); boxComposicao.getChildren().add(cartao);
         }
 
         // Situação social + UBS (tabela Saude)
@@ -867,15 +737,19 @@ public class DetalhesAdolescenteController {
 
         if (temDados) {
             lblSocBairro.setText(social != null ? Formatadores.textoOuTraco(social.getBairro()) : "-");
-            lblSocRenda.setText(social != null ? Formatadores.moeda(social.getRendaFamiliar()) + " / mês" : "-");
+            lblSocRenda.setText(social != null ? String.format(new java.util.Locale("pt","BR"),"%.2f salários mínimos",social.getRendaFamiliar()) : "-");
             lblSocBeneficios.setText(social != null ? Formatadores.textoOuTraco(social.getBeneficioSocial()) : "-");
-            lblSocCras.setText(social != null && social.getCrasReferencia() != null
-                    ? "CRAS nº " + social.getCrasReferencia() : "-");
+            lblSocCras.setText(social == null ? "—" : Formatadores.textoOuTraco(social.getCrasNome()));
             lblSocNis.setText(social != null ? String.valueOf(social.getNumeroNis()) : "-");
             lblSocUbs.setText(saude != null ? Formatadores.textoOuTraco(saude.getUbsReferencia()) : "-");
             lblSocEndereco.setText(social != null ? Formatadores.textoOuTraco(social.getEndereco()) : "-");
             lblSocTelefone.setText(social != null ? Formatadores.textoOuTraco(social.getTelefone()) : "-");
         }
+    }
+
+    private boolean confirmarRemocao(String mensagem) {
+        Alert a=new Alert(Alert.AlertType.CONFIRMATION,mensagem,ButtonType.YES,ButtonType.NO);
+        return a.showAndWait().orElse(ButtonType.NO)==ButtonType.YES;
     }
 
     private HBox cartaoPessoa(String nome, String detalhe, String selo) {
@@ -904,9 +778,9 @@ public class DetalhesAdolescenteController {
         return l;
     }
 
-    @FXML
-    public void adicionarResponsavel() {
-        Dialog<ButtonType> dialogo = criarDialogo("Adicionar responsável");
+    @FXML public void adicionarResponsavel() { formularioResponsavel(null); }
+    private void formularioResponsavel(Responsavel existente) {
+        Dialog<ButtonType> dialogo = criarDialogo(existente==null?"Adicionar responsável":"Editar responsável");
 
         TextField txtNome = new TextField();
         TextField txtCpf = new TextField();
@@ -917,7 +791,7 @@ public class DetalhesAdolescenteController {
         txtContato.setPromptText("(41) 99999-9999");
         TextField txtEmail = new TextField();
         TextField txtParentesco = new TextField();
-        txtParentesco.setPromptText("Ex.: Mãe, Pai, Avó (até 10 letras)");
+        txtParentesco.setPromptText("Ex.: Mãe, Pai, Avó (até 80 caracteres)");
         CheckBox chkPrincipal = new CheckBox("É o contato principal");
         Label erro = rotuloErro();
 
@@ -929,6 +803,27 @@ public class DetalhesAdolescenteController {
         linhaFormulario(grade, 4, "CONTATO", txtContato);
         linhaFormulario(grade, 5, "E-MAIL", txtEmail);
         linhaFormulario(grade, 6, "", chkPrincipal);
+        Label aviso=new Label("Parentesco e contato principal são definidos para este adolescente. Dados pessoais de um responsável existente são compartilhados.");
+        aviso.setWrapText(true); linhaFormulario(grade,7,"",aviso);
+        if(existente!=null) {
+            txtNome.setText(existente.getNomeCompleto()); txtCpf.setText(String.format("%011d",existente.getCpf())); txtCpf.setDisable(true);
+            dpNascimento.setValue(existente.getDataNascimento()); txtContato.setText(existente.getContato()); txtEmail.setText(existente.getEmail());
+            txtParentesco.setText(existente.getParentesco()); chkPrincipal.setSelected(existente.isContatoPrincipal());
+        } else txtCpf.focusedProperty().addListener((o,a,focused)-> {
+            String numero=Formatadores.soDigitos(txtCpf.getText());
+            if(!focused && numero.length()==11) {
+                try {
+                    Responsavel r=responsavelDAO.buscarPessoa(Long.parseLong(numero));
+                    boolean reutilizado=r!=null;
+                    txtNome.setDisable(reutilizado); dpNascimento.setDisable(reutilizado); txtContato.setDisable(reutilizado); txtEmail.setDisable(reutilizado);
+                    if(r!=null) {
+                        txtNome.setText(r.getNomeCompleto()); dpNascimento.setValue(r.getDataNascimento()); txtContato.setText(r.getContato()); txtEmail.setText(r.getEmail());
+                        aviso.setText("CPF já cadastrado: os dados pessoais serão reutilizados. Para alterá-los, salve o vínculo e use Editar.");
+                    }
+                } catch(RuntimeException e) { erro.setText(e.getMessage()); }
+            }
+        });
+
 
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
             String nome = txtNome.getText().trim();
@@ -939,8 +834,8 @@ public class DetalhesAdolescenteController {
             if (dpNascimento.getValue() == null || !dpNascimento.getValue().isBefore(LocalDate.now()))
                 return "Informe uma data de nascimento válida.";
             String parentesco = txtParentesco.getText().trim();
-            if (parentesco.isEmpty() || parentesco.length() > 10) return "Parentesco: de 1 a 10 caracteres.";
-            if (txtContato.getText().trim().length() > 15) return "Contato: no máximo 15 caracteres.";
+            if (parentesco.isEmpty() || parentesco.length() > 80) return "Parentesco: de 1 a 80 caracteres.";
+            if (txtContato.getText().trim().length() > 30) return "Contato: no máximo 30 caracteres.";
             if (txtEmail.getText().trim().length() > 90) return "E-mail: no máximo 90 caracteres.";
             return null;
         });
@@ -956,7 +851,7 @@ public class DetalhesAdolescenteController {
             r.setParentesco(txtParentesco.getText().trim());
             r.setContatoPrincipal(chkPrincipal.isSelected());
 
-            if (responsavelDAO.inserir(r, cpfAtual)) {
+            if (existente==null ? responsavelDAO.inserir(r, cpfAtual) : responsavelDAO.atualizar(r,cpfAtual)) {
                 carregarAbaFamilia();
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
@@ -969,9 +864,9 @@ public class DetalhesAdolescenteController {
         }
     }
 
-    @FXML
-    public void adicionarFamiliar() {
-        Dialog<ButtonType> dialogo = criarDialogo("Adicionar familiar");
+    @FXML public void adicionarFamiliar() { formularioFamiliar(null); }
+    private void formularioFamiliar(ComposicaoFamiliar existente) {
+        Dialog<ButtonType> dialogo = criarDialogo(existente==null?"Adicionar familiar":"Editar familiar");
 
         TextField txtNome = new TextField();
         TextField txtParentesco = new TextField();
@@ -979,7 +874,7 @@ public class DetalhesAdolescenteController {
         TextField txtRenda = new TextField();
         txtRenda.setPromptText("Ex.: 1500,00");
         TextField txtEscolaridade = new TextField();
-        txtEscolaridade.setPromptText("Até 10 caracteres. Ex.: Médio");
+        txtEscolaridade.setPromptText("Ex.: Ensino médio");
         TextField txtProfissao = new TextField();
         Label erro = rotuloErro();
 
@@ -990,6 +885,13 @@ public class DetalhesAdolescenteController {
         linhaFormulario(grade, 3, "RENDA (R$)", txtRenda);
         linhaFormulario(grade, 4, "ESCOLARIDADE", txtEscolaridade);
         linhaFormulario(grade, 5, "PROFISSÃO", txtProfissao);
+        if(existente!=null) {
+            txtNome.setText(existente.getNome()); txtParentesco.setText(existente.getParentesco());
+            txtIdade.setText(existente.getIdade()==null?"":existente.getIdade().toString());
+            txtRenda.setText(existente.getRenda()==null?"":String.format(new java.util.Locale("pt","BR"),"%.2f",existente.getRenda()));
+            txtEscolaridade.setText(existente.getEscolaridade()); txtProfissao.setText(existente.getProfissao());
+        }
+
 
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
             String nome = txtNome.getText().trim();
@@ -1011,15 +913,15 @@ public class DetalhesAdolescenteController {
                     return "Renda inválida. Use o formato 1500,00.";
                 }
             }
-            if (txtEscolaridade.getText().trim().length() > 10) return "Escolaridade: no máximo 10 caracteres.";
-            if (txtProfissao.getText().trim().length() > 25) return "Profissão: no máximo 25 caracteres.";
+            if (txtEscolaridade.getText().trim().length() > 80) return "Escolaridade: no máximo 80 caracteres.";
+            if (txtProfissao.getText().trim().length() > 120) return "Profissão: no máximo 120 caracteres.";
             return null;
         });
         if (!salvar) return;
 
         try {
             ComposicaoFamiliar f = new ComposicaoFamiliar();
-            f.setIdComposicaoFamiliar(IdUtil.proximoId("ComposicaoFamiliar"));
+            f.setIdComposicaoFamiliar(existente==null?0:existente.getIdComposicaoFamiliar());
             f.setNome(txtNome.getText().trim());
             f.setParentesco(txtParentesco.getText().trim());
             f.setIdade(txtIdade.getText().isBlank() ? null : Integer.valueOf(txtIdade.getText().trim()));
@@ -1028,7 +930,7 @@ public class DetalhesAdolescenteController {
             f.setProfissao(nuloSeVazio(txtProfissao.getText()));
             f.setCpfAdolescente(cpfAtual);
 
-            if (composicaoDAO.inserir(f)) {
+            if (existente==null ? composicaoDAO.inserir(f) : composicaoDAO.atualizar(f)) {
                 carregarAbaFamilia();
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar", "Não foi possível salvar o familiar.");
@@ -1040,119 +942,7 @@ public class DetalhesAdolescenteController {
         }
     }
 
-    @FXML
-    public void editarSituacaoSocial() {
-        SituacaoSocial existente;
-        Saude saudeExistente;
-        try {
-            existente = situacaoSocialDAO.buscarPorCpf(cpfAtual);
-            saudeExistente = saudeDAO.buscarPorCpf(cpfAtual);
-        } catch (RuntimeException e) {
-            erroBanco(e);
-            return;
-        }
-
-        Dialog<ButtonType> dialogo = criarDialogo(existente == null ? "Cadastrar situação social" : "Editar situação social");
-
-        TextField txtBairro = new TextField(existente != null ? textoOuVazio(existente.getBairro()) : "");
-        TextField txtEndereco = new TextField(existente != null ? textoOuVazio(existente.getEndereco()) : "");
-        TextField txtTelefone = new TextField(existente != null ? textoOuVazio(existente.getTelefone()) : "");
-        TextField txtRenda = new TextField(existente != null
-                ? String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.2f", existente.getRendaFamiliar()) : "");
-        TextField txtNis = new TextField(existente != null ? String.valueOf(existente.getNumeroNis()) : "");
-        TextField txtCras = new TextField(existente != null && existente.getCrasReferencia() != null
-                ? String.valueOf(existente.getCrasReferencia()) : "");
-        TextField txtBeneficios = new TextField(existente != null ? textoOuVazio(existente.getBeneficioSocial()) : "");
-        TextField txtUbs = new TextField(saudeExistente != null ? textoOuVazio(saudeExistente.getUbsReferencia()) : "");
-        txtRenda.setPromptText("Ex.: 1800,00");
-        txtNis.setPromptText("Somente números");
-        txtCras.setPromptText("Número do CRAS");
-        Label erro = rotuloErro();
-
-        GridPane grade = formulario();
-        linhaFormulario(grade, 0, "BAIRRO *", txtBairro);
-        linhaFormulario(grade, 1, "ENDEREÇO *", txtEndereco);
-        linhaFormulario(grade, 2, "TELEFONE *", txtTelefone);
-        linhaFormulario(grade, 3, "RENDA FAMILIAR *", txtRenda);
-        linhaFormulario(grade, 4, "NIS *", txtNis);
-        linhaFormulario(grade, 5, "CRAS DE REFERÊNCIA", txtCras);
-        linhaFormulario(grade, 6, "BENEFÍCIOS SOCIAIS", txtBeneficios);
-        linhaFormulario(grade, 7, "UBS DE REFERÊNCIA", txtUbs);
-
-        boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
-            String bairro = txtBairro.getText().trim();
-            if (bairro.isEmpty() || bairro.length() > 60) return "Informe o bairro (até 60 caracteres).";
-            String endereco = txtEndereco.getText().trim();
-            if (endereco.isEmpty() || endereco.length() > 60) return "Informe o endereço (até 60 caracteres).";
-            String telefone = txtTelefone.getText().trim();
-            if (telefone.isEmpty() || telefone.length() > 15) return "Informe o telefone (até 15 caracteres).";
-            try {
-                Formatadores.lerDecimal(txtRenda.getText());
-            } catch (NumberFormatException ex) {
-                return "Renda inválida. Use o formato 1800,00.";
-            }
-            String nis = Formatadores.soDigitos(txtNis.getText());
-            if (nis.isEmpty() || nis.length() > 11) return "O NIS deve ter até 11 dígitos.";
-            if (!txtCras.getText().isBlank()) {
-                try {
-                    Integer.parseInt(txtCras.getText().trim());
-                } catch (NumberFormatException ex) {
-                    return "O CRAS deve ser um número inteiro.";
-                }
-            }
-            if (txtBeneficios.getText().trim().length() > 256) return "Benefícios: no máximo 256 caracteres.";
-            if (txtUbs.getText().trim().length() > 25) return "UBS: no máximo 25 caracteres.";
-            return null;
-        });
-        if (!salvar) return;
-
-        try {
-            SituacaoSocial ss = existente != null ? existente : new SituacaoSocial();
-            ss.setBairro(txtBairro.getText().trim());
-            ss.setEndereco(txtEndereco.getText().trim());
-            ss.setTelefone(txtTelefone.getText().trim());
-            ss.setRendaFamiliar(Formatadores.lerDecimal(txtRenda.getText()));
-            ss.setNumeroNis(Long.parseLong(Formatadores.soDigitos(txtNis.getText())));
-            ss.setCrasReferencia(txtCras.getText().isBlank() ? null : Integer.valueOf(txtCras.getText().trim()));
-            ss.setBeneficioSocial(nuloSeVazio(txtBeneficios.getText()));
-
-            boolean gravou;
-            if (existente != null) {
-                gravou = situacaoSocialDAO.atualizar(ss);
-            } else {
-                ss.setIdSituacaoSocial(IdUtil.proximoId("SituacaoSocial"));
-                ss.setCpfAdolescente(cpfAtual);
-                gravou = situacaoSocialDAO.inserir(ss);
-            }
-
-            String ubs = nuloSeVazio(txtUbs.getText());
-            if (gravou && saudeExistente != null) {
-                saudeExistente.setUbsReferencia(ubs);
-                gravou = saudeDAO.atualizar(saudeExistente);
-            } else if (gravou && ubs != null) {
-                Saude nova = new Saude();
-                nova.setIdFichaSaude(IdUtil.proximoId("Saude"));
-                nova.setUbsReferencia(ubs);
-                nova.setUsoSpa(false);
-                nova.setCpfAdolescente(cpfAtual);
-                gravou = saudeDAO.inserir(nova);
-            }
-
-            if (gravou) {
-                recarregarPerfil(); // também atualiza o bairro nos dados pessoais
-            } else {
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
-                        "Não foi possível salvar os dados.\nSe o NIS ou a renda forem rejeitados, execute o script "
-                                + "ajustes_ddl.sql no banco.");
-            }
-        } catch (IllegalArgumentException e) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Dados inválidos", e.getMessage());
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    // ===================== AUXILIARES DE FORMULÁRIO =====================
+    @FXML public void editarSituacaoSocial() { editarCadastro(); }
 
     private Dialog<ButtonType> criarDialogo(String titulo) {
         Dialog<ButtonType> dialogo = new Dialog<>();

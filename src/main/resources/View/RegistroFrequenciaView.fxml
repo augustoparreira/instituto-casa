@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.RegistroFrequenciaController"
+      spacing="12" prefWidth="650" stylesheets="@adolescentes-style.css" styleClass="content-box">
+    <Label fx:id="lblAdolescente" styleClass="box-title" wrapText="true"/>
+    <HBox spacing="12" alignment="CENTER_LEFT"><Label text="Data" styleClass="form-value-normal"/><DatePicker fx:id="dpData"/><Button text="Novo lançamento" onAction="#novo" styleClass="btn-outline"/></HBox>
+    <Label text="Lançamentos deste dia — selecione para corrigir" styleClass="form-value-normal"/>
+    <ListView fx:id="listaRegistros" prefHeight="110" styleClass="frequencia-lista"/>
+    <HBox spacing="12"><ComboBox fx:id="cmbAtividade" promptText="Atividade" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="+ Atividade" onAction="#novaAtividade" styleClass="btn-outline"/></HBox>
+    <HBox spacing="12"><ComboBox fx:id="cmbMedida" promptText="Sem PSC · acompanhamento sem horas" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Sem PSC" onAction="#semPsc" styleClass="btn-outline"/></HBox>
+    <HBox spacing="12" alignment="CENTER_LEFT"><ComboBox fx:id="cmbStatus" prefWidth="260"/><Label text="Horas de PSC" styleClass="form-value-normal"/><TextField fx:id="txtHoras" prefWidth="75"/></HBox>
+    <Label text="Observação / justificativa (obrigatória para falta justificada)" styleClass="form-value-normal"/>
+    <TextArea fx:id="txtObservacoes" wrapText="true" prefRowCount="3"/>
+    <Label fx:id="lblMensagem" wrapText="true" style="-fx-text-fill: #76542b;"/>
+    <HBox spacing="12" alignment="CENTER_RIGHT"><Button text="Excluir lançamento" onAction="#excluir" styleClass="filter-btn"/><Button text="Salvar frequência" onAction="#salvar" styleClass="btn-novo"/></HBox>
+</VBox>

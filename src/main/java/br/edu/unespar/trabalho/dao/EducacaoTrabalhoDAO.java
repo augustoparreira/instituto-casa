@@ -53,7 +53,7 @@ public class EducacaoTrabalhoDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Erro ao buscar dados de educação/trabalho: " + e.getMessage());
+            throw new IllegalStateException("Não foi possível carregar os dados cadastrais.", e);
         }
         return null;
     }

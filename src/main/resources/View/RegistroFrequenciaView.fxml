@@ -8,7 +8,8 @@
     <Label text="Lançamentos deste dia — selecione para corrigir" styleClass="form-value-normal"/>
     <ListView fx:id="listaRegistros" prefHeight="110" styleClass="frequencia-lista"/>
     <HBox spacing="12"><ComboBox fx:id="cmbAtividade" promptText="Atividade" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="+ Atividade" onAction="#novaAtividade" styleClass="btn-outline"/></HBox>
-    <HBox spacing="12"><ComboBox fx:id="cmbMedida" promptText="Sem PSC · acompanhamento sem horas" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Sem PSC" onAction="#semPsc" styleClass="btn-outline"/></HBox>
+    <Label text="Medida deste lançamento — selecione LA ou PSC vigente na data" styleClass="form-value-normal" wrapText="true"/>
+    <HBox spacing="12"><ComboBox fx:id="cmbMedida" promptText="Acompanhamento sem vínculo com medida" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Sem vínculo" onAction="#semMedida" styleClass="btn-outline"/></HBox>
     <HBox spacing="12" alignment="CENTER_LEFT"><ComboBox fx:id="cmbStatus" prefWidth="260"/><Label text="Horas de PSC" styleClass="form-value-normal"/><TextField fx:id="txtHoras" prefWidth="75"/></HBox>
     <Label text="Observação / justificativa (obrigatória para falta justificada)" styleClass="form-value-normal"/>
     <TextArea fx:id="txtObservacoes" wrapText="true" prefRowCount="3"/>

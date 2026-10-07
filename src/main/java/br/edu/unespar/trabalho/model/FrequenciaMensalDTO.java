@@ -21,9 +21,7 @@ public class FrequenciaMensalDTO {
     public Adolescente getAdolescente() { return adolescente; }
     public boolean isPiaEnviado() { return piaEnviado; }
     public List<MedidaSocioeducativa> getMedidasDoMes() {
-        // No mês atual, uma medida já cadastrada conta como associada mesmo que comece nos próximos dias
-        // (ou meses). Nos demais meses vale o histórico: só medidas iniciadas até o fim daquele mês.
-        LocalDate limiteInicio = mes.equals(YearMonth.now()) ? LocalDate.MAX : mes.atEndOfMonth();
+        LocalDate limiteInicio = mes.atEndOfMonth();
         return medidas.stream()
                 .filter(m->!m.getDataInicio().isAfter(limiteInicio)
                         && (m.getDataFim()==null || !m.getDataFim().isBefore(mes.atDay(1))))

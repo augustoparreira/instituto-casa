@@ -230,8 +230,14 @@
                             <Button text="+  Registrar presença" styleClass="btn-outline" onAction="#registrarPresenca" />
                         </HBox>
 
+                        <Label text="Resumo geral por medida" styleClass="box-title"/>
+                        <Label text="Totais até hoje, independentes do mês consultado. Presenças e faltas incluem apenas os lançamentos vinculados à respectiva medida." wrapText="true" styleClass="page-subtitle"/>
+                        <HBox spacing="12"><ComboBox fx:id="cmbMedidaFrequenciaGeral" promptText="Medidas vigentes (LA e PSC)" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="search-field"/><Button text="Medidas vigentes" onAction="#mostrarMedidasVigentesFrequencia" styleClass="btn-outline"/></HBox>
+                        <VBox fx:id="boxFrequenciaGeral" spacing="16"/>
+                        <Region styleClass="divider"/>
+                        <Label text="Consulta mensal" styleClass="box-title"/>
                         <HBox spacing="12"><DatePicker fx:id="dpMesFrequencia"/><Button text="Consultar mês" onAction="#atualizarFrequenciaMes" styleClass="filter-btn"/><Button text="Planilha mensal" onAction="#abrirFrequenciaMensal" styleClass="btn-outline"/></HBox>
-                        <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. PSC mostra as horas do mês e LA mostra os meses cumpridos; quem tem as duas vê os dois. Os totais ficam no cabeçalho e na aba de medidas." wrapText="true" styleClass="page-subtitle"/>
+                        <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. PSC mostra as horas do mês e LA mostra os meses decorridos até a referência consultada." wrapText="true" styleClass="page-subtitle"/>
                         <HBox spacing="12.0">
                             <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label fx:id="lblFreqPresencas" text="0" styleClass="stat-number-green" />
@@ -298,7 +304,7 @@
                                 <Label fx:id="lblPiaEnviado" text="Não" styleClass="form-value-normal" />
                             </VBox>
                             <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                <Button text="Gerar relatório PDF" styleClass="btn-novo" onAction="#gerarPdfPia" />
+                                <Button text="Exportar relatório TXT" styleClass="btn-novo" onAction="#exportarTextoPia" />
                                 <Button fx:id="btnMarcarEnviado" text="Marcar como enviado" styleClass="btn-outline" onAction="#marcarPiaEnviado" />
                                 <Region HBox.hgrow="ALWAYS" />
                                 <Button text="Editar PIA" styleClass="btn-outline" onAction="#editarPia" />

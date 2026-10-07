@@ -2,7 +2,9 @@ package br.edu.unespar.trabalho.controller;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
-import br.edu.unespar.trabalho.model.EventoAgendaDTO;
+import br.edu.unespar.trabalho.model.EventoAgenda;
+import br.edu.unespar.trabalho.dao.EventoAgendaDAO;
+import br.edu.unespar.trabalho.model.StatusAdolescente;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -22,7 +24,6 @@ import javafx.stage.Stage;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 
 public class DashboardController {
@@ -60,8 +61,10 @@ public class DashboardController {
     private void carregarEstatisticasEAdolescentes() {
         List<AdolescenteDTO> jovensCadastrados = adolescenteDAO.listarResumoDTO();
 
-        long totalPsc = jovensCadastrados.stream().filter(j -> "PSC".equalsIgnoreCase(j.getMedida())).count();
-        long totalLa = jovensCadastrados.stream().filter(j -> "LA".equalsIgnoreCase(j.getMedida())).count();
+        long totalPsc = jovensCadastrados.stream().filter(j -> StatusAdolescente.ATIVO.getDescricao().equalsIgnoreCase(j.getStatus()))
+                .filter(j -> java.util.Arrays.stream(j.getMedida().split("/")).anyMatch(m -> "PSC".equalsIgnoreCase(m.trim()))).count();
+        long totalLa = jovensCadastrados.stream().filter(j -> StatusAdolescente.ATIVO.getDescricao().equalsIgnoreCase(j.getStatus()))
+                .filter(j -> java.util.Arrays.stream(j.getMedida().split("/")).anyMatch(m -> "LA".equalsIgnoreCase(m.trim()))).count();
 
         if (lblTotalCadastrados != null) lblTotalCadastrados.setText(String.valueOf(jovensCadastrados.size()));
         if (lblTotalPsc != null) lblTotalPsc.setText(String.valueOf(totalPsc));
@@ -146,35 +149,57 @@ public class DashboardController {
         if (vboxAgenda == null) return;
         vboxAgenda.getChildren().clear();
 
-        List<EventoAgendaDTO> agenda = new ArrayList<>();
-        agenda.add(new EventoAgendaDTO(25, "09h00", "Visita domiciliar", "Lucas Oliveira"));
-        agenda.add(new EventoAgendaDTO(26, "10h30", "Reunião PIA", "Mariana Santos"));
-        agenda.add(new EventoAgendaDTO(27, "14h00", "Entrega relatório", "Ass. Carla"));
-        agenda.add(new EventoAgendaDTO(28, "09h00", "Audiência judicial", "Felipe Souza"));
+        List<EventoAgenda> agenda;
+        LocalDate segunda=LocalDate.now().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        try {
+            agenda=new EventoAgendaDAO().listar(segunda,segunda.plusDays(6)).stream()
+                    .filter(e->e.getStatus()==EventoAgenda.Status.AGENDADO).toList();
+        } catch(RuntimeException e) {
+            Label erro=new Label("Agenda indisponível. Confira a conexão e a configuração do banco.");
+            erro.setWrapText(true); erro.setStyle("-fx-text-fill: #757575;"); vboxAgenda.getChildren().add(erro);
+            return;
+        }
+        if(agenda.isEmpty()) {
+            Label vazio=new Label("Nenhum compromisso agendado nesta semana."); vazio.setWrapText(true);
+            vazio.setStyle("-fx-text-fill: #757575;"); vboxAgenda.getChildren().add(vazio);
+        }
 
-        for (EventoAgendaDTO evento : agenda) {
+        for (EventoAgenda evento : agenda.stream().limit(5).toList()) {
             HBox agendaRow = new HBox(12);
             agendaRow.setAlignment(Pos.CENTER_LEFT);
             agendaRow.setStyle("-fx-border-color: transparent transparent #eeeeee transparent; -fx-border-width: 0 0 1 0; -fx-padding: 5 0 8 0;");
 
             VBox dataBox = new VBox(2);
             dataBox.setAlignment(Pos.CENTER);
-            Label lblDia = new Label(evento.getDia() + " Jun");
+            Label lblDia = new Label(evento.getData().format(DateTimeFormatter.ofPattern("dd/MM")));
             lblDia.setStyle("-fx-text-fill: #a0a0a0; -fx-font-size: 11px;");
-            Label lblHora = new Label(evento.getHorario());
+            Label lblHora = new Label(evento.getHoraInicio().format(DateTimeFormatter.ofPattern("HH:mm")));
             lblHora.setStyle("-fx-text-fill: #19523e; -fx-font-weight: bold; -fx-font-size: 12px;");
             dataBox.getChildren().addAll(lblDia, lblHora);
 
             VBox infoBox = new VBox(2);
             Label lblTitulo = new Label(evento.getTitulo());
             lblTitulo.setStyle("-fx-text-fill: #2b2b2b; -fx-font-weight: bold; -fx-font-size: 12px;");
-            Label lblSub = new Label(evento.getTipo());
+            Label lblSub = new Label(evento.getNomeAdolescente()==null?evento.getTipo().toString():evento.getNomeAdolescente());
+            lblTitulo.setWrapText(true); lblSub.setWrapText(true);
             lblSub.setStyle("-fx-text-fill: #757575; -fx-font-size: 11px;");
             infoBox.getChildren().addAll(lblTitulo, lblSub);
 
             agendaRow.getChildren().addAll(dataBox, infoBox);
             vboxAgenda.getChildren().add(agendaRow);
+            agendaRow.setStyle(agendaRow.getStyle()+"-fx-cursor: hand;");
+            agendaRow.setOnMouseClicked(e->abrirAgendaNaData(evento.getData()));
         }
+    }
+
+    private void abrirAgendaNaData(LocalDate data) {
+        try {
+            FXMLLoader loader=new FXMLLoader(getClass().getResource("/View/AgendaView.fxml"));
+            Parent root=loader.load();
+            ((AgendaController)loader.getController()).exibirData(data);
+            Stage stage=(Stage)vboxAgenda.getScene().getWindow();
+            NavegacaoUtil.trocarRaiz(stage,root,"Agenda institucional");
+        } catch(Exception e) { e.printStackTrace(); }
     }
 
     private String getIniciais(String nomeCompleto) {

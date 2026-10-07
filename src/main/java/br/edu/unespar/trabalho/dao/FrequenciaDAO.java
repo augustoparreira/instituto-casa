@@ -24,9 +24,13 @@ public class FrequenciaDAO {
                     try(ResultSet r=s.executeQuery()) { if(!r.next()) throw new IllegalArgumentException("Adolescente não encontrado."); }
                 }
                 if(f.getIdMedida()!=null) {
-                    try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM MedidaSocioeducativa WHERE id_medida=? AND cpf_adolescente=? AND upper(tipo_medida)='PSC' AND data_inicio<=? AND (data_fim IS NULL OR data_fim>=?)")) {
+                    try(PreparedStatement s=c.prepareStatement("SELECT tipo_medida FROM MedidaSocioeducativa WHERE id_medida=? AND cpf_adolescente=? AND upper(tipo_medida) IN ('LA','PSC') AND data_inicio<=? AND (data_fim IS NULL OR data_fim>=?)")) {
                         s.setInt(1,f.getIdMedida()); s.setLong(2,f.getCpfAdolescente()); s.setObject(3,f.getDataPresenca()); s.setObject(4,f.getDataPresenca());
-                        try(ResultSet r=s.executeQuery()) { if(!r.next()) throw new IllegalArgumentException("A PSC selecionada não pertence a este adolescente ou não abrange a data."); }
+                        try(ResultSet r=s.executeQuery()) {
+                            if(!r.next()) throw new IllegalArgumentException("A medida selecionada não pertence a este adolescente ou não abrange a data.");
+                            if(TipoMedida.fromCodigo(r.getString("tipo_medida"))==TipoMedida.LA && f.getHorasContabilizadas()>0)
+                                throw new IllegalArgumentException("Comparecimento de LA não contabiliza horas de PSC.");
+                        }
                     }
                 }
                 try(PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE cpf_adolescente=? AND data_presenca=? AND upper(status_presenca)='PRESENTE' AND id_atividade<>?")) {
@@ -90,7 +94,7 @@ public class FrequenciaDAO {
     /**
      * Mantém o status do adolescente coerente com a frequência do mês do lançamento:
      * - ao atingir o limite de faltas injustificadas, ATIVO passa para EM_DESCUMPRIMENTO;
-     * - se este mesmo lançamento (correção ou exclusão) desfez a irregularidade, EM_DESCUMPRIMENTO volta para ATIVO.
+     * - uma correção ou exclusão só devolve para ATIVO se nenhum outro mês permanecer irregular.
      * INATIVO e EM_ANALISE_EXTINCAO nunca são alterados automaticamente.
      */
     private void sincronizarStatusAdolescente(Connection c,long cpf,YearMonth mes,int faltasAntes) throws SQLException {
@@ -98,7 +102,14 @@ public class FrequenciaDAO {
         int faltasDepois=contarDatasComFaltaInjustificada(c,cpf,mes);
         String de,para;
         if(faltasDepois>=limite) { de=StatusAdolescente.ATIVO.getCodigo(); para=StatusAdolescente.EM_DESCUMPRIMENTO.getCodigo(); }
-        else if(faltasAntes>=limite) { de=StatusAdolescente.EM_DESCUMPRIMENTO.getCodigo(); para=StatusAdolescente.ATIVO.getCodigo(); }
+        else if(faltasAntes>=limite) {
+            try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM Frequencia WHERE cpf_adolescente=? AND upper(trim(status_presenca))=? "
+                    + "GROUP BY date_trunc('month',data_presenca) HAVING count(DISTINCT data_presenca)>=?")) {
+                s.setLong(1,cpf); s.setString(2,StatusPresenca.FALTA_INJUSTIFICADA.getCodigo()); s.setInt(3,limite);
+                try(ResultSet r=s.executeQuery()) { if(r.next()) return; }
+            }
+            de=StatusAdolescente.EM_DESCUMPRIMENTO.getCodigo(); para=StatusAdolescente.ATIVO.getCodigo();
+        }
         else return;
         try(PreparedStatement s=c.prepareStatement("UPDATE Adolescente SET status=? WHERE cpf_adolescente=? AND upper(status)=?")) {
             s.setString(1,para); s.setLong(2,cpf); s.setString(3,de); s.executeUpdate();
@@ -107,7 +118,8 @@ public class FrequenciaDAO {
 
     public List<Frequencia> listar(long cpf,LocalDate inicio,LocalDate fim) {
         List<Frequencia> lista=new ArrayList<>();
-        String sql="SELECT f.*,a.nome_atividade FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
+        String sql="SELECT f.*,a.nome_atividade,m.tipo_medida FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
+                + "LEFT JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida "
                 + "WHERE (?=0 OR f.cpf_adolescente=?) AND f.data_presenca BETWEEN ? AND ? ORDER BY f.data_presenca DESC,a.nome_atividade";
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
             s.setLong(1,cpf); s.setLong(2,cpf); s.setObject(3,inicio); s.setObject(4,fim);
@@ -116,6 +128,7 @@ public class FrequenciaDAO {
                 f.setNomeAtividade(r.getString("nome_atividade")); f.setDataPresenca(r.getDate("data_presenca").toLocalDate());
                 f.setStatusPresenca(StatusPresenca.fromCodigo(r.getString("status_presenca"))); f.setHorasCumpridas((Integer)r.getObject("horas_cumpridas"));
                 f.setIdMedida((Integer)r.getObject("id_medida")); f.setObservacoes(r.getString("observacoes")); lista.add(f);
+                f.setTipoMedida(r.getString("tipo_medida")==null?null:TipoMedida.fromCodigo(r.getString("tipo_medida")));
             } }
             return lista;
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar as frequências.",e); }

@@ -9,6 +9,9 @@ public class Frequencia {
     private StatusPresenca statusPresenca;
     private Integer horasCumpridas;
     private Integer idMedida;
+    private TipoMedida tipoMedida;
+    public TipoMedida getTipoMedida() { return tipoMedida; }
+    public void setTipoMedida(TipoMedida v) { tipoMedida = v; }
     private String observacoes = "";
     private String nomeAtividade;
     public Integer getIdMedida() { return idMedida; }
@@ -17,7 +20,10 @@ public class Frequencia {
     public void setObservacoes(String v) { observacoes = v; }
     public String getNomeAtividade() { return nomeAtividade; }
     public void setNomeAtividade(String v) { nomeAtividade = v; }
-    @Override public String toString() { return nomeAtividade + " · " + statusPresenca + " · " + getHorasContabilizadas() + "h"; }
+    @Override public String toString() {
+        String medida=tipoMedida==null ? (idMedida==null?"Sem vínculo com medida":"Medida #"+idMedida) : tipoMedida.getCodigo()+" #"+idMedida;
+        return nomeAtividade + " · " + statusPresenca + " · " + medida + (tipoMedida==TipoMedida.LA?"":" · "+getHorasContabilizadas()+"h");
+    }
 
     public void validar() {
         if (cpfAdolescente <= 0 || idAtividade <= 0 || dataPresenca == null || statusPresenca == null)

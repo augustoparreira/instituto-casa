@@ -63,6 +63,11 @@ public class VerificacaoCadastroFrequencia {
         var la=medida(CPF,TipoMedida.LA,LocalDate.of(2024,2,29));
         verifica(la.getMesesCorridos(LocalDate.of(2024,3,28))==0 && la.getMesesCorridos(LocalDate.of(2024,3,29))==1,"meses completos de LA e ano bissexto");
         verifica(YearMonth.of(2024,2).lengthOfMonth()==29,"competência bissexta");
+        var futura=medida(CPF,TipoMedida.PSC,YearMonth.now().plusMonths(2).atDay(1));
+        verifica(new FrequenciaMensalDTO(a,List.of(futura),List.of(),YearMonth.now(),false).getMedidasDoMes().isEmpty(),
+                "medida de mês posterior não aparece na competência atual");
+        verifica(new FrequenciaMensalDTO(a,List.of(futura),List.of(),YearMonth.now().plusMonths(2),false).getMse().equals("PSC"),
+                "medida futura aparece na competência de início");
     }
 
     private static void testarBanco(boolean interfaceFx) throws Exception {
@@ -84,6 +89,12 @@ public class VerificacaoCadastroFrequencia {
                     ddl.execute("INSERT INTO Frequencia VALUES(10000000001,1,'2024-01-02','Presente',4)");
                     ddl.execute(Files.readString(Path.of("sql/ajustes_cadastro_frequencia.sql")));
                     ddl.execute(Files.readString(Path.of("sql/ajustes_cadastro_frequencia.sql")));
+                    ddl.execute(Files.readString(Path.of("sql/agenda.sql")));
+                    ddl.execute(Files.readString(Path.of("sql/agenda.sql")));
+                    ddl.execute(Files.readString(Path.of("sql/relatorios_acompanhamento.sql")));
+                    ddl.execute(Files.readString(Path.of("sql/relatorios_acompanhamento.sql")));
+                    ddl.execute("INSERT INTO Pessoa(cpf,nome_completo,data_nascimento) VALUES(77777777770,'Técnico de agenda','1980-01-01')");
+                    ddl.execute("INSERT INTO EquipeTecnica(cpf_equipe,login,senha,cargo_funcao,nivel_acesso) VALUES(77777777770,'agenda_teste','senha fictícia','Técnico','EQUIPE_TECNICA')");
                 }
                 verifica(new FrequenciaDAO().listar(10000000001L,LocalDate.of(2024,1,1),LocalDate.of(2024,1,31)).getFirst().getIdMedida()==1,"ajuste SQL reexecutável preserva e vincula frequência legada inequívoca");
 
@@ -165,15 +176,33 @@ public class VerificacaoCadastroFrequencia {
                 var hoje=frequencia(at.getIdAtividade(),nova.getIdMedida(),LocalDate.now(),StatusPresenca.PRESENTE,20); freq.registrar(hoje);
                 rejeita(IllegalArgumentException.class,()->freq.registrar(frequencia(at2.getIdAtividade(),nova.getIdMedida(),LocalDate.now(),StatusPresenca.PRESENTE,5)),"limite diário de 24 horas entre atividades");
                 verifica(mdao.consultarHorasDaMedida(psc.getIdMedida(),LocalDate.now())==0 && mdao.consultarHorasDaMedida(nova.getIdMedida(),LocalDate.now())==20,"nova PSC não herda horas da medida anterior");
-                var somenteLa=frequencia(at2.getIdAtividade(),null,LocalDate.now(),StatusPresenca.PRESENTE,0); freq.registrar(somenteLa);
-                verifica(freq.listar(CPF,LocalDate.now(),LocalDate.now()).size()==2,"acompanhamento de LA sem horas de PSC");
+                var somenteLa=frequencia(at2.getIdAtividade(),la.getIdMedida(),LocalDate.now(),StatusPresenca.PRESENTE,0); freq.registrar(somenteLa);
+                verifica(freq.listar(CPF,LocalDate.now(),LocalDate.now()).stream().anyMatch(registro->registro.getIdMedida()!=null && registro.getIdMedida()==la.getIdMedida() && registro.getTipoMedida()==TipoMedida.LA && registro.getHorasContabilizadas()==0),"comparecimento vinculado explicitamente à LA sem horas de PSC");
+                somenteLa.setHorasCumpridas(4);
+                rejeita(IllegalArgumentException.class,()->freq.atualizar(somenteLa),"LA não pode receber horas mesmo por acesso direto ao DAO");
+                somenteLa.setHorasCumpridas(0);
+                la.setHistoricoInfracional("Atualização com comparecimento vinculado"); mdao.atualizar(la);
                 rejeita(IllegalArgumentException.class,()->freq.registrar(frequencia(at2.getIdAtividade(),null,LocalDate.now().minusDays(1),StatusPresenca.PRESENTE,4)),"horas novas sem PSC rejeitadas");
                 for(int dia:new int[]{9,14}) freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,dia),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 var mensal=new FrequenciaMensalDAO().listar(JANEIRO).stream().filter(l->l.getAdolescente().getCpf()==CPF).findFirst().orElseThrow();
                 verifica(mensal.getSituacao().equals("Irregular") && mensal.getMse().equals("LA/PSC"),"planilha combina medidas sem duplicar adolescente e calcula irregularidade mensal");
                 verifica(adao.listarResumoDTO().stream().filter(l->l.getCpf().equals(a.getCpfFormatado())).count()==1,"listagem de cadastro tem uma linha por adolescente");
+                var fevereiro1=frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,2,4),StatusPresenca.FALTA_INJUSTIFICADA,0);
+                var fevereiro2=frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,2,11),StatusPresenca.FALTA_INJUSTIFICADA,0);
+                freq.registrar(fevereiro1); freq.registrar(fevereiro2);
+                freq.excluir(fevereiro2);
+                verifica(adao.buscarPorCpf(CPF).getStatus()==StatusAdolescente.EM_DESCUMPRIMENTO,"excluir falta de fevereiro preserva descumprimento de janeiro");
+                freq.registrar(fevereiro2); fevereiro2.setStatusPresenca(StatusPresenca.PRESENTE); freq.atualizar(fevereiro2);
+                verifica(adao.buscarPorCpf(CPF).getStatus()==StatusAdolescente.EM_DESCUMPRIMENTO,"corrigir falta de fevereiro preserva descumprimento de janeiro");
+                freq.excluir(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,14),StatusPresenca.FALTA_INJUSTIFICADA,0));
+                verifica(adao.buscarPorCpf(CPF).getStatus()==StatusAdolescente.ATIVO,"retorna a Ativo quando nenhum mês permanece irregular");
+                freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,14),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 freq.excluir(hoje); verifica(mdao.consultarHorasDaMedida(nova.getIdMedida(),LocalDate.now())==0,"exclusão recalcula saldo");
-                if(interfaceFx) testarInterface();
+                testarAgenda();
+                if(interfaceFx) {
+                    freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,6),StatusPresenca.PRESENTE,6));
+                    testarInterface();
+                }
             } finally {
                 if(urlAnterior==null) System.clearProperty("casa.db.url"); else System.setProperty("casa.db.url",urlAnterior);
                 // Exclusivamente o schema aleatório criado por esta execução. Nunca public.
@@ -183,13 +212,40 @@ public class VerificacaoCadastroFrequencia {
         }
     }
 
+    private static void testarAgenda() {
+        EventoAgendaDAO dao=new EventoAgendaDAO();
+        EventoAgenda evento=eventoAgenda(LocalDate.of(2026,8,31),"Evento de teste");
+        evento.setCpfAdolescente(CPF); evento.setCpfEquipe(77777777770L); dao.inserir(evento);
+        verifica(dao.listar(evento.getData(),evento.getData()).getFirst().getNomeTecnico().equals("Técnico de agenda"),"agenda persiste vínculos e nomes dos participantes");
+        EventoAgenda conflito=eventoAgenda(evento.getData(),"Sobreposição"); conflito.setCpfAdolescente(CPF);
+        rejeita(IllegalArgumentException.class,()->dao.inserir(conflito),"agenda impede sobreposição do adolescente");
+        conflito.setCpfAdolescente(null); conflito.setCpfEquipe(77777777770L);
+        rejeita(IllegalArgumentException.class,()->dao.inserir(conflito),"agenda impede sobreposição do técnico");
+        evento.setTitulo("Evento atualizado"); dao.atualizar(evento);
+        verifica(dao.listar(evento.getData(),evento.getData()).getFirst().getTitulo().equals("Evento atualizado"),"agenda edita sem criar duplicata");
+        evento.setStatus(EventoAgenda.Status.CANCELADO); dao.atualizar(evento); dao.inserir(conflito);
+        verifica(dao.listar(evento.getData(),evento.getData()).size()==2,"cancelado preserva histórico e libera horário");
+        conflito.setStatus(EventoAgenda.Status.CONCLUIDO); dao.atualizar(conflito);
+        verifica(dao.excluir(conflito.getIdEvento()),"agenda conclui e exclui compromisso");
+        EventoAgenda futuro=eventoAgenda(LocalDate.now().plusDays(1),"Futuro"); futuro.setStatus(EventoAgenda.Status.CONCLUIDO);
+        rejeita(IllegalArgumentException.class,()->dao.inserir(futuro),"compromisso futuro não pode ser concluído");
+        EventoAgenda invalido=eventoAgenda(LocalDate.now(),"Horário inválido"); invalido.setHoraFim(invalido.getHoraInicio());
+        rejeita(IllegalArgumentException.class,()->dao.inserir(invalido),"agenda rejeita horário final igual ao inicial");
+        dao.inserir(eventoAgenda(LocalDate.now(),"Agenda real da semana"));
+    }
+
+    private static EventoAgenda eventoAgenda(LocalDate data,String titulo) {
+        EventoAgenda e=new EventoAgenda(); e.setTitulo(titulo); e.setData(data); e.setTipo(EventoAgenda.Tipo.ATENDIMENTO);
+        e.setHoraInicio(LocalTime.of(9,0)); e.setHoraFim(LocalTime.of(10,0)); return e;
+    }
+
     private static void testarInterface() throws Exception {
         CompletableFuture<Void> fim=new CompletableFuture<>();
         Platform.startup(()-> {
             Platform.setImplicitExit(false);
             try {
                 Files.createDirectories(Path.of("target/verificacao"));
-                for(String nome:List.of("CadastroAdolescenteView","AdolescentesView","DetalhesAdolescenteView","FrequenciaView","RegistroFrequenciaView")) {
+                for(String nome:List.of("Dashboard","CadastroAdolescenteView","AdolescentesView","DetalhesAdolescenteView","FrequenciaView","RegistroFrequenciaView","AgendaView","RelatoriosView")) {
                     FXMLLoader loader=new FXMLLoader(VerificacaoCadastroFrequencia.class.getResource("/View/"+nome+".fxml"));
                     Parent root=loader.load(); Object controller=loader.getController();
                     if(controller instanceof CadastroAdolescenteController cadastro) cadastro.carregarParaEdicao(CPF);
@@ -200,6 +256,26 @@ public class VerificacaoCadastroFrequencia {
                     Scene scene=new Scene(root,controller instanceof RegistroFrequenciaController?720:1280,
                             controller instanceof RegistroFrequenciaController?650:850);
                     root.applyCss(); root.layout();
+                    if(controller instanceof DashboardController) {
+                        verifica(((javafx.scene.layout.VBox)root.lookup("#vboxAgenda")).lookupAll(".label").stream()
+                                .anyMatch(n->n instanceof Label l && l.getText().equals("Agenda real da semana")),"painel mostra compromisso real da semana");
+                        int pscBase=Integer.parseInt(((Label)root.lookup("#lblTotalPsc")).getText());
+                        int laBase=Integer.parseInt(((Label)root.lookup("#lblTotalLa")).getText());
+                        String statusOriginal=new AdolescenteDAO().buscarPorCpf(CPF).getStatus().getCodigo();
+                        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("UPDATE Adolescente SET status=? WHERE cpf_adolescente=?")) {
+                            s.setLong(2,CPF);
+                            try {
+                                s.setString(1,StatusAdolescente.ATIVO.getCodigo()); s.executeUpdate();
+                                Parent ativo=FXMLLoader.load(VerificacaoCadastroFrequencia.class.getResource("/View/Dashboard.fxml"));
+                                verifica(Integer.parseInt(((Label)ativo.lookup("#lblTotalPsc")).getText())==pscBase+1
+                                        && Integer.parseInt(((Label)ativo.lookup("#lblTotalLa")).getText())==laBase+1,"painel conta adolescente ativo com LA/PSC em ambos os cartões");
+                                s.setString(1,StatusAdolescente.INATIVO.getCodigo()); s.executeUpdate();
+                                Parent inativo=FXMLLoader.load(VerificacaoCadastroFrequencia.class.getResource("/View/Dashboard.fxml"));
+                                verifica(Integer.parseInt(((Label)inativo.lookup("#lblTotalPsc")).getText())==pscBase
+                                        && Integer.parseInt(((Label)inativo.lookup("#lblTotalLa")).getText())==laBase,"painel exclui inativos dos contadores de medidas ativas");
+                            } finally { s.setString(1,statusOriginal); s.executeUpdate(); }
+                        }
+                    }
                     if(controller instanceof CadastroAdolescenteController cadastro) {
                         verifica(((TextField)root.lookup("#txtCras")).getText().equals("CRAS Centro"),"FXML de edição carrega CRAS textual");
                         verifica(((TextField)root.lookup("#txtCpf")).isDisabled(),"edição protege a chave CPF");
@@ -240,12 +316,29 @@ public class VerificacaoCadastroFrequencia {
                         ((ScrollPane)root.lookup(".scroll-pane")).setVvalue(1);
                         root.applyCss(); root.layout();
                     }
-                    if (controller instanceof DetalhesAdolescenteController) {
+                    if (controller instanceof DetalhesAdolescenteController perfil) {
                         DatePicker encerramento = (DatePicker)root.lookup("#dpFimMedida");
                         verifica(encerramento.getParent() instanceof javafx.scene.layout.VBox grupo
                                 && grupo.getChildren().getFirst() instanceof Label rotulo
                                 && rotulo.getText().contains("ENCERRAMENTO"),"calendário de encerramento tem rótulo acima do campo");
                         ((Button)root.lookup("#btnAbaFrequencia")).fire();
+                        javafx.scene.layout.VBox geral=(javafx.scene.layout.VBox)root.lookup("#boxFrequenciaGeral");
+                        verifica(geral.getChildren().size()==2,"resumo geral mostra LA e PSC vigentes juntas");
+                        javafx.scene.layout.VBox pscAtual=(javafx.scene.layout.VBox)geral.getChildren().stream()
+                                .filter(n->((Label)((javafx.scene.layout.VBox)n).getChildren().getFirst()).getText().startsWith("PSC")).findFirst().orElseThrow();
+                        javafx.scene.layout.HBox totaisPsc=(javafx.scene.layout.HBox)pscAtual.getChildren().get(1);
+                        verifica(((Label)((javafx.scene.layout.VBox)totaisPsc.getChildren().get(1)).getChildren().getFirst()).getText().equals("0h"),"PSC vigente não herda horas da PSC anterior no resumo geral");
+                        @SuppressWarnings("unchecked")
+                        ComboBox<MedidaSocioeducativa> historico=(ComboBox<MedidaSocioeducativa>)root.lookup("#cmbMedidaFrequenciaGeral");
+                        historico.setValue(historico.getItems().stream().filter(m->m.isPSC() && m.getDataFim()!=null).findFirst().orElseThrow());
+                        javafx.scene.layout.HBox totaisAntigos=(javafx.scene.layout.HBox)((javafx.scene.layout.VBox)geral.getChildren().getFirst()).getChildren().get(1);
+                        verifica(geral.getChildren().size()==1 && ((Label)((javafx.scene.layout.VBox)totaisAntigos.getChildren().get(1)).getChildren().getFirst()).getText().equals("6h"),"selecionar PSC encerrada mostra suas próprias horas históricas");
+                        DatePicker mesPerfil=(DatePicker)root.lookup("#dpMesFrequencia");
+                        mesPerfil.setValue(JANEIRO.atDay(1)); perfil.atualizarFrequenciaMes();
+                        totaisAntigos=(javafx.scene.layout.HBox)((javafx.scene.layout.VBox)geral.getChildren().getFirst()).getChildren().get(1);
+                        verifica(historico.getValue()!=null && ((Label)((javafx.scene.layout.VBox)totaisAntigos.getChildren().get(1)).getChildren().getFirst()).getText().equals("6h"),"consulta mensal preserva medida selecionada e totais gerais");
+                        perfil.mostrarMedidasVigentesFrequencia();
+                        mesPerfil.setValue(LocalDate.now().withDayOfMonth(1)); perfil.atualizarFrequenciaMes();
                         ListView<?> lista = (ListView<?>)root.lookup("#listaFrequenciaPerfil");
                         Button corrigir = (Button)root.lookup("#btnCorrigirFrequencia");
                         verifica(corrigir.isDisabled(),"correção exige selecionar uma frequência");
@@ -270,11 +363,21 @@ public class VerificacaoCadastroFrequencia {
                         data.setValue(LocalDate.of(2025,1,8));
                         ComboBox<?> atividade = (ComboBox<?>) root.lookup("#cmbAtividade");
                         atividade.getSelectionModel().selectFirst();
+                        @SuppressWarnings("unchecked")
+                        ComboBox<MedidaSocioeducativa> medida=(ComboBox<MedidaSocioeducativa>)root.lookup("#cmbMedida");
+                        verifica(medida.getItems().stream().anyMatch(MedidaSocioeducativa::isLA) && medida.getItems().stream().anyMatch(MedidaSocioeducativa::isPSC),"editor oferece LA e PSC vigentes");
+                        medida.setValue(medida.getItems().stream().filter(MedidaSocioeducativa::isPSC).findFirst().orElseThrow());
                         ((TextField)root.lookup("#txtHoras")).setText("3");
                         registro.salvar();
                         var salvas = new FrequenciaDAO().listar(CPF,data.getValue(),data.getValue());
                         verifica(salvas.size()==1 && salvas.getFirst().getHorasContabilizadas()==3,
                                 "formulário JavaFX registra frequência no JDBC");
+                        ((ListView<?>)root.lookup("#listaRegistros")).getSelectionModel().selectFirst();
+                        medida.setValue(medida.getItems().stream().filter(MedidaSocioeducativa::isLA).findFirst().orElseThrow());
+                        verifica(((TextField)root.lookup("#txtHoras")).isDisabled() && ((TextField)root.lookup("#txtHoras")).getText().equals("0"),"selecionar LA desabilita e zera horas no editor");
+                        registro.salvar();
+                        salvas=new FrequenciaDAO().listar(CPF,data.getValue(),data.getValue());
+                        verifica(salvas.getFirst().getTipoMedida()==TipoMedida.LA && salvas.getFirst().getHorasContabilizadas()==0,"editor corrige vínculo de PSC para LA sem duplicar presença");
                         ((ListView<?>)root.lookup("#listaRegistros")).getSelectionModel().selectFirst();
                         @SuppressWarnings("unchecked")
                         ComboBox<StatusPresenca> status = (ComboBox<StatusPresenca>)root.lookup("#cmbStatus");
@@ -307,6 +410,71 @@ public class VerificacaoCadastroFrequencia {
                         });
                         RegistroFrequenciaController.abrir(falta, () -> {});
                         verifica(abriuSelecionada[0],"correção abre a oficina selecionada preservando a falta justificada");
+                    }
+                    if(controller instanceof AgendaController agenda) {
+                        agenda.exibirData(LocalDate.of(2026,8,31));
+                        javafx.scene.layout.GridPane calendario=(javafx.scene.layout.GridPane)root.lookup("#gridCalendario");
+                        verifica(calendario.getChildren().stream().filter(n->n.getUserData() instanceof LocalDate).count()==31
+                                && calendario.getRowConstraints().size()==7,"agenda renderiza todos os dias de mês com seis semanas");
+                        agenda.exibirData(LocalDate.of(2024,2,29));
+                        verifica(calendario.getChildren().stream().filter(n->n.getUserData() instanceof LocalDate).count()==29,"agenda navega para fevereiro bissexto");
+                        agenda.exibirData(LocalDate.of(2026,8,31));
+                        fecharProximoDialogo(ButtonType.OK,painel-> {
+                            ((TextField)painel.lookup("#txtEventoTitulo")).setText("Compromisso pela tela");
+                            ((TextField)painel.lookup("#txtEventoInicio")).setText("14:00");
+                            ((TextField)painel.lookup("#txtEventoFim")).setText("15:00");
+                            ((ComboBox<?>)painel.lookup("#cmbEventoAdolescente")).getSelectionModel().selectFirst();
+                        });
+                        agenda.abrirModalNovoEvento(new ActionEvent(root,root));
+                        EventoAgendaDAO eventos=new EventoAgendaDAO();
+                        verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream()
+                                .anyMatch(e->e.getTitulo().equals("Compromisso pela tela") && e.getCpfAdolescente()!=null),"formulário JavaFX grava compromisso e vínculo no JDBC");
+                        javafx.scene.layout.VBox painel=(javafx.scene.layout.VBox)root.lookup("#listaEventosPainel");
+                        javafx.scene.layout.VBox card=(javafx.scene.layout.VBox)painel.getChildren().stream()
+                                .filter(n->n.getUserData() instanceof EventoAgenda e && e.getTitulo().equals("Compromisso pela tela")).findFirst().orElseThrow();
+                        fecharProximoDialogo(ButtonType.OK,p->((TextField)p.lookup("#txtEventoTitulo")).setText("Compromisso editado pela tela"));
+                        ((Button)card.lookupAll(".button").stream().filter(n->n instanceof Button b && b.getText().equals("Editar")).findFirst().orElseThrow()).fire();
+                        verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream().anyMatch(e->e.getTitulo().equals("Compromisso editado pela tela")),"agenda edita compromisso pela tela");
+                        card=(javafx.scene.layout.VBox)painel.getChildren().stream().filter(n->n.getUserData() instanceof EventoAgenda e && e.getTitulo().equals("Compromisso editado pela tela")).findFirst().orElseThrow();
+                        fecharProximoDialogo(ButtonType.YES);
+                        ((Button)card.lookupAll(".button").stream().filter(n->n instanceof Button b && b.getText().equals("Cancelar")).findFirst().orElseThrow()).fire();
+                        verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream().anyMatch(e->e.getStatus()==EventoAgenda.Status.CANCELADO && e.getTitulo().equals("Compromisso editado pela tela")),"cancelamento preserva compromisso no histórico");
+                        ((CheckBox)root.lookup("#chkCancelados")).setSelected(true);
+                        card=(javafx.scene.layout.VBox)painel.getChildren().stream().filter(n->n.getUserData() instanceof EventoAgenda e && e.getTitulo().equals("Compromisso editado pela tela")).findFirst().orElseThrow();
+                        fecharProximoDialogo(ButtonType.YES);
+                        ((Button)card.lookupAll(".button").stream().filter(n->n instanceof Button b && b.getText().equals("Excluir")).findFirst().orElseThrow()).fire();
+                        verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream().noneMatch(e->e.getTitulo().equals("Compromisso editado pela tela")),"agenda exclui compromisso após confirmação");
+                        fecharProximoDialogo(ButtonType.OK,p-> {
+                            ((TextField)p.lookup("#txtEventoTitulo")).setText("Visita domiciliar de acompanhamento");
+                            ((TextField)p.lookup("#txtEventoLocal")).setText("Instituto C.A.S.A.");
+                        });
+                        agenda.abrirModalNovoEvento(new ActionEvent(root,root));
+                        root.applyCss(); root.layout();
+                    }
+                    if(controller instanceof RelatoriosController relatorios) {
+                        @SuppressWarnings("unchecked")
+                        ComboBox<Adolescente> adolescente=(ComboBox<Adolescente>)root.lookup("#cmbAdolescente");
+                        adolescente.setValue(adolescente.getItems().stream().filter(a->a.getCpf()==CPF).findFirst().orElseThrow());
+                        ((DatePicker)root.lookup("#dpCompetencia")).setValue(JANEIRO.atDay(1)); relatorios.gerarNovoRelatorio();
+                        verifica(((TextField)root.lookup("#campoNOME")).getText().equals("Cadastro validado pela tela")
+                                && ((TextArea)root.lookup("#txtRegistroFrequencia")).getText().contains("06/01/2025"),"relatório prepara identificação e frequência da competência correta");
+                        ((TextField)root.lookup("#campoPROCESSO")).setText("0000000-00.2025.8.16.0000");
+                        ((TextArea)root.lookup("#txtDescumprimento")).setText("Contato com a família registrado pela equipe em 15/01/2025. Acordo de comparecimento às atividades, conforme avaliação técnica.");
+                        relatorios.salvarAtualizacaoRelatorio();
+                        RelatorioAcompanhamentoDAO rdao=new RelatorioAcompanhamentoDAO();
+                        var salvo=rdao.listar().getFirst();
+                        verifica(salvo.getCpfAdolescente()==CPF && salvo.getCompetencia().equals(JANEIRO)
+                                && salvo.getCampo(RelatorioAcompanhamento.Campo.PROCESSO).contains("2025"),"rascunho de relatório persiste dados revisados e competência");
+                        ((TextField)root.lookup("#campoFILIACAO")).setText("Filiação revisada pela equipe"); relatorios.salvarAtualizacaoRelatorio();
+                        verifica(rdao.listar().size()==1 && rdao.listar().getFirst().getCampo(RelatorioAcompanhamento.Campo.FILIACAO).equals("Filiação revisada pela equipe"),"editar rascunho atualiza o banco sem duplicar relatório");
+                        relatorios.exportarPara(Path.of("target/verificacao/relatorio-acompanhamento.txt"));
+                        String textoExportado=Files.readString(Path.of("target/verificacao/relatorio-acompanhamento.txt"));
+                        verifica(textoExportado.contains("Filiação revisada pela equipe") && textoExportado.contains("0000000-00.2025.8.16.0000")
+                                && textoExportado.contains("06/01/2025") && textoExportado.contains("Acordo de comparecimento"),"exportação TXT preserva os dados revisados e as duas seções em UTF-8");
+                        fecharProximoDialogo(ButtonType.CLOSE); relatorios.visualizarRelatorio();
+                        salvo=rdao.listar().getFirst();
+                        verifica(rdao.excluir(salvo.getIdRelatorio()) && rdao.listar().isEmpty(),"exclusão de rascunho remove o registro do banco");
+                        root.applyCss(); root.layout();
                     }
                     WritableImage imagem=root.snapshot(null,null);
                     BufferedImage png=new BufferedImage((int)imagem.getWidth(),(int)imagem.getHeight(),BufferedImage.TYPE_INT_ARGB);

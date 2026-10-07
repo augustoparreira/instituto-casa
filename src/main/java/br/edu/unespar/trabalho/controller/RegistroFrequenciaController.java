@@ -32,19 +32,24 @@ public class RegistroFrequenciaController {
             public Atividade fromString(String s) { return null; }
         });
         cmbStatus.valueProperty().addListener((o,a,b)-> {
-            txtHoras.setDisable(b!=StatusPresenca.PRESENTE);
-            if(b!=StatusPresenca.PRESENTE) txtHoras.setText("0");
+            atualizarHoras(selecionada==null);
         });
         cmbAtividade.valueProperty().addListener((o,a,b)-> {
-            if(selecionada==null && b!=null && cmbStatus.getValue()==StatusPresenca.PRESENTE)
-                txtHoras.setText(cmbMedida.getValue()==null?"0":Integer.toString(b.getCargaHoraria()));
+            atualizarHoras(selecionada==null);
         });
         cmbMedida.valueProperty().addListener((o,a,b)-> {
-            if(selecionada==null && cmbStatus.getValue()==StatusPresenca.PRESENTE)
-                txtHoras.setText(b==null || cmbAtividade.getValue()==null?"0":Integer.toString(cmbAtividade.getValue().getCargaHoraria()));
+            atualizarHoras(selecionada==null);
         });
         dpData.valueProperty().addListener((o,a,b)-> { if(cpf!=0 && b!=null) carregarDia(); });
         listaRegistros.getSelectionModel().selectedItemProperty().addListener((o,a,b)-> { if(b!=null) preencher(b); });
+    }
+
+    private void atualizarHoras(boolean sugerir) {
+        boolean contabiliza=cmbStatus.getValue()==StatusPresenca.PRESENTE
+                && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC();
+        txtHoras.setDisable(!contabiliza);
+        if(!contabiliza) txtHoras.setText("0");
+        else if(sugerir) txtHoras.setText(cmbAtividade.getValue()==null?"0":Integer.toString(cmbAtividade.getValue().getCargaHoraria()));
     }
 
     public void carregar(long cpf,LocalDate data,Runnable retorno) {
@@ -60,7 +65,7 @@ public class RegistroFrequenciaController {
         try {
             selecionada=null;
             cmbMedida.setItems(FXCollections.observableArrayList(new MedidaSocioeducativaDAO().listarPorAdolescente(cpf)
-                    .stream().filter(m->m.isPSC() && m.vigenteEm(dpData.getValue())).toList()));
+                    .stream().filter(m->m.vigenteEm(dpData.getValue())).toList()));
             listaRegistros.setItems(FXCollections.observableArrayList(dao.listar(cpf,dpData.getValue(),dpData.getValue())));
             novo();
         } catch(RuntimeException e) { erro(e); }
@@ -70,6 +75,7 @@ public class RegistroFrequenciaController {
         selecionada=null; listaRegistros.getSelectionModel().clearSelection(); cmbAtividade.setDisable(false);
         cmbAtividade.setValue(null); cmbMedida.setValue(cmbMedida.getItems().size()==1?cmbMedida.getItems().getFirst():null);
         cmbStatus.setValue(StatusPresenca.PRESENTE); txtHoras.setText("0"); txtObservacoes.clear();
+        atualizarHoras(false);
         lblMensagem.setText("Novo lançamento. Para corrigir um existente, selecione-o na lista.");
     }
 
@@ -78,10 +84,11 @@ public class RegistroFrequenciaController {
         cmbAtividade.setDisable(true);
         cmbMedida.setValue(cmbMedida.getItems().stream().filter(m->f.getIdMedida()!=null && m.getIdMedida()==f.getIdMedida()).findFirst().orElse(null));
         cmbStatus.setValue(f.getStatusPresenca()); txtHoras.setText(Integer.toString(f.getHorasContabilizadas()));
+        atualizarHoras(false);
         txtObservacoes.setText(f.getObservacoes()); lblMensagem.setText("Editando o lançamento selecionado. Para trocar atividade ou data, exclua-o e registre novamente.");
     }
 
-    @FXML public void semPsc() { cmbMedida.setValue(null); txtHoras.setText("0"); }
+    @FXML public void semMedida() { cmbMedida.setValue(null); atualizarHoras(false); }
 
     @FXML public void salvar() {
         try {
@@ -95,7 +102,7 @@ public class RegistroFrequenciaController {
             if(cmbAtividade.getValue()==null) throw new IllegalArgumentException("Selecione uma atividade.");
             Frequencia f=new Frequencia(); f.setCpfAdolescente(cpf); f.setIdAtividade(cmbAtividade.getValue().getIdAtividade());
             f.setDataPresenca(dpData.getValue()); f.setStatusPresenca(cmbStatus.getValue());
-            f.setHorasCumpridas(f.isPresente()?Integer.parseInt(txtHoras.getText().trim()):0);
+            f.setHorasCumpridas(f.isPresente() && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC()?Integer.parseInt(txtHoras.getText().trim()):0);
             f.setIdMedida(cmbMedida.getValue()==null?null:cmbMedida.getValue().getIdMedida()); f.setObservacoes(txtObservacoes.getText());
             if(selecionada==null) dao.registrar(f); else dao.atualizar(f);
             carregarDia(); aoSalvar.run(); lblMensagem.setText("Frequência salva. Totais recalculados.");

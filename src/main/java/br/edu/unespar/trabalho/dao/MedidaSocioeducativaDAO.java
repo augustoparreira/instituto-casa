@@ -35,9 +35,9 @@ public class MedidaSocioeducativaDAO {
                         s.setInt(1,m.getIdMedida()); s.setObject(2,m.getDataInicio()); s.setObject(3,m.getDataFim());
                         try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Há frequências fora do período informado. Corrija os lançamentos antes de mudar as datas."); }
                     }
-                    try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM Frequencia WHERE id_medida=? AND upper(?)<>'PSC'")) {
+                    try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM Frequencia f JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida WHERE f.id_medida=? AND upper(m.tipo_medida)<>upper(?)")) {
                         s.setInt(1,m.getIdMedida()); s.setString(2,m.getTipoMedida().getCodigo());
-                        try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Uma PSC com frequências vinculadas não pode ser convertida em LA."); }
+                        try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Uma medida com frequências vinculadas não pode mudar de tipo. Corrija os vínculos antes."); }
                     }
                 } else m.setIdMedida(IdUtil.proximoId(c,"MedidaSocioeducativa"));
                 String sql=edicao ? "UPDATE MedidaSocioeducativa SET reincidencia=?,tipo_medida=?,data_inicio=?,historico_infracional=?,duracao_meses=?,duracao_horas=?,data_fim=? WHERE id_medida=? AND cpf_adolescente=?"

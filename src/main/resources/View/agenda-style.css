@@ -11,6 +11,10 @@
 .logout-button { -fx-background-color: transparent; -fx-text-fill: #d9534f; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 5px 0; }
 
 .main-content { -fx-background-color: #f9f8f4; }
+.root { -fx-text-background-color: #333333; -fx-text-base-color: #333333; }
+.check-box { -fx-text-fill: #333333; }
+.dialog-pane .label { -fx-text-fill: #333333; }
+.combo-box .list-cell { -fx-text-fill: #333333; }
 .page-title { -fx-font-family: "Georgia", serif; -fx-font-size: 26px; -fx-text-fill: #2b2b2b; }
 .page-subtitle { -fx-text-fill: #888888; -fx-font-size: 12px; }
 
@@ -26,7 +30,7 @@
 .calendar-grid { -fx-background-color: #e5e5e0; -fx-background-radius: 6px; -fx-border-color: #e5e5e0; }
 .week-day-label { -fx-alignment: center; -fx-font-weight: bold; -fx-text-fill: #777777; -fx-font-size: 11px; -fx-background-color: white; }
 
-.day-cell { -fx-background-color: white; -fx-padding: 5px; -fx-alignment: top-left; }
+.day-cell { -fx-background-color: white; -fx-padding: 5px; -fx-alignment: top-left; -fx-border-color: #e5e5e0; -fx-border-width: 0 1px 1px 0; }
 .day-cell-today { -fx-background-color: #f2f7f4; -fx-border-color: #19523e; -fx-border-width: 2px; -fx-padding: 5px; }
 
 .day-number { -fx-font-weight: bold; -fx-text-fill: #333333; -fx-font-size: 12px; }
@@ -53,6 +57,10 @@
 
 .event-title-bold { -fx-font-weight: bold; -fx-text-fill: #2b2b2b; -fx-font-size: 12px; }
 .event-desc-sub { -fx-text-fill: #666666; -fx-font-size: 10px; }
+.event-card-purple .button, .event-card-green .button, .dialog-pane .button {
+    -fx-text-fill: #19523e; -fx-background-color: white; -fx-border-color: #d6d8d3;
+    -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;
+}
 
 .box-title-mini { -fx-font-weight: bold; -fx-text-fill: #888888; -fx-font-size: 10px; }
 .legend-text { -fx-text-fill: #555555; -fx-font-size: 11px; }

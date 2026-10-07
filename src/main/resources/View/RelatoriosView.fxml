@@ -8,6 +8,10 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -49,60 +53,44 @@
         </VBox>
     </left>
 
-    <!-- CONTEÚDO CENTRAL -->
     <center>
-        <VBox styleClass="main-content" spacing="20.0">
-            <padding>
-                <Insets top="30.0" bottom="30.0" left="40.0" right="40.0" />
-            </padding>
-
-            <!-- Cabeçalho -->
-            <HBox alignment="CENTER_LEFT">
-                <VBox spacing="4.0">
-                    <Label text="Relatórios Institucionais" styleClass="page-title" />
-                    <Label fx:id="lblNivelAcessoInfo" text="Nível de Acesso: Administrador (Acesso Total)" styleClass="page-subtitle" />
-                </VBox>
-                <Region HBox.hgrow="ALWAYS" />
-                <Button fx:id="btnNovoRelatorio" text="+ Gerar Novo Relatório" styleClass="btn-novo-evento" onAction="#gerarNovoRelatorio" />
+        <VBox styleClass="main-content" spacing="14">
+            <padding><Insets top="25" right="30" bottom="25" left="30"/></padding>
+            <Label text="Relatório de acompanhamento" styleClass="page-title"/>
+            <Label text="Medida socioeducativa · relatório mensal para revisão e encaminhamento ao Judiciário" styleClass="page-subtitle" wrapText="true"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <ComboBox fx:id="cmbAdolescente" promptText="Selecione o adolescente" maxWidth="Infinity" HBox.hgrow="ALWAYS" minWidth="0" styleClass="month-combo"/>
+                <DatePicker fx:id="dpCompetencia" prefWidth="140"/>
+                <Button text="Preparar novo" onAction="#gerarNovoRelatorio" styleClass="btn-novo-evento"/>
             </HBox>
-
-            <HBox spacing="20.0" VBox.vgrow="ALWAYS">
-                <!-- Lista de Relatórios Gerados (Esquerda) -->
-                <VBox styleClass="content-box" prefWidth="450.0" spacing="15.0">
-                    <Label text="Relatórios Cadastrados" styleClass="box-title" />
-                    <HBox spacing="10.0">
-                        <ComboBox fx:id="cmbTipoFiltro" promptText="Filtrar por tipo..." styleClass="month-combo" HBox.hgrow="ALWAYS" maxWidth="Infinity" />
-                    </HBox>
-                    <ListView fx:id="listRelatorios" VBox.vgrow="ALWAYS" styleClass="custom-list-view" />
+            <Label fx:id="lblMensagem" wrapText="true" styleClass="page-subtitle"/>
+            <HBox spacing="18" VBox.vgrow="ALWAYS">
+                <VBox styleClass="content-box" prefWidth="250" minWidth="220" maxWidth="250" spacing="10">
+                    <Label text="Rascunhos salvos" styleClass="box-title-mini"/>
+                    <TextField fx:id="txtPesquisa" promptText="Nome, mês/ano ou número"/>
+                    <ListView fx:id="listRelatorios" VBox.vgrow="ALWAYS" styleClass="relatorios-lista"/>
+                    <Button text="Excluir selecionado" onAction="#excluirRelatorio" styleClass="btn-excluir" maxWidth="Infinity"/>
                 </VBox>
-
-                <!-- Painel de Visualização e Edição de Dados (Direita) -->
-                <VBox styleClass="content-box" HBox.hgrow="ALWAYS" spacing="15.0">
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="Detalhamento e Atualização" styleClass="box-title" />
-                        <Region HBox.hgrow="ALWAYS" />
-                        <Label fx:id="lblStatusEdicao" text="Modo: Visualização" styleClass="selected-date-sub" />
-                    </HBox>
-                    <Separator />
-
-                    <VBox spacing="10.0">
-                        <Label text="Título do Relatório" styleClass="form-label-mini" />
-                        <TextField fx:id="txtTituloRelatorio" promptText="Título do relatório" styleClass="search-field" />
-
-                        <Label text="Adolescente / Categoria de Acompanhamento" styleClass="form-label-mini" />
-                        <TextField fx:id="txtCategoriaRelatorio" promptText="Ex: Lucas Henrique / Medidas Cumpridas" styleClass="search-field" />
-
-                        <Label text="Parecer Técnico / Observações" styleClass="form-label-mini" />
-                        <TextArea fx:id="txtParecerTecnico" promptText="Digite aqui as observações ou parecer do relatório..." prefHeight="220.0" styleClass="search-field" wrapText="true" />
-                    </VBox>
-
-                    <Region VBox.vgrow="ALWAYS" />
-
-                    <!-- Botões de Ação Condicionados ao Nível do Usuário -->
-                    <HBox spacing="10.0" alignment="CENTER_RIGHT">
-                        <Button fx:id="btnExcluirRelatorio" text="Excluir Relatório" styleClass="btn-excluir" onAction="#excluirRelatorio" visible="true" />
-                        <Button fx:id="btnExportar" text="Exportar PDF" styleClass="btn-novo-evento" onAction="#exportarPDF" />
-                        <Button fx:id="btnSalvarAtualizacao" text="Salvar Alterações" styleClass="btn-novo-evento" onAction="#salvarAtualizacaoRelatorio" />
+                <VBox styleClass="content-box" HBox.hgrow="ALWAYS" minWidth="0" spacing="12">
+                    <Label fx:id="lblStatusEdicao" text="Prepare um relatório ou abra um rascunho salvo" styleClass="selected-date-sub" wrapText="true"/>
+                    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                        <content><VBox spacing="12" style="-fx-padding: 8;">
+                            <Label text="Identificação" styleClass="event-title-bold"/>
+                            <GridPane fx:id="gridIdentificacao" hgap="10" vgap="8">
+                                <columnConstraints><ColumnConstraints percentWidth="35"/><ColumnConstraints percentWidth="65" hgrow="ALWAYS"/></columnConstraints>
+                            </GridPane>
+                            <Label text="1. REGISTRO DE FREQUÊNCIA" styleClass="event-title-bold"/>
+                            <Label text="Preenchido com os lançamentos da competência. Revise e complemente o texto." styleClass="page-subtitle" wrapText="true"/>
+                            <TextArea fx:id="txtRegistroFrequencia" prefRowCount="7" wrapText="true"/>
+                            <Label text="2. DESCUMPRIMENTO DA MEDIDA E CONTATO COM A FAMÍLIA E ACORDO FIRMADO" styleClass="event-title-bold" wrapText="true"/>
+                            <TextArea fx:id="txtDescumprimento" prefRowCount="6" wrapText="true" promptText="Descreva a situação, o contato com a família e o acordo firmado. Se não houve descumprimento, informe isso após avaliação."/>
+                            <HBox spacing="10" alignment="CENTER_LEFT"><Label text="Data de emissão" styleClass="event-title-bold"/><DatePicker fx:id="dpEmissao"/></HBox>
+                        </VBox></content>
+                    </ScrollPane>
+                    <HBox spacing="8" alignment="CENTER_RIGHT">
+                        <Button text="Visualizar" onAction="#visualizarRelatorio"/>
+                        <Button text="Salvar rascunho" onAction="#salvarAtualizacaoRelatorio" styleClass="btn-novo-evento"/>
+                        <Button text="Exportar TXT" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
                     </HBox>
                 </VBox>
             </HBox>

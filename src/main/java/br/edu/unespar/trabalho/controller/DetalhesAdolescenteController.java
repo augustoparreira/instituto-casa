@@ -29,7 +29,6 @@ import br.edu.unespar.trabalho.model.TipoMedida;
 import br.edu.unespar.trabalho.util.Formatadores;
 import br.edu.unespar.trabalho.util.IdUtil;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
-import br.edu.unespar.trabalho.util.PdfSimples;
 import br.edu.unespar.trabalho.util.Sessao;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -64,6 +63,8 @@ import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -135,6 +136,10 @@ public class DetalhesAdolescenteController {
     @FXML private Label lblFreqPercentual;
     @FXML private ListView<Frequencia> listaFrequenciaPerfil;
     @FXML private Button btnCorrigirFrequencia;
+    @FXML private ComboBox<MedidaSocioeducativa> cmbMedidaFrequenciaGeral;
+    @FXML private VBox boxFrequenciaGeral;
+    private List<MedidaSocioeducativa> medidasFrequenciaGeral = List.of();
+    private List<Frequencia> registrosFrequenciaGeral = List.of();
 
     // ----- Aba: PIA -----
     @FXML private Label lblPiaStatus;
@@ -210,6 +215,13 @@ public class DetalhesAdolescenteController {
             }
         });
         cmbMedidaPerfil.valueProperty().addListener((o,a,b)->exibirMedidaSelecionada());
+        cmbMedidaFrequenciaGeral.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(MedidaSocioeducativa medida,boolean vazio) {
+                super.updateItem(medida,vazio);
+                setText(medida==null ? "Medidas vigentes (LA e PSC)" : medida.toString());
+            }
+        });
+        cmbMedidaFrequenciaGeral.valueProperty().addListener((o,a,b)->exibirFrequenciaGeral());
         cmbTipoMedida.setItems(FXCollections.observableArrayList(TipoMedida.values()));
 
         // Aplicando máscaras nos DatePickers de Medidas e PIA
@@ -499,13 +511,66 @@ public class DetalhesAdolescenteController {
         lblFreqPercentual.setText(injustificadas>=FrequenciaMensalDTO.LIMITE_FALTAS_INJUSTIFICADAS?"Irregular":"Regular");
         // O indicador de medida depende do que o adolescente cumpre naquele mês: PSC conta horas, LA conta meses,
         // e quem tem as duas medidas vê os dois cards.
-        var resumoMes=new FrequenciaMensalDTO(null,medidaDAO.listarPorAdolescente(cpfAtual),registros,mes,false);
+        medidasFrequenciaGeral=medidaDAO.listarPorAdolescente(cpfAtual);
+        var resumoMes=new FrequenciaMensalDTO(null,medidasFrequenciaGeral,registros,mes,false);
         boolean temPsc=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isPSC);
         boolean temLa=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isLA);
         lblFreqMeses.setText(resumoMes.getMeses().isBlank()?"-":resumoMes.getMeses());
         alternar(cardFreqHoras,temPsc);
         alternar(cardFreqMeses,temLa);
         listaFrequenciaPerfil.setItems(FXCollections.observableArrayList(registros));
+        LocalDate inicioGeral=medidasFrequenciaGeral.stream().map(MedidaSocioeducativa::getDataInicio).min(LocalDate::compareTo).orElse(LocalDate.now());
+        registrosFrequenciaGeral=inicioGeral.isAfter(LocalDate.now()) ? List.of() : frequenciaDAO.listar(cpfAtual,inicioGeral,LocalDate.now());
+        MedidaSocioeducativa anterior=cmbMedidaFrequenciaGeral.getValue();
+        cmbMedidaFrequenciaGeral.setItems(FXCollections.observableArrayList(medidasFrequenciaGeral));
+        cmbMedidaFrequenciaGeral.setValue(anterior==null ? null : medidasFrequenciaGeral.stream()
+                .filter(m->m.getIdMedida()==anterior.getIdMedida()).findFirst().orElse(null));
+        exibirFrequenciaGeral();
+    }
+
+    @FXML public void mostrarMedidasVigentesFrequencia() {
+        cmbMedidaFrequenciaGeral.setValue(null);
+        exibirFrequenciaGeral();
+    }
+
+    private void exibirFrequenciaGeral() {
+        boxFrequenciaGeral.getChildren().clear();
+        MedidaSocioeducativa selecionada=cmbMedidaFrequenciaGeral.getValue();
+        List<MedidaSocioeducativa> medidas=selecionada==null ? medidasFrequenciaGeral.stream()
+                .filter(m->m.vigenteEm(LocalDate.now())).toList() : List.of(selecionada);
+        if(medidas.isEmpty()) {
+            Label vazio=new Label("Nenhuma medida vigente. Selecione uma medida para consultar seu histórico.");
+            vazio.getStyleClass().add("page-subtitle"); vazio.setWrapText(true);
+            boxFrequenciaGeral.getChildren().add(vazio);
+        }
+        for(MedidaSocioeducativa medida:medidas) {
+            List<Frequencia> vinculados=registrosFrequenciaGeral.stream()
+                    .filter(f->f.getIdMedida()!=null && f.getIdMedida()==medida.getIdMedida()).toList();
+            Label titulo=new Label(medida.getTipoMedida().getCodigo()+" · Início: "+medida.getDataInicio().format(FORMATO_DATA)
+                    +(medida.getDataFim()==null ? "" : " · Encerramento: "+medida.getDataFim().format(FORMATO_DATA)));
+            titulo.getStyleClass().add("form-value-normal"); titulo.setWrapText(true);
+            HBox indicadores=new HBox(12);
+            if(medida.isPSC()) {
+                int cumpridas=vinculados.stream().mapToInt(Frequencia::getHorasContabilizadas).sum();
+                indicadores.getChildren().addAll(indicadorFrequenciaGeral(medida.getDuracaoHoras()+"h","Horas exigidas","stat-number-dark"),
+                        indicadorFrequenciaGeral(cumpridas+"h","Horas cumpridas","stat-number-green"),
+                        indicadorFrequenciaGeral(Math.max(0,medida.getDuracaoHoras()-cumpridas)+"h","Horas pendentes","stat-number-orange"));
+            } else {
+                indicadores.getChildren().add(indicadorFrequenciaGeral(medida.getMesesCorridos()+" / "+medida.getDuracaoMeses(),
+                        "Meses decorridos / previstos","stat-number-dark"));
+            }
+            indicadores.getChildren().addAll(indicadorFrequenciaGeral(Long.toString(vinculados.stream().filter(Frequencia::isPresente).count()),"Presenças registradas","stat-number-green"),
+                    indicadorFrequenciaGeral(Long.toString(vinculados.stream().filter(f->!f.isPresente()).count()),"Faltas registradas","stat-number-red"));
+            boxFrequenciaGeral.getChildren().add(new VBox(8,titulo,indicadores));
+        }
+    }
+
+    private VBox indicadorFrequenciaGeral(String valor,String descricao,String estilo) {
+        Label numero=new Label(valor); numero.getStyleClass().add(estilo);
+        Label legenda=new Label(descricao); legenda.getStyleClass().add("stat-label"); legenda.setWrapText(true);
+        VBox card=new VBox(4,numero,legenda); card.getStyleClass().add("stat-box"); card.setAlignment(Pos.CENTER);
+        HBox.setHgrow(card,Priority.ALWAYS);
+        return card;
     }
 
     @FXML public void corrigirFrequenciaSelecionada() {
@@ -663,57 +728,42 @@ public class DetalhesAdolescenteController {
     }
 
     @FXML
-    public void gerarPdfPia() {
+    public void exportarTextoPia() {
         if (piaAtual == null) return;
 
         FileChooser seletor = new FileChooser();
         seletor.setTitle("Salvar relatório do PIA");
-        seletor.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento PDF", "*.pdf"));
-        seletor.setInitialFileName("PIA_" + nomeParaArquivo(jovemAtual.getNome()) + "_" + LocalDate.now() + ".pdf");
+        seletor.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento de texto", "*.txt"));
+        seletor.setInitialFileName("PIA_" + nomeParaArquivo(jovemAtual.getNome()) + "_" + LocalDate.now() + ".txt");
         File destino = seletor.showSaveDialog(lblNome.getScene().getWindow());
         if (destino == null) return;
 
-        try {
+        try (FileWriter arquivo = new FileWriter(destino, StandardCharsets.UTF_8)) {
             EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
             String emitidoPor = usuario != null && usuario.getLogin() != null ? " por " + usuario.getLogin() : "";
-
-            PdfSimples pdf = new PdfSimples();
-            pdf.titulo("Plano Individual de Atendimento (PIA)");
-            pdf.subtitulo("Instituto C.A.S.A. - emitido em " + Formatadores.dataCurta(LocalDate.now()) + emitidoPor);
-            pdf.espaco(4);
-            pdf.linha();
-
-            pdf.rotulo("Adolescente");
-            pdf.paragrafo(jovemAtual.getNome() + "  |  CPF " + jovemAtual.getCpf());
-            pdf.rotulo("Medida socioeducativa");
-            pdf.paragrafo(jovemAtual.getMedida() + "  |  Progresso: " + jovemAtual.getTextoProgresso());
-            pdf.rotulo("Técnico de referência");
-            pdf.paragrafo(jovemAtual.getTecnico());
-
-            pdf.espaco(6);
-            pdf.linha();
-
-            pdf.rotulo("Data de elaboração");
-            pdf.paragrafo(Formatadores.dataExtenso(piaAtual.getDataElaboracao()));
-            pdf.rotulo("Técnico(a) responsável pelo PIA");
-            pdf.paragrafo(Formatadores.textoOuTraco(perfilDAO.buscarNomeAutorPia(piaAtual.getIdPia())));
-            pdf.rotulo("Diagnóstico inicial");
-            pdf.paragrafo(Formatadores.textoOuTraco(piaAtual.getDiagnostico()));
-            pdf.rotulo("Vulnerabilidades identificadas");
-            pdf.paragrafo(Formatadores.textoOuTraco(piaAtual.getVulnerabilidades()));
-            pdf.rotulo("Potencialidades");
-            pdf.paragrafo(Formatadores.textoOuTraco(piaAtual.getPotencialidades()));
-            pdf.rotulo("Estratégias de intervenção");
-            pdf.paragrafo(Formatadores.textoOuTraco(piaAtual.getEstrategias()));
-            pdf.rotulo("Documento enviado ao CREAS");
-            pdf.paragrafo(piaAtual.isDocumentoEnviado() ? "Sim" : "Não");
-
-            pdf.salvar(destino.toPath());
-            mostrarAlerta(Alert.AlertType.INFORMATION, "Relatório gerado", "PDF salvo em:\n" + destino.getAbsolutePath());
+            arquivo.write("Plano Individual de Atendimento (PIA)" + System.lineSeparator());
+            arquivo.write("Instituto C.A.S.A. - emitido em " + Formatadores.dataCurta(LocalDate.now()) + emitidoPor + System.lineSeparator());
+            for (String[] campo : new String[][] {
+                    {"Adolescente", jovemAtual.getNome() + "  |  CPF " + jovemAtual.getCpf()},
+                    {"Medida socioeducativa", jovemAtual.getMedida() + "  |  Progresso: " + jovemAtual.getTextoProgresso()},
+                    {"Técnico de referência", jovemAtual.getTecnico()},
+                    {"Data de elaboração", Formatadores.dataExtenso(piaAtual.getDataElaboracao())},
+                    {"Técnico(a) responsável pelo PIA", perfilDAO.buscarNomeAutorPia(piaAtual.getIdPia())},
+                    {"Diagnóstico inicial", piaAtual.getDiagnostico()},
+                    {"Vulnerabilidades identificadas", piaAtual.getVulnerabilidades()},
+                    {"Potencialidades", piaAtual.getPotencialidades()},
+                    {"Estratégias de intervenção", piaAtual.getEstrategias()},
+                    {"Documento enviado ao CREAS", piaAtual.isDocumentoEnviado() ? "Sim" : "Não"}
+            }) {
+                arquivo.write(System.lineSeparator() + campo[0] + ":" + System.lineSeparator()
+                        + Formatadores.textoOuTraco(campo[1]) + System.lineSeparator());
+            }
         } catch (IOException | RuntimeException e) {
             e.printStackTrace();
-            mostrarAlerta(Alert.AlertType.ERROR, "Erro ao gerar PDF", "Não foi possível salvar o arquivo PDF.");
+            mostrarAlerta(Alert.AlertType.ERROR, "Erro ao exportar", "Não foi possível salvar o arquivo de texto.");
+            return;
         }
+        mostrarAlerta(Alert.AlertType.INFORMATION, "Relatório gerado", "Texto salvo em:\n" + destino.getAbsolutePath());
     }
 
     private void carregarAbaFamilia() {

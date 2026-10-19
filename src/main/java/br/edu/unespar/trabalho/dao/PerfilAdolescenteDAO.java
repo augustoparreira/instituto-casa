@@ -16,7 +16,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Consultas e ações da tela de perfil do adolescente que os DAOs do back ainda não oferecem. */
+/**
+ * Consulta dados do perfil e gerencia os vínculos de referência técnica e autoria do PIA por JDBC.
+ */
 public class PerfilAdolescenteDAO {
 
     /** Medida mais recente do adolescente, ou null se ele ainda não tem medida. */
@@ -114,7 +116,6 @@ public class PerfilAdolescenteDAO {
         }
     }
 
-    // ===================== FREQUÊNCIA =====================
 
     /** Registros de frequência do adolescente (mais recentes primeiro), já com o nome da atividade. */
     public List<FrequenciaLinhaDTO> listarFrequencia(long cpfAdolescente) {
@@ -165,7 +166,6 @@ public class PerfilAdolescenteDAO {
         }
     }
 
-    // ===================== PIA =====================
 
     /** Nome do técnico que elaborou o PIA (tabela ElaborarPIA), ou null. */
     public String buscarNomeAutorPia(int idPia) {

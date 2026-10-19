@@ -7,6 +7,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste responsáveis e gerencia seus vínculos e parentescos com os adolescentes por JDBC.
+ */
 public class ResponsavelDAO {
 
     public boolean inserir(Responsavel r,long cpf) { return salvar(r,cpf,false); }
@@ -70,14 +73,12 @@ public class ResponsavelDAO {
                 while (rs.next()) {
                     Responsavel resp = new Responsavel();
 
-                    // Dados da tabela Pessoa
                     resp.setCpf(rs.getLong("cpf"));
                     resp.setNomeCompleto(rs.getString("nome_completo"));
                     resp.setDataNascimento(rs.getDate("data_nascimento").toLocalDate());
                     resp.setContato(rs.getString("contato"));
                     resp.setEmail(rs.getString("email"));
 
-                    // Dados da tabela Responsavel
                     resp.setParentesco(rs.getString("parentesco"));
                     resp.setContatoPrincipal(rs.getBoolean("contato_principal"));
 

@@ -24,7 +24,7 @@
             <Button text="Adolescentes" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAdolescentes" />
             <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
             <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
-            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" visible="false" managed="false" />
             <Region VBox.vgrow="ALWAYS" />
             <VBox spacing="15.0" styleClass="user-box">
                 <HBox spacing="12.0" alignment="CENTER_LEFT">

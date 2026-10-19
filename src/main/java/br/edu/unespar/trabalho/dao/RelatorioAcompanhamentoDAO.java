@@ -8,6 +8,9 @@ import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Persiste e consulta cópias dos dados revisados dos relatórios de acompanhamento por JDBC.
+ */
 public class RelatorioAcompanhamentoDAO {
     public boolean salvar(RelatorioAcompanhamento r) {
         r.validar();

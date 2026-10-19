@@ -22,7 +22,6 @@ public class MedidaSocioeducativa {
     private Integer duracaoMeses; // somente LA
     private Integer duracaoHoras; // somente PSC
 
-    // Campo de reincidência mantido (informado pela equipa técnica)
     private boolean reincidencia;
 
     public boolean isReincidencia() { return reincidencia; }

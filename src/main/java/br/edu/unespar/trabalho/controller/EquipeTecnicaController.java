@@ -1,7 +1,6 @@
 package br.edu.unespar.trabalho.controller;
 
 import br.edu.unespar.trabalho.model.MembroEquipeDTO;
-import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -19,6 +18,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 
+/**
+ * Controla a consulta e os filtros da equipe técnica exibida com dados demonstrativos.
+ */
 public class EquipeTecnicaController {
 
     @FXML private TextField txtPesquisa;
@@ -37,7 +39,7 @@ public class EquipeTecnicaController {
 
     @FXML
     public void initialize() {
-        // Dados de simulação idênticos ao layout da imagem fornecida
+
         listaOriginal = FXCollections.observableArrayList(
                 new MembroEquipeDTO("Ana Paula Costa", "Assistente Social", "ana.costa", "3 adolescente(s)", "Administrador", "AP"),
                 new MembroEquipeDTO("Bruno Ferreira", "Psicólogo", "bruno.ferreira", "2 adolescente(s)", "Equipe Técnica", "BF"),
@@ -61,7 +63,6 @@ public class EquipeTecnicaController {
                     box.setStyle("-fx-alignment: center-left; -fx-padding: 12px 16px; -fx-background-color: white; " +
                             "-fx-background-radius: 8px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; -fx-cursor: hand;");
 
-                    // Avatar Circular com Iniciais
                     HBox avatarBox = new HBox();
                     avatarBox.setStyle("-fx-alignment: center;");
                     Circle avatar = new Circle(18);
@@ -70,7 +71,6 @@ public class EquipeTecnicaController {
                     Label lblIniciais = new Label(item.getIniciais());
                     lblIniciais.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: #19523e;");
 
-                    // Informações Principais do Membro
                     VBox info = new VBox(2);
                     Label lblNome = new Label(item.getNome());
                     lblNome.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #2b2b2b;");
@@ -84,7 +84,6 @@ public class EquipeTecnicaController {
                     Region spacer = new Region();
                     HBox.setHgrow(spacer, Priority.ALWAYS);
 
-                    // Badge de Nível de Acesso (Administrador / Equipe Técnica / Educador)
                     Label badgeAcesso = new Label(item.getNivelAcesso());
                     String estiloBadge = switch (item.getNivelAcesso()) {
                         case "Administrador" -> "-fx-background-color: #ececec; -fx-text-fill: #555555;";
@@ -127,7 +126,6 @@ public class EquipeTecnicaController {
         }
     }
 
-    // Handlers dos Filtros Por Cargo
     @FXML public void filtrarCargoTodos(ActionEvent e) { filtroCargoAtual = "Todos"; atualizarEstiloBotoesCargo(btnCargoTodos); filtrarMembros(); }
     @FXML public void filtrarCargoAssistente(ActionEvent e) { filtroCargoAtual = "Assistente"; atualizarEstiloBotoesCargo(btnCargoAssistente); filtrarMembros(); }
     @FXML public void filtrarCargoPsicologo(ActionEvent e) { filtroCargoAtual = "Psicólogo"; atualizarEstiloBotoesCargo(btnCargoPsicologo); filtrarMembros(); }
@@ -148,7 +146,6 @@ public class EquipeTecnicaController {
         btn.getStyleClass().add(isAtivo ? "filter-btn-active" : "filter-btn");
     }
 
-    // Métodos Globais de Navegação Lateral
     @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Dashboard.fxml", "Painel de Controle"); }
     @FXML public void irParaAdolescentes(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/AdolescentesView.fxml", "Adolescentes"); }
     @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/AgendaView.fxml", "Agenda institucional"); }

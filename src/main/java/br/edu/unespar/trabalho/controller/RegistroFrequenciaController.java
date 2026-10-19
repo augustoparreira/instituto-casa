@@ -10,7 +10,9 @@ import javafx.scene.control.*;
 import javafx.util.StringConverter;
 import java.time.LocalDate;
 
-/** Editor reutilizado pela planilha mensal e pelo perfil, com persistência nos DAOs. */
+/**
+ * Controla o registro, a correção e a exclusão de frequências pelo perfil ou pela planilha mensal.
+ */
 public class RegistroFrequenciaController {
     @FXML private Label lblAdolescente, lblMensagem;
     @FXML private DatePicker dpData;

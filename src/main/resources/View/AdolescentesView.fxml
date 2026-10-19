@@ -34,7 +34,7 @@
             <Button text="Frequência mensal" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#abrirFrequencia" />
             <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
             <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
-            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" visible="false" managed="false" />
 
             <Region VBox.vgrow="ALWAYS" />
 

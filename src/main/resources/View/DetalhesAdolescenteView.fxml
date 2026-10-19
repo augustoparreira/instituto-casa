@@ -36,7 +36,7 @@
             <Button text="Adolescentes" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#voltarParaLista" />
             <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
             <Button text="Relatórios" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
-            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" visible="false" managed="false" />
 
             <Region VBox.vgrow="ALWAYS" />
 
@@ -304,7 +304,7 @@
                                 <Label fx:id="lblPiaEnviado" text="Não" styleClass="form-value-normal" />
                             </VBox>
                             <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                <Button text="Exportar relatório TXT" styleClass="btn-novo" onAction="#exportarTextoPia" />
+                                <Button text="Exportar relatório" styleClass="btn-novo" onAction="#exportarTextoPia" />
                                 <Button fx:id="btnMarcarEnviado" text="Marcar como enviado" styleClass="btn-outline" onAction="#marcarPiaEnviado" />
                                 <Region HBox.hgrow="ALWAYS" />
                                 <Button text="Editar PIA" styleClass="btn-outline" onAction="#editarPia" />

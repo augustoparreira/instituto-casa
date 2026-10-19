@@ -8,6 +8,9 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste frequências e recalcula horas e situação do adolescente em transações JDBC.
+ */
 public class FrequenciaDAO {
     public boolean registrar(Frequencia f) { return salvar(f,false); }
     public boolean atualizar(Frequencia f) { return salvar(f,true); }

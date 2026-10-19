@@ -23,6 +23,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
+/**
+ * Controla a listagem, os filtros e a navegação para o cadastro e o perfil dos adolescentes.
+ */
 public class AdolescentesController {
 
     @FXML private TextField txtPesquisa;
@@ -50,7 +53,6 @@ public class AdolescentesController {
     public void initialize() {
         adolescenteDAO = new AdolescenteDAO();
 
-        // Controller limpo: Pede a lista pronta para o DAO!
         listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());
 
         listaFiltrada = new FilteredList<>(listaOriginal, p -> true);

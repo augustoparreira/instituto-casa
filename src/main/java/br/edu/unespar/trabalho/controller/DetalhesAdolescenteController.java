@@ -2,7 +2,6 @@ package br.edu.unespar.trabalho.controller;
 
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.FrequenciaMensalDTO;
-import br.edu.unespar.trabalho.dao.AtividadeDAO;
 import br.edu.unespar.trabalho.dao.ComposicaoFamiliarDAO;
 import br.edu.unespar.trabalho.dao.EquipeTecnicaDAO;
 import br.edu.unespar.trabalho.dao.FrequenciaDAO;
@@ -13,12 +12,10 @@ import br.edu.unespar.trabalho.dao.ResponsavelDAO;
 import br.edu.unespar.trabalho.dao.SaudeDAO;
 import br.edu.unespar.trabalho.dao.SituacaoSocialDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
-import br.edu.unespar.trabalho.model.Atividade;
 import br.edu.unespar.trabalho.model.ComposicaoFamiliar;
 import br.edu.unespar.trabalho.model.EquipeTecnica;
 import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
 import br.edu.unespar.trabalho.model.Frequencia;
-import br.edu.unespar.trabalho.model.FrequenciaLinhaDTO;
 import br.edu.unespar.trabalho.model.MedidaSocioeducativa;
 import br.edu.unespar.trabalho.model.PIA;
 import br.edu.unespar.trabalho.model.Responsavel;
@@ -73,11 +70,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+/**
+ * Controla o perfil do adolescente, suas medidas, frequências, PIA e vínculos familiares.
+ */
 public class DetalhesAdolescenteController {
 
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    // ----- Cabeçalho do perfil -----
     @FXML private Label lblNome;
     @FXML private Label lblCpf;
     @FXML private Label lblStatus;
@@ -86,7 +85,6 @@ public class DetalhesAdolescenteController {
     @FXML private Label lblPorcentagem;
     @FXML private Label lblHoras;
 
-    // ----- Aba: Dados Pessoais -----
     @FXML private Label lblInfoNome;
     @FXML private Label lblInfoCpf;
     @FXML private Label lblInfoNascimento;
@@ -94,7 +92,6 @@ public class DetalhesAdolescenteController {
     @FXML private Label lblInfoBairro;
     @FXML private Label lblInfoStatus;
 
-    // ----- Abas -----
     @FXML private Button btnAbaDados;
     @FXML private Button btnAbaMedida;
     @FXML private Button btnAbaFrequencia;
@@ -107,7 +104,6 @@ public class DetalhesAdolescenteController {
     @FXML private VBox panePia;
     @FXML private VBox paneFamilia;
 
-    // ----- Aba: Medida Socioeducativa -----
     @FXML private VBox boxMedidaCadastrada;
     @FXML private VBox boxMedidaForm;
     @FXML private Label lblMedidaTipo;
@@ -126,7 +122,6 @@ public class DetalhesAdolescenteController {
     @FXML private Label lblTecnicoAtual;
     @FXML private ComboBox<EquipeTecnica> cmbTecnico;
 
-    // ----- Aba: Frequência e Horas -----
     @FXML private Label lblFreqPresencas;
     @FXML private Label lblFreqFaltas;
     @FXML private Label lblFreqHoras;
@@ -141,7 +136,6 @@ public class DetalhesAdolescenteController {
     private List<MedidaSocioeducativa> medidasFrequenciaGeral = List.of();
     private List<Frequencia> registrosFrequenciaGeral = List.of();
 
-    // ----- Aba: PIA -----
     @FXML private Label lblPiaStatus;
     @FXML private Label lblPiaData;
     @FXML private Label lblPiaTecnico;
@@ -161,7 +155,6 @@ public class DetalhesAdolescenteController {
     @FXML private TextArea txtPiaPotencialidades;
     @FXML private TextArea txtPiaEstrategias;
 
-    // ----- Aba: Família e Social -----
     @FXML private VBox boxResponsaveis;
     @FXML private VBox boxComposicao;
     @FXML private VBox boxSocialVazio;
@@ -179,7 +172,6 @@ public class DetalhesAdolescenteController {
     private final MedidaSocioeducativaDAO medidaDAO = new MedidaSocioeducativaDAO();
     private final PerfilAdolescenteDAO perfilDAO = new PerfilAdolescenteDAO();
     private final EquipeTecnicaDAO equipeDAO = new EquipeTecnicaDAO();
-    private final AtividadeDAO atividadeDAO = new AtividadeDAO();
     private final FrequenciaDAO frequenciaDAO = new FrequenciaDAO();
     private final PIADAO piaDAO = new PIADAO();
     private final ResponsavelDAO responsavelDAO = new ResponsavelDAO();
@@ -187,7 +179,7 @@ public class DetalhesAdolescenteController {
     private final SituacaoSocialDAO situacaoSocialDAO = new SituacaoSocialDAO();
     private final SaudeDAO saudeDAO = new SaudeDAO();
 
-    /** Limite de texto de cada campo do PIA (exige rodar o ajustes_ddl.sql que amplia as colunas). */
+    /** Limite de 1.000 caracteres por campo textual do PIA, conforme o DDL ajustado. */
     private static final int LIMITE_TEXTO_PIA = 1000;
 
     @FXML private Label lblDadosComplementares;
@@ -224,7 +216,6 @@ public class DetalhesAdolescenteController {
         cmbMedidaFrequenciaGeral.valueProperty().addListener((o,a,b)->exibirFrequenciaGeral());
         cmbTipoMedida.setItems(FXCollections.observableArrayList(TipoMedida.values()));
 
-        // Aplicando máscaras nos DatePickers de Medidas e PIA
         aplicarMascaraData(dpInicioMedida);
         aplicarMascaraData(dpFimMedida);
         aplicarMascaraData(dpPiaData);
@@ -509,8 +500,8 @@ public class DetalhesAdolescenteController {
         lblFreqPresencas.setText(Long.toString(presencas)); lblFreqFaltas.setText(Long.toString(faltas));
         lblFreqHoras.setText(horas+"h");
         lblFreqPercentual.setText(injustificadas>=FrequenciaMensalDTO.LIMITE_FALTAS_INJUSTIFICADAS?"Irregular":"Regular");
-        // O indicador de medida depende do que o adolescente cumpre naquele mês: PSC conta horas, LA conta meses,
-        // e quem tem as duas medidas vê os dois cards.
+
+
         medidasFrequenciaGeral=medidaDAO.listarPorAdolescente(cpfAtual);
         var resumoMes=new FrequenciaMensalDTO(null,medidasFrequenciaGeral,registros,mes,false);
         boolean temPsc=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isPSC);

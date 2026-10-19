@@ -6,6 +6,13 @@ import java.sql.SQLException;
 
 public class ConnectionFactory {
 
+    /*
+     * CONFIGURAÇÃO LOCAL DO POSTGRESQL
+     * Professor: antes de executar o sistema, ajuste a URL, o usuário e a senha
+     * abaixo para o PostgreSQL da sua máquina e prepare a base com os scripts SQL
+     * do projeto. Essas credenciais são usadas na conexão JDBC em execução;
+     * a compilação não exige uma conexão com o banco de dados.
+     */
     private static final String URL = "jdbc:postgresql://localhost:5432/db_instituto_casa";
     private static final String USER = "postgres";
     private static final String PASS = "admin123";

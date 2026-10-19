@@ -12,6 +12,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste documentos e consulta ou atualiza seu status de envio por JDBC.
+ */
 public class DocumentoDAO {
 
     public boolean inserir(Documento doc) {
@@ -41,7 +44,6 @@ public class DocumentoDAO {
         }
     }
 
-    // Caso de uso "Atualizar Status de Documentação"
     public boolean atualizarStatus(int idDocumento, String novoStatus) {
         String sql = "UPDATE Documento SET status_envio = ? WHERE id_documento = ?";
         try (Connection conn = ConnectionFactory.getConnection();

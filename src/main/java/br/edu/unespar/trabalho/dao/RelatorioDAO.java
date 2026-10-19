@@ -9,6 +9,9 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * Mantém a listagem legada de documentos; a remoção altera apenas a coleção em memória.
+ */
 public class RelatorioDAO {
 
     private static RelatorioDAO instance;
@@ -58,14 +61,14 @@ public class RelatorioDAO {
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            // Simulação de ID - Num cenário real usar SERIAL/AUTO_INCREMENT
+            // Identificador legado derivado do relógio, sem sequência no banco.
             int novoId = (int) (System.currentTimeMillis() % 100000);
 
             stmt.setInt(1, novoId);
             stmt.setString(2, item.getCategoria());
             stmt.setDate(3, Date.valueOf(LocalDate.now()));
             stmt.setString(4, item.getParecer());
-            stmt.setLong(5, 11122233344L); // Substituir por lógica de seleção de adolescente depois
+            stmt.setLong(5, 11122233344L); // CPF fixo do fluxo legado.
 
             if (stmt.executeUpdate() > 0) {
                 listaRelatorios.add(0, item);
@@ -76,7 +79,7 @@ public class RelatorioDAO {
     }
 
     public void remover(RelatorioItem item) {
-        // Implementação simplificada para a interface baseada na memória
+        // Remove apenas da coleção; o documento permanece no banco.
         listaRelatorios.remove(item);
     }
 }

@@ -1,6 +1,5 @@
 package br.edu.unespar.trabalho.util;
 
-import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.Connection;
 

@@ -8,10 +8,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste e consulta os integrantes da composição familiar vinculados ao adolescente por JDBC.
+ */
 public class ComposicaoFamiliarDAO {
 
     public boolean inserir(ComposicaoFamiliar f) { return salvar(f,false); }

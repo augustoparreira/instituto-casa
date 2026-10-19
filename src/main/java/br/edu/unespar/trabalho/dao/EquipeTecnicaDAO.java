@@ -8,6 +8,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Autentica usuários e persiste os dados da equipe técnica por JDBC.
+ */
 public class EquipeTecnicaDAO {
 
     public EquipeTecnica autenticar(String login, String senha) {

@@ -19,6 +19,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Controla a preparação, revisão, persistência e exportação em texto dos relatórios de acompanhamento.
+ */
 public class RelatoriosController {
     @FXML private Label lblNomeUsuario, lblCargoUsuario, lblStatusEdicao, lblMensagem;
     @FXML private ComboBox<Adolescente> cmbAdolescente;

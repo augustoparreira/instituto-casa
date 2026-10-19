@@ -6,6 +6,9 @@ import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Consulta por JDBC os dados de adolescentes, medidas e frequências para a planilha mensal.
+ */
 public class FrequenciaMensalDAO {
     public List<FrequenciaMensalDTO> listar(YearMonth mes) {
         var adolescentes=new AdolescenteDAO().listarCadastros();

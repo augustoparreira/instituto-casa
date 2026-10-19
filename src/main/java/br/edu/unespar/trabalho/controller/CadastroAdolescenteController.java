@@ -23,6 +23,9 @@ import javafx.scene.Parent;
 import javafx.stage.Stage;
 import java.time.LocalDate;
 
+/**
+ * Controla o cadastro e a edição dos dados pessoais, sociais, de saúde e de escolaridade do adolescente.
+ */
 public class CadastroAdolescenteController {
 
     @FXML private TextField txtNome;
@@ -177,7 +180,6 @@ public class CadastroAdolescenteController {
         try {
             dpNascimento.commitValue();
 
-            // Valida se o DatePicker conseguiu converter a data ou se ficou inválida/incompleta
             if(txtNome.getText().isBlank() || dpNascimento.getValue()==null)
                 throw new IllegalArgumentException("Preencha o nome e uma data de nascimento válida (ex: DD/MM/AAAA).");
 
@@ -237,7 +239,7 @@ public class CadastroAdolescenteController {
         } catch(NumberFormatException e) {
             mostrarAlerta(Alert.AlertType.WARNING,"Valor inválido","Confira os campos numéricos. Renda é informada em salários mínimos, por exemplo: 1,5.");
         } catch(java.time.format.DateTimeParseException e) {
-            // MENSAGEM AMIGÁVEL TRATADA AQUI:
+
             mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","A data de nascimento informada é inválida ou está incompleta. Verifique o dia, mês e ano.");
         } catch(IllegalArgumentException e) {
             mostrarAlerta(Alert.AlertType.WARNING,"Confira os dados",e.getMessage());

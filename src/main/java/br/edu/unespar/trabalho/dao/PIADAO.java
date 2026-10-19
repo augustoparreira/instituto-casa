@@ -5,9 +5,11 @@ import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.*;
 
+/**
+ * Persiste o PIA e sincroniza a confirmação de envio com o cadastro do adolescente por JDBC.
+ */
 public class PIADAO {
 
-    // 1. CREATE (Já tínhamos feito)
     public boolean inserir(PIA pia) {
         String sql = "INSERT INTO PIA (id_pia, data_elaboracao, diagnostico, vulnerabilidades, potencialidades, estrategias, documento_enviado, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -38,7 +40,6 @@ public class PIADAO {
         }
     }
 
-    // 2. READ (Buscar o PIA de um adolescente específico para mostrar na tela)
     public PIA buscarPorCpf(long cpfAdolescente) {
         String sql = "SELECT p.*, a.pia_enviado AS envio_confirmado FROM PIA p "
                 + "JOIN Adolescente a ON a.cpf_adolescente=p.cpf_adolescente WHERE p.cpf_adolescente = ?";
@@ -68,7 +69,6 @@ public class PIADAO {
         return null; // Retorna nulo se o adolescente ainda não tiver um PIA cadastrado
     }
 
-    // 3. UPDATE (Editar o texto do PIA ou marcar documento_enviado como true)
     public boolean atualizar(PIA pia) {
         String sql = "UPDATE PIA SET diagnostico = ?, vulnerabilidades = ?, potencialidades = ?, estrategias = ?, documento_enviado = ? WHERE id_pia = ?";
 
@@ -106,7 +106,6 @@ public class PIADAO {
         }
     }
 
-    // 4. DELETE (Conforme exigido pelo método excluirPIA() no diagrama de classes)
     public boolean excluir(int idPia) {
         String sql = "DELETE FROM PIA WHERE id_pia = ?";
 

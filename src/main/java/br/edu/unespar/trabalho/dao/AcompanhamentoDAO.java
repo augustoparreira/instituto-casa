@@ -12,6 +12,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste vínculos de acompanhamento e consulta adolescentes vinculados à equipe técnica por JDBC.
+ */
 public class AcompanhamentoDAO {
 
     public boolean vincular(Acompanhamento acompanhamento) {

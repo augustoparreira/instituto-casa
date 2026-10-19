@@ -5,6 +5,9 @@ import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.*;
 
+/**
+ * Persiste e consulta os dados de escolaridade e trabalho do adolescente por JDBC.
+ */
 public class EducacaoTrabalhoDAO {
 
     public boolean inserir(EducacaoTrabalho et) {

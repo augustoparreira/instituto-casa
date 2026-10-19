@@ -15,6 +15,9 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
+/**
+ * Valida as credenciais de acesso, inicia a sessão e abre o painel principal.
+ */
 public class LoginController {
 
     @FXML private TextField txtLogin;
@@ -34,14 +37,13 @@ public class LoginController {
         }
 
         try {
-            // Chama a nova implementação segura (AuthServiceImpl com EquipeTecnicaDAO)
+
             EquipeTecnicaDTO usuarioLogado = authService.autenticar(usuario, senha);
 
             if (usuarioLogado != null) {
-                // Guarda o utilizador logado em sessão
+
                 Sessao.setUsuarioLogado(usuarioLogado);
 
-                // Vai para o Dashboard e passa os dados para preencher o Menu Lateral e Cards
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/View/Dashboard.fxml"));
                 Parent root = loader.load();
 

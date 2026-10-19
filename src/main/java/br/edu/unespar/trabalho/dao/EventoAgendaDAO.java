@@ -7,6 +7,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste compromissos e valida conflitos de horário dos participantes em transações JDBC.
+ */
 public class EventoAgendaDAO {
     public boolean inserir(EventoAgenda evento) { return salvar(evento,false); }
     public boolean atualizar(EventoAgenda evento) { return salvar(evento,true); }

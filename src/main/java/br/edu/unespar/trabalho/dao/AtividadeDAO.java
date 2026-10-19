@@ -8,6 +8,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Executa operações de cadastro e consulta de atividades por JDBC.
+ */
 public class AtividadeDAO {
 
     public boolean inserir(Atividade a) {

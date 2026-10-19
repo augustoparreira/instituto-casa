@@ -26,22 +26,22 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+/**
+ * Apresenta os indicadores de adolescentes, as medidas e os compromissos do painel principal.
+ */
 public class DashboardController {
 
     @FXML private Label lblNomeUsuario;
     @FXML private Label lblCargoUsuario;
     @FXML private Label lblDataAtualizacao;
 
-    // Estatísticas Numéricas
     @FXML private Label lblTotalCadastrados;
     @FXML private Label lblTotalPsc;
     @FXML private Label lblTotalLa;
 
-    // Contêineres Dinâmicos
     @FXML private VBox vboxAdolescentes;
     @FXML private VBox vboxAgenda;
 
-    // Cartão de Alerta (Prazo próximo)
     @FXML private VBox cardPrazoGabriel;
     @FXML private Label lblNomeAlerta;
     @FXML private Label lblDataAlerta;
@@ -77,21 +77,18 @@ public class DashboardController {
         for (int i = 0; i < jovensCadastrados.size(); i++) {
             AdolescenteDTO jovem = jovensCadastrados.get(i);
 
-            // Linha do Adolescente
             HBox row = new HBox(15);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setStyle("-fx-background-color: white; -fx-padding: 10 15; -fx-border-color: #eeeeee; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
             row.setUserData(jovem);
             row.setOnMouseClicked(this::clicarAdolescentePainel);
 
-            // Avatar com Iniciais
             StackPane avatar = new StackPane();
             Circle circle = new Circle(18, Color.web("#e8f3ee"));
             Label initials = new Label(getIniciais(jovem.getNome()));
             initials.setStyle("-fx-text-fill: #19523e; -fx-font-weight: bold; -fx-font-size: 12px;");
             avatar.getChildren().addAll(circle, initials);
 
-            // Textos e Barra de Progresso
             VBox infoBox = new VBox(4);
             HBox.setHgrow(infoBox, Priority.ALWAYS);
 
@@ -104,20 +101,17 @@ public class DashboardController {
             HBox progressBox = new HBox(10);
             progressBox.setAlignment(Pos.CENTER_LEFT);
 
-            // Usando o getProgresso() (double) do DTO
             ProgressBar pb = new ProgressBar(jovem.getProgresso());
             pb.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(pb, Priority.ALWAYS);
             pb.setStyle("-fx-accent: #0f8558; -fx-control-inner-background: #e8f3ee;");
 
-            // Usando o getTextoProgresso() (String) do DTO
             Label lblProgText = new Label(jovem.getTextoProgresso());
             lblProgText.setStyle("-fx-text-fill: #757575; -fx-font-size: 11px; -fx-font-weight: bold;");
             progressBox.getChildren().addAll(pb, lblProgText);
 
             infoBox.getChildren().addAll(lblNome, lblTech, progressBox);
 
-            // Badge de Medida
             Label lblBadge = new Label(jovem.getMedida());
             if ("LA".equalsIgnoreCase(jovem.getMedida())) {
                 lblBadge.setStyle("-fx-background-color: #f3e8f3; -fx-text-fill: #8d118d; -fx-padding: 4 8; -fx-background-radius: 10; -fx-font-size: 11px; -fx-font-weight: bold;");
@@ -134,7 +128,6 @@ public class DashboardController {
                 vboxAdolescentes.getChildren().add(row);
             }
 
-            // Define o alerta do primeiro jovem
             if (i == 0 && cardPrazoGabriel != null) {
                 cardPrazoGabriel.setUserData(jovem);
                 cardPrazoGabriel.setVisible(true);

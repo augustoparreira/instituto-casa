@@ -7,6 +7,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+/**
+ * Registra por JDBC a associação entre o PIA e o técnico responsável por sua elaboração.
+ */
 public class ElaborarPIADAO {
 
     // Tabela associativa pura (cpf_equipe, id_pia). A data de elaboração fica na tabela PIA.

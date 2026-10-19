@@ -9,6 +9,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 
+/**
+ * Persiste e consulta os dados sociais, de endereço e de benefícios do adolescente por JDBC.
+ */
 public class SituacaoSocialDAO {
 
     public boolean inserir(SituacaoSocial ss) {

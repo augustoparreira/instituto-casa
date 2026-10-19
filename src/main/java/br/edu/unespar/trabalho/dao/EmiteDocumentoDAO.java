@@ -7,6 +7,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+/**
+ * Registra por JDBC a associação entre o documento emitido e o membro da equipe técnica.
+ */
 public class EmiteDocumentoDAO {
 
     public boolean inserir(EmiteDocumento emite) {

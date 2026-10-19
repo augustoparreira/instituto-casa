@@ -14,6 +14,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * Controla a consulta da planilha mensal de frequência e a abertura do editor de lançamentos.
+ */
 public class FrequenciaController {
     @FXML private TableView<FrequenciaMensalDTO> tabela;
     @FXML private DatePicker dpCompetencia;

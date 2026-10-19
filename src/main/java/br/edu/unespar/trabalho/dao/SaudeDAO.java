@@ -5,6 +5,9 @@ import br.edu.unespar.trabalho.util.ConnectionFactory;
 
 import java.sql.*;
 
+/**
+ * Persiste e consulta os dados de saúde do adolescente por JDBC.
+ */
 public class SaudeDAO {
 
     public boolean inserir(Saude saude) {
@@ -35,7 +38,6 @@ public class SaudeDAO {
         }
     }
 
-    // Buscar dados de saúde do adolescente
     public Saude buscarPorCpf(long cpfAdolescente) {
         String sql = "SELECT * FROM Saude WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -59,7 +61,6 @@ public class SaudeDAO {
         return null;
     }
 
-    // Atualizar dados de saúde
     public boolean atualizar(Saude saude) {
         String sql = "UPDATE Saude SET ubs_referencia = ?, uso_spa = ?, observacoes = ?, substancias_utilizadas = ? WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();

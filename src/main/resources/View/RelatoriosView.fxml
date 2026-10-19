@@ -36,7 +36,7 @@
             <Button text="Adolescentes" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAdolescentes" />
             <Button text="Agenda" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaAgenda" />
             <Button text="Relatórios" styleClass="nav-button-active" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaRelatorios" />
-            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" />
+            <Button text="Equipe Técnica" styleClass="nav-button" maxWidth="Infinity" alignment="TOP_LEFT" onAction="#irParaEquipeTecnica" visible="false" managed="false" />
 
             <Region VBox.vgrow="ALWAYS" />
 
@@ -90,7 +90,7 @@
                     <HBox spacing="8" alignment="CENTER_RIGHT">
                         <Button text="Visualizar" onAction="#visualizarRelatorio"/>
                         <Button text="Salvar rascunho" onAction="#salvarAtualizacaoRelatorio" styleClass="btn-novo-evento"/>
-                        <Button text="Exportar TXT" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
+                        <Button text="Exportar" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
                     </HBox>
                 </VBox>
             </HBox>

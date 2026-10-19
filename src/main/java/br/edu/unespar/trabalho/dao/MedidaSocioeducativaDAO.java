@@ -8,6 +8,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Persiste medidas, valida vigência e consulta horas de PSC por JDBC.
+ */
 public class MedidaSocioeducativaDAO {
     public boolean inserir(MedidaSocioeducativa m) { return salvar(m,false); }
     public boolean atualizar(MedidaSocioeducativa m) { return salvar(m,true); }

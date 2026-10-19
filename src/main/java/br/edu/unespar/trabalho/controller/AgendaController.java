@@ -17,6 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Controla o calendário institucional e a inclusão, edição e exclusão de compromissos.
+ */
 public class AgendaController {
     @FXML private GridPane gridCalendario;
     @FXML private Label lblMesAno, lblDataSelecionada, lblDiaSemanaSelecionado, lblIrParaHojeTexto, lblMensagem;

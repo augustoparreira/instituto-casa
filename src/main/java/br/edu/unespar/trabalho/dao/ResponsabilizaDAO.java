@@ -7,6 +7,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+/**
+ * Registra por JDBC o vínculo entre o adolescente e seu responsável.
+ */
 public class ResponsabilizaDAO {
 
     public boolean inserir(Responsabiliza vinculo) {

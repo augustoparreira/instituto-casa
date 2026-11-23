@@ -186,6 +186,20 @@ public class RelatoriosController {
             arquivo.write(System.lineSeparator()+"Apucarana, "+r.getDataEmissao().format(DATA)+System.lineSeparator());
         }
     }
+    @FXML public void imprimirRelatorio() {
+        try {
+            RelatorioAcompanhamento r=lerFormulario();
+            validarExportacao(r);
+            List<String> blocos=new java.util.ArrayList<>();
+            blocos.addAll(List.of(INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,TITULO,
+                    r.getCompetencia().format(DateTimeFormatter.ofPattern("MM/yyyy")),"Identificação"));
+            for(Campo campo:Campo.values()) blocos.add(campo.getRotulo()+": "+r.getCampo(campo));
+            blocos.addAll(List.of(FREQUENCIA,r.getRegistroFrequencia(),DESCUMPRIMENTO,r.getDescumprimento(),
+                    "Apucarana, "+r.getDataEmissao().format(DATA)));
+            br.edu.unespar.trabalho.util.ImpressaoRelatorio.imprimir(gridIdentificacao.getScene().getWindow(),blocos);
+        } catch(RuntimeException e) { erro(e); }
+    }
+
     private void validarExportacao(RelatorioAcompanhamento r) {
         if(r.getCampo(Campo.PROCESSO).isBlank() || r.getRegistroFrequencia().isBlank() || r.getDescumprimento().isBlank())
             throw new IllegalArgumentException("Para exportar o relatório, informe o número do processo e revise as duas seções do relatório. Se não houve descumprimento, registre isso explicitamente.");

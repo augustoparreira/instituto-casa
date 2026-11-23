@@ -132,6 +132,13 @@ public class VerificacaoCadastroFrequencia {
                 pia=pdao.buscarPorCpf(CPF); pia.setDocumentoEnviado(false); pdao.atualizar(pia);
                 verifica(!adao.buscarPorCpf(CPF).isPiaEnviado(),"edição de envio no PIA sincroniza confirmação cadastral");
                 pia.setDocumentoEnviado(true); pdao.atualizar(pia);
+                pdao.confirmarEnvio(CPF,false);
+                verifica(!pdao.consultarEnvio(CPF) && !adao.buscarPorCpf(CPF).isPiaEnviado(),"PIA confirma envio sem editar texto");
+                verifica(pdao.buscarPorCpf(CPF).getDiagnostico().equals("Dado fictício"),"confirmação preserva texto histórico do PIA");
+                pdao.confirmarEnvio(CPF,true);
+                pdao.confirmarEnvio(10000000001L,false);
+                verifica(!pdao.consultarEnvio(10000000001L),"confirmação também atualiza PIA legado");
+
                 verifica(adao.buscarPorCpf(CPF).getObservacoes().equals("Somente às terças") && !new EducacaoTrabalhoDAO().buscarPorCpf(CPF).isEstuda(),"edição do cadastro e limpeza de campos condicionais");
                 rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(a,social,saude,estudo,false),"CPF duplicado rejeitado");
                 Adolescente outro=adolescente(CPF+1); EducacaoTrabalho grande=new EducacaoTrabalho(); grande.setEstuda(true); grande.setEscola("x".repeat(121));
@@ -476,6 +483,14 @@ public class VerificacaoCadastroFrequencia {
                         verifica(rdao.excluir(salvo.getIdRelatorio()) && rdao.listar().isEmpty(),"exclusão de rascunho remove o registro do banco");
                         root.applyCss(); root.layout();
                     }
+                    if(controller instanceof DetalhesAdolescenteController perfilPia) {
+                        CheckBox enviado=(CheckBox)root.lookup("#chkEnvioPia");
+                        verifica(enviado!=null && root.lookup("#txtPiaDiagnostico")==null,"interface PIA contém apenas confirmação");
+                        enviado.setSelected(false);
+                        fecharProximoDialogo(ButtonType.OK);
+                        perfilPia.salvarConfirmacaoPia();
+                        verifica(!new PIADAO().consultarEnvio(CPF),"interface grava confirmação de envio");
+                    }
                     WritableImage imagem=root.snapshot(null,null);
                     BufferedImage png=new BufferedImage((int)imagem.getWidth(),(int)imagem.getHeight(),BufferedImage.TYPE_INT_ARGB);
                     for(int y=0;y<png.getHeight();y++) for(int x=0;x<png.getWidth();x++) png.setRGB(x,y,imagem.getPixelReader().getArgb(x,y));
@@ -489,6 +504,7 @@ public class VerificacaoCadastroFrequencia {
                                 "botão JavaFX exclui a frequência após confirmação");
                     }
                 }
+                VerificacaoImpressao.executar();
                 fim.complete(null);
             } catch(Throwable t) { fim.completeExceptionally(t); }
         });

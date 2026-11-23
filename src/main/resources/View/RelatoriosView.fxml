@@ -90,7 +90,8 @@
                     <HBox spacing="8" alignment="CENTER_RIGHT">
                         <Button text="Visualizar" onAction="#visualizarRelatorio"/>
                         <Button text="Salvar rascunho" onAction="#salvarAtualizacaoRelatorio" styleClass="btn-novo-evento"/>
-                        <Button text="Exportar" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
+                        <Button text="Imprimir / salvar PDF" onAction="#imprimirRelatorio" styleClass="btn-novo"/>
+                <Button text="Exportar" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
                     </HBox>
                 </VBox>
             </HBox>

@@ -18,13 +18,12 @@ public class AuthServiceImpl implements AuthService {
         EquipeTecnica usuario = equipeTecnicaDAO.autenticar(login, senha);
 
         if (usuario != null) {
-            String nivelAcesso = usuario.getNivelAcesso() != null ? usuario.getNivelAcesso().getDescricao() : "Desconhecido";
-
             return new EquipeTecnicaDTO(
                     usuario.getCpf(),
+                    usuario.getLogin(),
                     usuario.getNomeCompleto(),
                     usuario.getCargoFuncao(),
-                    nivelAcesso
+                    usuario.getNivelAcesso()
             );
         }
 

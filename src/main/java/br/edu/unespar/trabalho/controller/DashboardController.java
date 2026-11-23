@@ -145,6 +145,10 @@ public class DashboardController {
             var prevista=medidas.stream().filter(m -> m.isLA() && m.getDataFim()==null
                             && m.getDataInicio()!=null && !m.getDataInicio().isAfter(LocalDate.now())
                             && m.getDuracaoMeses()!=null && m.getDuracaoMeses()>0)
+                    .filter(m -> {
+                        var a=adolescenteDAO.buscarPorCpf(m.getCpfAdolescente());
+                        return a!=null && a.getStatus()!=StatusAdolescente.INATIVO;
+                    })
                     .min(java.util.Comparator.comparing(m -> m.getDataInicio().plusMonths(m.getDuracaoMeses())));
             if(prevista.isEmpty()) return;
             var m=prevista.get();

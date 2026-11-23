@@ -11,6 +11,7 @@ import java.sql.*;
 public class PIADAO {
 
     public boolean consultarEnvio(long cpf) {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_CONSULTAR);
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
                 "SELECT pia_enviado FROM Adolescente WHERE cpf_adolescente=?")) {
             s.setLong(1,cpf);
@@ -22,6 +23,7 @@ public class PIADAO {
     }
 
     public void confirmarEnvio(long cpf, boolean enviado) {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_ALTERAR);
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {

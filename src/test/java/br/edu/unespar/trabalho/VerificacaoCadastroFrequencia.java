@@ -28,6 +28,7 @@ public class VerificacaoCadastroFrequencia {
     private static final YearMonth JANEIRO=YearMonth.of(2025,1);
 
     public static void main(String[] args) throws Exception {
+        br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"teste","Teste","Teste",NivelAcesso.ADMINISTRADOR));
         testarRegras();
         if(Arrays.asList(args).contains("--integracao")) testarBanco(Arrays.asList(args).contains("--interface"));
         System.out.println("OK: "+verificacoes+" verificações concluídas.");

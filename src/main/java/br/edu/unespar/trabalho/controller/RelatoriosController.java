@@ -187,6 +187,7 @@ public class RelatoriosController {
         }
     }
     @FXML public void imprimirRelatorio() {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.RELATORIO_EXPORTAR);
         try {
             RelatorioAcompanhamento r=lerFormulario();
             validarExportacao(r);

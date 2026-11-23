@@ -25,6 +25,13 @@ final class VerificacaoImpressao {
             }
             assert altura<=726 : "Texto excede a altura da página.";
         }
+        var primeira=paginas.getFirst();
+        var imagem=primeira.snapshot(null,null);
+        var png=new java.awt.image.BufferedImage((int)imagem.getWidth(),(int)imagem.getHeight(),java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        for(int y=0;y<png.getHeight();y++) for(int x=0;x<png.getWidth();x++) png.setRGB(x,y,imagem.getPixelReader().getArgb(x,y));
+        try {
+            javax.imageio.ImageIO.write(png,"png",java.nio.file.Path.of("target/verificacao/ImpressaoRelatorio.png").toFile());
+        } catch(java.io.IOException e) { throw new IllegalStateException(e); }
         assert original.contentEquals(reconstruido) : "Paginação precisa preservar cada caractere.";
         assert ImpressaoRelatorio.paginar(List.of("Relatório curto"),523,720).size()==1;
         System.out.println("OK: paginação de texto longo, palavra extensa, acentos e preservação integral em "+paginas.size()+" páginas.");

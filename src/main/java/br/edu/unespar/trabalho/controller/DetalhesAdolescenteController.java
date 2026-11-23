@@ -557,6 +557,7 @@ public class DetalhesAdolescenteController {
     }
 
     private void carregarAbaPia() {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_CONSULTAR);
         piaEnviadoAtual = piaDAO.consultarEnvio(cpfAtual);
         chkEnvioPia.setSelected(piaEnviadoAtual);
         lblPiaStatus.setText(piaEnviadoAtual ? "Documento enviado" : "Documento pendente");
@@ -565,6 +566,7 @@ public class DetalhesAdolescenteController {
     }
 
     @FXML public void salvarConfirmacaoPia() {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_ALTERAR);
         try {
             piaDAO.confirmarEnvio(cpfAtual, chkEnvioPia.isSelected());
             carregarAbaPia();

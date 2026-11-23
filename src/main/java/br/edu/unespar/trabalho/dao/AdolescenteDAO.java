@@ -227,8 +227,9 @@ public class AdolescenteDAO {
                     if(executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
                             a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf())!=1)
                         throw new SQLException("Cadastro não encontrado.");
-                    executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,status=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
-                            a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf());
+                    if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,status=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
+                            a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf())!=1)
+                        throw new IllegalArgumentException("O cadastro do adolescente não existe mais. Recarregue a lista antes de editar.");
                 } else {
                     executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
                             a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail());

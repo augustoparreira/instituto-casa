@@ -145,6 +145,16 @@ public class VerificacaoCadastroFrequencia {
                 r.setContato("(43) 99999-0000"); rdao.atualizar(r,CPF+1);
                 verifica(rdao.buscarPessoa(r.getCpf()).getContato().equals(r.getContato()),"edição de responsável");
                 rdao.desvincular(CPF+1,r.getCpf()); verifica(rdao.listarResponsaveis(CPF).size()==1,"desvincular não apaga responsável do outro adolescente");
+                r.setNomeCompleto("Alteração de formulário antigo");
+                rejeita(IllegalArgumentException.class,()->rdao.atualizar(r,CPF+1),"edição antiga não recria vínculo removido");
+                verifica(rdao.listarResponsaveis(CPF+1).isEmpty()
+                        && !rdao.buscarPessoa(r.getCpf()).getNomeCompleto().equals(r.getNomeCompleto()),
+                        "vínculo removido e dados pessoais preservados após edição rejeitada");
+                Adolescente inexistente=adolescente(r.getCpf());
+                rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(inexistente,social,saude,estudo,true),
+                        "edição exige registro de adolescente além de Pessoa");
+                verifica(!rdao.buscarPessoa(r.getCpf()).getNomeCompleto().equals(inexistente.getNomeCompleto()),
+                        "edição de adolescente inexistente reverte alteração de Pessoa");
                 ComposicaoFamiliar f=new ComposicaoFamiliar(); f.setCpfAdolescente(CPF); f.setNome("Familiar fictício"); f.setParentesco("Irmão");
                 ComposicaoFamiliarDAO cdao=new ComposicaoFamiliarDAO(); cdao.inserir(f); f.setIdade(15); cdao.atualizar(f);
                 verifica(cdao.listarPorAdolescente(CPF).getFirst().getIdade()==15,"inclusão e edição de composição familiar");

@@ -23,6 +23,14 @@ public class ResponsavelDAO {
                 try(PreparedStatement s=c.prepareStatement("SELECT cpf_adolescente FROM Adolescente WHERE cpf_adolescente=? FOR UPDATE")) {
                     s.setLong(1,cpf); try(ResultSet rs=s.executeQuery()) { if(!rs.next()) throw new IllegalArgumentException("Adolescente não encontrado."); }
                 }
+                if(edicao) {
+                    try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM Responsabiliza WHERE cpf_adolescente=? AND cpf_responsavel=? FOR UPDATE")) {
+                        s.setLong(1,cpf); s.setLong(2,r.getCpf());
+                        try(ResultSet rs=s.executeQuery()) {
+                            if(!rs.next()) throw new IllegalArgumentException("O vínculo do responsável foi removido. Recarregue o perfil antes de editar.");
+                        }
+                    }
+                }
                 String pessoa=edicao ? "UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?"
                         : "INSERT INTO Pessoa(nome_completo,data_nascimento,contato,email,cpf) VALUES(?,?,?,?,?) ON CONFLICT(cpf) DO NOTHING";
                 try(PreparedStatement s=c.prepareStatement(pessoa)) {

@@ -56,6 +56,7 @@ public class DashboardController {
 
         carregarEstatisticasEAdolescentes();
         carregarAgendaSemanal();
+        carregarPrazo();
     }
 
     private void carregarEstatisticasEAdolescentes() {
@@ -128,13 +129,37 @@ public class DashboardController {
                 vboxAdolescentes.getChildren().add(row);
             }
 
-            if (i == 0 && cardPrazoGabriel != null) {
-                cardPrazoGabriel.setUserData(jovem);
-                cardPrazoGabriel.setVisible(true);
-                cardPrazoGabriel.setManaged(true);
-                lblNomeAlerta.setText(jovem.getNome());
-                lblDataAlerta.setText("Nascimento: " + jovem.getDataNascimento());
-            }
+
+        }
+    }
+
+    private void carregarPrazo() {
+        if(cardPrazoGabriel==null) return;
+        cardPrazoGabriel.setVisible(true);
+        cardPrazoGabriel.setManaged(true);
+        cardPrazoGabriel.setUserData(null);
+        lblNomeAlerta.setText("Sem previsão de LA disponível");
+        lblDataAlerta.setText("PSC é acompanhada pelo saldo de horas. A extinção depende da decisão judicial.");
+        try {
+            var medidas=new br.edu.unespar.trabalho.dao.MedidaSocioeducativaDAO().listarPorAdolescente(0);
+            var prevista=medidas.stream().filter(m -> m.isLA() && m.getDataFim()==null
+                            && m.getDataInicio()!=null && !m.getDataInicio().isAfter(LocalDate.now())
+                            && m.getDuracaoMeses()!=null && m.getDuracaoMeses()>0)
+                    .min(java.util.Comparator.comparing(m -> m.getDataInicio().plusMonths(m.getDuracaoMeses())));
+            if(prevista.isEmpty()) return;
+            var m=prevista.get();
+            var adolescente=adolescenteDAO.buscarPorCpf(m.getCpfAdolescente());
+            LocalDate data=m.getDataInicio().plusMonths(m.getDuracaoMeses());
+            lblNomeAlerta.setText(adolescente.getNomeCompleto());
+            lblDataAlerta.setText("LA · previsão pelo período determinado: "+data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    +(data.isBefore(LocalDate.now()) ? "\nPeríodo previsto atingido. Conferir acompanhamento." : "")
+                    +"\nEsta previsão não confirma o encerramento judicial.");
+            var resumo=adolescenteDAO.listarResumoDTO().stream()
+                    .filter(a -> a.getCpf().replaceAll("\\D","").equals(Long.toString(m.getCpfAdolescente()))).findFirst();
+            resumo.ifPresent(cardPrazoGabriel::setUserData);
+        } catch(RuntimeException e) {
+            lblNomeAlerta.setText("Previsão indisponível");
+            lblDataAlerta.setText("Não foi possível consultar as medidas.");
         }
     }
 

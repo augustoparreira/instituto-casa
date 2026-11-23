@@ -34,6 +34,16 @@ final class VerificacaoImpressao {
         } catch(java.io.IOException e) { throw new IllegalStateException(e); }
         assert original.contentEquals(reconstruido) : "Paginação precisa preservar cada caractere.";
         assert ImpressaoRelatorio.paginar(List.of("Relatório curto"),523,720).size()==1;
+        List<VBox> folhas=ImpressaoRelatorio.prepararPaginas(List.of(original),523,748);
+        assert folhas.size()==paginas.size();
+        for(int i=0;i<folhas.size();i++) {
+            Text rodape=(Text)folhas.get(i).getChildren().getLast();
+            assert rodape.getText().equals("Página "+(i+1)+" de "+folhas.size());
+            VBox conteudo=(VBox)folhas.get(i).getChildren().getFirst();
+            String esperado=paginas.get(i).getChildren().stream().map(n -> ((Text)n).getText()).collect(java.util.stream.Collectors.joining());
+            String atual=conteudo.getChildren().stream().map(n -> ((Text)n).getText()).collect(java.util.stream.Collectors.joining());
+            assert esperado.equals(atual) : "Prévia e impressão devem usar os mesmos trechos.";
+        }
         System.out.println("OK: paginação de texto longo, palavra extensa, acentos e preservação integral em "+paginas.size()+" páginas.");
     }
 }

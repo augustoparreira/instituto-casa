@@ -216,6 +216,7 @@ public class VerificacaoCadastroFrequencia {
                 verifica(adao.buscarPorCpf(CPF).getStatus()==StatusAdolescente.ATIVO,"retorna a Ativo quando nenhum mês permanece irregular");
                 freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,14),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 freq.excluir(hoje); verifica(mdao.consultarHorasDaMedida(nova.getIdMedida(),LocalDate.now())==0,"exclusão recalcula saldo");
+                testarStatusProtegidos();
                 testarAgenda();
                 testarPermissoesOperacionais();
                 if(interfaceFx) {
@@ -239,6 +240,20 @@ public class VerificacaoCadastroFrequencia {
             br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"tecnico","Técnico","Teste",NivelAcesso.EQUIPE_TECNICA));
             verifica(!new AdolescenteDAO().listarResumoDTO().isEmpty(),"técnico consulta listagem operacional");
             verifica(new AdolescenteDAO().buscarPorCpf(CPF).getBairro()==null,"projeção técnica omite dados sociais");
+            var operacional=new AdolescenteDAO().buscarPorCpf(CPF);
+            operacional.setContato(" ");
+            rejeita(IllegalArgumentException.class,()->new AdolescenteDAO().salvarDadosOperacionais(operacional,new EducacaoTrabalhoDAO().buscarPorCpf(CPF)),
+                    "edição operacional também exige telefone");
+            operacional.setContato("43999990000");
+            operacional.setPiaEnviado(!piaOriginal);
+            new AdolescenteDAO().salvarDadosOperacionais(operacional,new EducacaoTrabalhoDAO().buscarPorCpf(CPF));
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(admin);
+            verifica(new SituacaoSocialDAO().buscarPorCpf(CPF).getTelefone().equals("43999990000"),
+                    "consulta social acompanha telefone atualizado");
+            verifica(new PIADAO().consultarEnvio(CPF)==piaOriginal && java.util.Objects.equals(new SaudeDAO().buscarPorCpf(CPF).getUbsReferencia(),ubsOriginal),
+                    "edição operacional preserva saúde e PIA");
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"tecnico","Técnico","Teste",NivelAcesso.EQUIPE_TECNICA));
+
             rejeita(SecurityException.class,()->new SaudeDAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta de saúde");
             rejeita(SecurityException.class,()->new SituacaoSocialDAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta social");
             rejeita(SecurityException.class,()->new PIADAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta de PIA");
@@ -251,6 +266,28 @@ public class VerificacaoCadastroFrequencia {
             rejeita(SecurityException.class,()->new FrequenciaDAO().registrar(f),"educador não registra horas");
             rejeita(SecurityException.class,()->new FrequenciaDAO().excluir(f),"educador não exclui frequência");
         } finally { br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(admin); }
+    }
+
+    private static void testarStatusProtegidos() throws SQLException {
+        var dao=new FrequenciaDAO();
+        var anterior=new AdolescenteDAO().buscarPorCpf(CPF).getStatus();
+        var atividade=new Atividade(); atividade.setNomeAtividade("Verificação de status"); atividade.setCargaHoraria(1);
+        new AtividadeDAO().inserir(atividade);
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement update=c.prepareStatement("UPDATE Adolescente SET status=? WHERE cpf_adolescente=?")) {
+            update.setLong(2,CPF);
+            try {
+                for(var status:List.of(StatusAdolescente.INATIVO,StatusAdolescente.EM_ANALISE_EXTINCAO)) {
+                    update.setString(1,status.getCodigo()); update.executeUpdate();
+                    var primeira=frequencia(atividade.getIdAtividade(),null,LocalDate.of(2025,2,20),StatusPresenca.FALTA_INJUSTIFICADA,0);
+                    var segunda=frequencia(atividade.getIdAtividade(),null,LocalDate.of(2025,2,21),StatusPresenca.FALTA_INJUSTIFICADA,0);
+                    dao.registrar(primeira); dao.registrar(segunda);
+                    verifica(new AdolescenteDAO().buscarPorCpf(CPF).getStatus()==status,"faltas preservam situação manual "+status);
+                    primeira.setStatusPresenca(StatusPresenca.PRESENTE); dao.atualizar(primeira); dao.excluir(segunda);
+                    verifica(new AdolescenteDAO().buscarPorCpf(CPF).getStatus()==status,"correção e exclusão preservam situação manual "+status);
+                    dao.excluir(primeira);
+                }
+            } finally { update.setString(1,anterior.getCodigo()); update.executeUpdate(); }
+        }
     }
 
     private static void testarAgenda() {
@@ -514,7 +551,18 @@ public class VerificacaoCadastroFrequencia {
                         String textoExportado=Files.readString(Path.of("target/verificacao/relatorio-acompanhamento.txt"));
                         verifica(textoExportado.contains("Filiação revisada pela equipe") && textoExportado.contains("0000000-00.2025.8.16.0000")
                                 && textoExportado.contains("06/01/2025") && textoExportado.contains("Acordo de comparecimento"),"exportação TXT preserva os dados revisados e as duas seções em UTF-8");
-                        fecharProximoDialogo(ButtonType.CLOSE); relatorios.visualizarRelatorio();
+                        fecharProximoDialogo(ButtonType.CLOSE, painel -> {
+                            ScrollPane scroll=(ScrollPane)painel.getContent();
+                            var paginas=(javafx.scene.layout.VBox)scroll.getContent();
+                            var papel=(javafx.scene.layout.VBox)paginas.getChildren().getFirst();
+                            verifica(Math.abs(papel.getPrefWidth()-javafx.print.Paper.A4.getWidth())<1,
+                                    "prévia apresenta folha A4 com margens");
+                            var img=painel.snapshot(null,null);
+                            var png=new BufferedImage((int)img.getWidth(),(int)img.getHeight(),BufferedImage.TYPE_INT_ARGB);
+                            for(int y=0;y<png.getHeight();y++) for(int x=0;x<png.getWidth();x++) png.setRGB(x,y,img.getPixelReader().getArgb(x,y));
+                            try { ImageIO.write(png,"png",Path.of("target/verificacao/PreviaPaginas.png").toFile()); }
+                            catch(java.io.IOException e) { throw new IllegalStateException(e); }
+                        }); relatorios.visualizarRelatorio();
                         salvo=rdao.listar().getFirst();
                         verifica(rdao.excluir(salvo.getIdRelatorio()) && rdao.listar().isEmpty(),"exclusão de rascunho remove o registro do banco");
                         root.applyCss(); root.layout();
@@ -533,8 +581,12 @@ public class VerificacaoCadastroFrequencia {
                     ImageIO.write(png,"png",Path.of("target/verificacao/"+nome+".png").toFile());
                     verifica(true,"FXML carregado e renderizado: "+nome);
                     if (controller instanceof RegistroFrequenciaController registro) {
+                        var lista=(ListView<Frequencia>)root.lookup("#listaRegistros");
+                        new FrequenciaDAO().excluir(lista.getSelectionModel().getSelectedItem());
                         fecharProximoDialogo(ButtonType.YES);
                         registro.excluir();
+                        verifica(((Label)root.lookup("#lblMensagem")).getText().contains("já foi removido"),
+                                "interface informa exclusão anterior sem confirmar nova remoção");
                         LocalDate data = ((DatePicker)root.lookup("#dpData")).getValue();
                         verifica(new FrequenciaDAO().listar(CPF,data,data).isEmpty(),
                                 "botão JavaFX exclui a frequência após confirmação");

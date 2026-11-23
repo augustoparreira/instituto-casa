@@ -147,7 +147,12 @@ public class RegistroFrequenciaController {
         if(selecionada==null) { lblMensagem.setText("Selecione o lançamento a excluir."); return; }
         Alert aviso=new Alert(Alert.AlertType.CONFIRMATION,"Excluir este lançamento? As horas serão recalculadas.",ButtonType.YES,ButtonType.NO);
         if(aviso.showAndWait().orElse(ButtonType.NO)!=ButtonType.YES) return;
-        try { dao.excluir(selecionada); carregarDia(); aoSalvar.run(); }
+        try {
+            boolean excluiu=dao.excluir(selecionada);
+            carregarDia(); aoSalvar.run();
+            lblMensagem.setText(excluiu ? "Frequência excluída. Totais recalculados."
+                    : "O lançamento já foi removido. A lista foi atualizada.");
+        }
         catch(RuntimeException e) { erro(e); }
     }
 

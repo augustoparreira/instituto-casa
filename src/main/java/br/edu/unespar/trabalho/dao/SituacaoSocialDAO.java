@@ -52,7 +52,7 @@ public class SituacaoSocialDAO {
     public SituacaoSocial buscarPorCpf(long cpfAdolescente) {
         exigir(SOCIAL_CONSULTAR);
 
-        String sql = "SELECT * FROM SituacaoSocial WHERE cpf_adolescente = ?";
+        String sql = "SELECT ss.*,p.contato AS contato_atual FROM SituacaoSocial ss JOIN Pessoa p ON p.cpf=ss.cpf_adolescente WHERE ss.cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, cpfAdolescente);
@@ -64,7 +64,7 @@ public class SituacaoSocialDAO {
                     ss.setBeneficioSocial(rs.getString("beneficios_sociais"));
                     ss.setEndereco(rs.getString("endereco")); // Campo novo adicionado
                     ss.setBairro(rs.getString("bairro")); // Campo novo adicionado
-                    ss.setTelefone(rs.getString("telefone")); // Campo novo adicionado
+                    ss.setTelefone(rs.getString("contato_atual")); // Campo novo adicionado
                     ss.setCrasNome(rs.getString("cras_nome"));
                     ss.setNumeroNis(rs.getLong("numero_nis")); // Campo novo adicionado
 

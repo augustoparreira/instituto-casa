@@ -249,6 +249,8 @@ public class AdolescenteDAO {
         if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80
                 || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))
             throw new IllegalArgumentException("Confira nome e nascimento.");
+        if(a.getContato()==null || a.getContato().isBlank())
+            throw new IllegalArgumentException("Telefone é obrigatório.");
         estudo.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);

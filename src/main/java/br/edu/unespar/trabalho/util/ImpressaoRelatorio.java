@@ -65,6 +65,18 @@ public final class ImpressaoRelatorio {
         return t;
     }
 
+    public static List<VBox> prepararPaginas(List<String> blocos,double largura,double altura) {
+        List<VBox> conteudo=paginar(blocos,largura,altura-28);
+        List<VBox> folhas=new ArrayList<>();
+        for(int i=0;i<conteudo.size();i++) {
+            VBox folha=new VBox(10,conteudo.get(i),texto("Página "+(i+1)+" de "+conteudo.size(),largura));
+            folha.setPadding(Insets.EMPTY);
+            folha.setPrefWidth(largura);
+            folhas.add(folha);
+        }
+        return folhas;
+    }
+
     public static void imprimir(Window owner,List<String> blocos) {
         PrinterJob job=PrinterJob.createPrinterJob();
         if(job==null) {
@@ -76,11 +88,9 @@ public final class ImpressaoRelatorio {
         job.getJobSettings().setPageLayout(layout);
         job.getJobSettings().setJobName("Relatório mensal de acompanhamento");
         try {
-            List<VBox> paginas=paginar(blocos,layout.getPrintableWidth(),layout.getPrintableHeight()-28);
+            List<VBox> paginas=prepararPaginas(blocos,layout.getPrintableWidth(),layout.getPrintableHeight());
             for(int i=0;i<paginas.size();i++) {
-                VBox folha=new VBox(10,paginas.get(i),texto("Página "+(i+1)+" de "+paginas.size(),layout.getPrintableWidth()));
-                folha.setPadding(Insets.EMPTY);
-                if(!job.printPage(layout,folha)) {
+                if(!job.printPage(layout,paginas.get(i))) {
                     job.cancelJob();
                     new Alert(Alert.AlertType.ERROR,"A impressão foi interrompida. Confira a fila da impressora.").showAndWait();
                     return;

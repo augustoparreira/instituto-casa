@@ -80,7 +80,7 @@ public class ComposicaoFamiliarDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Erro ao listar composição familiar: " + e.getMessage());
+            throw new IllegalStateException("Não foi possível consultar a composição familiar.", e);
         }
         return lista;
     }

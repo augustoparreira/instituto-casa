@@ -20,3 +20,7 @@ A frequência não distingue no banco a origem manual ou automática de EM_DESCU
 LA pode ultrapassar o período previsto sem encerramento automático. A previsão não confirma decisão judicial. O calendário mensal considera as medidas que abrangem a competência consultada.
 
 Login, sessões e gerenciamento de contas continuam sob responsabilidade do desenvolvedor principal. A inclusão completa pelo técnico depende dos campos sociais obrigatórios e da matriz. Revalidar o direcionamento das telas por perfil e mudanças de sessão na futura versão integrada.
+
+## Continuação automatizada
+
+As consultas de responsáveis e composição familiar agora propagam falhas SQL ao tratamento de erro da tela. Foram aprovadas 94 verificações de regras e integração JDBC, sem abrir a interface, incluindo indisponibilidade das consultas, listas vazias válidas e preservação da renda familiar em edição técnica. A validação manual da impressão PDF fica com o usuário. Computer Use permanece suspenso a pedido dele.

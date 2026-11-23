@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.ComposicaoFamiliar;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
@@ -19,13 +21,15 @@ public class ComposicaoFamiliarDAO {
     public boolean inserir(ComposicaoFamiliar f) { return salvar(f,false); }
     public boolean atualizar(ComposicaoFamiliar f) { return salvar(f,true); }
     private boolean salvar(ComposicaoFamiliar f,boolean edicao) {
+        exigir(FAMILIA_ALTERAR); if(f.getRenda()!=null) exigir(SOCIAL_ALTERAR);
+
         if(f.getNome()==null || f.getNome().isBlank()) throw new IllegalArgumentException("Informe o nome do familiar.");
         if(f.getRenda()!=null && (!Double.isFinite(f.getRenda()) || f.getRenda()<0)) throw new IllegalArgumentException("Renda inválida.");
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {
                 if(!edicao) f.setIdComposicaoFamiliar(IdUtil.proximoId(c,"ComposicaoFamiliar"));
-                String sql=edicao ? "UPDATE ComposicaoFamiliar SET nome=?,parentesco=?,idade=?,renda=?,escolaridade=?,profissao=? WHERE id_composicaoFamiliar=? AND cpf_adolescente=?"
+                String sql=edicao ? "UPDATE ComposicaoFamiliar SET nome=?,parentesco=?,idade=?,renda="+(pode(SOCIAL_ALTERAR)?"?":"coalesce(?,renda)")+",escolaridade=?,profissao=? WHERE id_composicaoFamiliar=? AND cpf_adolescente=?"
                         : "INSERT INTO ComposicaoFamiliar(nome,parentesco,idade,renda,escolaridade,profissao,id_composicaoFamiliar,cpf_adolescente) VALUES(?,?,?,?,?,?,?,?)";
                 try(PreparedStatement s=c.prepareStatement(sql)) {
                     s.setString(1,f.getNome()); s.setString(2,f.getParentesco()); s.setObject(3,f.getIdade()); s.setObject(4,f.getRenda());
@@ -37,14 +41,18 @@ public class ComposicaoFamiliarDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar o familiar.",e); }
     }
     public boolean excluir(int id,long cpf) {
+        exigir(FAMILIA_ALTERAR);
+
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM ComposicaoFamiliar WHERE id_composicaoFamiliar=? AND cpf_adolescente=?")) {
             s.setInt(1,id); s.setLong(2,cpf); return s.executeUpdate()==1;
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível excluir o familiar.",e); }
     }
 
     public List<ComposicaoFamiliar> listarPorAdolescente(long cpfAdolescente) {
+        exigir(FAMILIA_CONSULTAR);
+
         List<ComposicaoFamiliar> lista = new ArrayList<>();
-        String sql = "SELECT id_composicaoFamiliar, nome, parentesco, idade, renda, escolaridade, profissao, cpf_adolescente " +
+        String sql = "SELECT id_composicaoFamiliar, nome, parentesco, idade, " + (pode(SOCIAL_CONSULTAR) ? "renda" : "NULL::double precision AS renda") + ", escolaridade, profissao, cpf_adolescente " +
                 "FROM ComposicaoFamiliar WHERE cpf_adolescente = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();

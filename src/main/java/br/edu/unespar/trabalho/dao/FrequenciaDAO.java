@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import java.sql.*;
@@ -16,6 +18,8 @@ public class FrequenciaDAO {
     public boolean atualizar(Frequencia f) { return salvar(f,true); }
 
     private boolean salvar(Frequencia f,boolean edicao) {
+        exigir(edicao ? FREQUENCIA_EDITAR : FREQUENCIA_REGISTRAR); if(f.getHorasContabilizadas()>0) exigir(HORAS_PSC_REGISTRAR);
+
         f.validar();
         if(f.getHorasContabilizadas()>0 && f.getIdMedida()==null)
             throw new IllegalArgumentException("Selecione a PSC para contabilizar horas. Para acompanhamento apenas de LA, informe zero horas.");
@@ -60,6 +64,8 @@ public class FrequenciaDAO {
     }
 
     public boolean excluir(Frequencia f) {
+        exigir(FREQUENCIA_EXCLUIR);
+
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {
@@ -120,6 +126,8 @@ public class FrequenciaDAO {
     }
 
     public List<Frequencia> listar(long cpf,LocalDate inicio,LocalDate fim) {
+        exigir(FREQUENCIA_CONSULTAR);
+
         List<Frequencia> lista=new ArrayList<>();
         String sql="SELECT f.*,a.nome_atividade,m.tipo_medida FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
                 + "LEFT JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida "
@@ -137,8 +145,12 @@ public class FrequenciaDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar as frequências.",e); }
     }
 
-    public int consultarFaltas(long cpf) { return consultarFaltas(cpf,YearMonth.now()); }
+    public int consultarFaltas(long cpf) {
+        exigir(FREQUENCIA_CONSULTAR);
+ return consultarFaltas(cpf,YearMonth.now()); }
     public int consultarFaltas(long cpf,YearMonth mes) {
+        exigir(FREQUENCIA_CONSULTAR);
+
         return (int)listar(cpf,mes.atDay(1),mes.atEndOfMonth()).stream()
                 .filter(f->f.getStatusPresenca()==StatusPresenca.FALTA_INJUSTIFICADA)
                 .map(Frequencia::getDataPresenca).distinct().count();

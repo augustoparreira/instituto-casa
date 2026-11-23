@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -36,6 +38,20 @@ public class AgendaController {
     private static final Locale PORTUGUES=Locale.forLanguageTag("pt-BR");
 
     @FXML public void initialize() {
+        gridCalendario.sceneProperty().addListener((obs,antes,cena) -> {
+            if(cena==null) return;
+            javafx.application.Platform.runLater(() -> {
+                for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
+                    if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
+                    String texto=button.getText();
+                    if("Relatórios".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,RELATORIO_CONSULTAR);
+                    if("Equipe Técnica".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,USUARIO_GERENCIAR);
+                }
+            });
+        });
+
+        exigir(AGENDA_CONSULTAR);
+
         popularComboBoxAnos();
         chkCancelados.selectedProperty().addListener((o,a,b)-> { atualizarCalendario(); atualizarPainelLateral(); });
         lblIrParaHojeTexto.setText("Ir para hoje — "+LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
@@ -144,6 +160,12 @@ public class AgendaController {
     @FXML public void abrirModalNovoEvento(ActionEvent e) { abrirFormulario(null); }
 
     private void abrirFormulario(EventoAgenda existente) {
+        try { exigir(existente==null ? AGENDA_CADASTRAR : AGENDA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try {
             Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle(existente==null?"Novo compromisso":"Editar compromisso");
             if(gridCalendario.getScene()!=null && gridCalendario.getScene().getWindow()!=null) dialogo.initOwner(gridCalendario.getScene().getWindow());
@@ -220,12 +242,24 @@ public class AgendaController {
         } catch(RuntimeException e) { erro(e); }
     }
     private void alterarStatus(EventoAgenda evento,EventoAgenda.Status status) {
+        try { exigir(AGENDA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         if(status==EventoAgenda.Status.CANCELADO && !confirmar("Cancelar este compromisso? Ele ficará no histórico.")) return;
         EventoAgenda.Status anterior=evento.getStatus(); evento.setStatus(status);
         try { dao.atualizar(evento); atualizarAgenda(); }
         catch(RuntimeException e) { evento.setStatus(anterior); erro(e); }
     }
     private void excluir(EventoAgenda e) {
+        try { exigir(AGENDA_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         if(!confirmar("Excluir definitivamente este compromisso? Para preservar o histórico, use Cancelar.")) return;
         try { if(!dao.excluir(e.getIdEvento())) throw new IllegalArgumentException("O compromisso não existe mais."); atualizarAgenda(); }
         catch(RuntimeException ex) { erro(ex); }

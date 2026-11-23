@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.model.EventoAgenda;
@@ -50,6 +52,20 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
+        vboxAdolescentes.sceneProperty().addListener((obs,antes,cena) -> {
+            if(cena==null) return;
+            javafx.application.Platform.runLater(() -> {
+                for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
+                    if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
+                    String texto=button.getText();
+                    if("Relatórios".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,RELATORIO_CONSULTAR);
+                    if("Equipe Técnica".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,USUARIO_GERENCIAR);
+                }
+            });
+        });
+
+        exigir(PAINEL_CONSULTAR);
+
         if (lblDataAtualizacao != null) {
             lblDataAtualizacao.setText("Atualizado em " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")));
         }

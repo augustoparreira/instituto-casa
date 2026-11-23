@@ -153,6 +153,16 @@ public class VerificacaoCadastroFrequencia {
                 r.setContato("(43) 99999-0000"); rdao.atualizar(r,CPF+1);
                 verifica(rdao.buscarPessoa(r.getCpf()).getContato().equals(r.getContato()),"edição de responsável");
                 rdao.desvincular(CPF+1,r.getCpf()); verifica(rdao.listarResponsaveis(CPF).size()==1,"desvincular não apaga responsável do outro adolescente");
+                r.setNomeCompleto("Alteração de formulário antigo");
+                rejeita(IllegalArgumentException.class,()->rdao.atualizar(r,CPF+1),"edição antiga não recria vínculo removido");
+                verifica(rdao.listarResponsaveis(CPF+1).isEmpty()
+                        && !rdao.buscarPessoa(r.getCpf()).getNomeCompleto().equals(r.getNomeCompleto()),
+                        "vínculo removido e dados pessoais preservados após edição rejeitada");
+                Adolescente inexistente=adolescente(r.getCpf());
+                rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(inexistente,social,saude,estudo,true),
+                        "edição exige registro de adolescente além de Pessoa");
+                verifica(!rdao.buscarPessoa(r.getCpf()).getNomeCompleto().equals(inexistente.getNomeCompleto()),
+                        "edição de adolescente inexistente reverte alteração de Pessoa");
                 ComposicaoFamiliar f=new ComposicaoFamiliar(); f.setCpfAdolescente(CPF); f.setNome("Familiar fictício"); f.setParentesco("Irmão");
                 ComposicaoFamiliarDAO cdao=new ComposicaoFamiliarDAO(); cdao.inserir(f); f.setIdade(15); cdao.atualizar(f);
                 verifica(cdao.listarPorAdolescente(CPF).getFirst().getIdade()==15,"inclusão e edição de composição familiar");
@@ -207,6 +217,7 @@ public class VerificacaoCadastroFrequencia {
                 freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,14),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 freq.excluir(hoje); verifica(mdao.consultarHorasDaMedida(nova.getIdMedida(),LocalDate.now())==0,"exclusão recalcula saldo");
                 testarAgenda();
+                testarPermissoesOperacionais();
                 if(interfaceFx) {
                     freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,6),StatusPresenca.PRESENTE,6));
                     testarInterface();
@@ -218,6 +229,28 @@ public class VerificacaoCadastroFrequencia {
                 s.execute("DROP SCHEMA "+schema+" CASCADE");
             }
         }
+    }
+
+    private static void testarPermissoesOperacionais() {
+        var admin=br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado();
+        boolean piaOriginal=new PIADAO().consultarEnvio(CPF);
+        String ubsOriginal=new SaudeDAO().buscarPorCpf(CPF).getUbsReferencia();
+        try {
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"tecnico","Técnico","Teste",NivelAcesso.EQUIPE_TECNICA));
+            verifica(!new AdolescenteDAO().listarResumoDTO().isEmpty(),"técnico consulta listagem operacional");
+            verifica(new AdolescenteDAO().buscarPorCpf(CPF).getBairro()==null,"projeção técnica omite dados sociais");
+            rejeita(SecurityException.class,()->new SaudeDAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta de saúde");
+            rejeita(SecurityException.class,()->new SituacaoSocialDAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta social");
+            rejeita(SecurityException.class,()->new PIADAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta de PIA");
+            rejeita(SecurityException.class,()->new RelatorioAcompanhamentoDAO().listar(),"DAO bloqueia relatório completo");
+            rejeita(SecurityException.class,()->new PerfilAdolescenteDAO().definirTecnicoReferencia(CPF,77777777770L),"DAO bloqueia alteração de referência");
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"educador","Educador","Teste",NivelAcesso.EDUCADOR));
+            verifica(!new FrequenciaMensalDAO().listar(JANEIRO).isEmpty(),"educador consulta frequência por projeções operacionais");
+            rejeita(SecurityException.class,()->new AdolescenteDAO().buscarPorCpf(CPF),"educador não consulta prontuário");
+            Frequencia f=frequencia(1,null,LocalDate.now(),StatusPresenca.PRESENTE,2);
+            rejeita(SecurityException.class,()->new FrequenciaDAO().registrar(f),"educador não registra horas");
+            rejeita(SecurityException.class,()->new FrequenciaDAO().excluir(f),"educador não exclui frequência");
+        } finally { br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(admin); }
     }
 
     private static void testarAgenda() {
@@ -267,6 +300,8 @@ public class VerificacaoCadastroFrequencia {
                     if(controller instanceof DashboardController) {
                         verifica(((javafx.scene.layout.VBox)root.lookup("#vboxAgenda")).lookupAll(".label").stream()
                                 .anyMatch(n->n instanceof Label l && l.getText().equals("Agenda real da semana")),"painel mostra compromisso real da semana");
+                        verifica(!((Label)root.lookup("#lblDataAlerta")).getText().contains("Nascimento:"),
+                                "painel usa previs?o de medida em lugar de nascimento");
                         int pscBase=Integer.parseInt(((Label)root.lookup("#lblTotalPsc")).getText());
                         int laBase=Integer.parseInt(((Label)root.lookup("#lblTotalLa")).getText());
                         String statusOriginal=new AdolescenteDAO().buscarPorCpf(CPF).getStatus().getCodigo();

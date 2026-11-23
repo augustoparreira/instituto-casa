@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import javafx.collections.FXCollections;
@@ -28,6 +30,20 @@ public class RegistroFrequenciaController {
     private final FrequenciaDAO dao = new FrequenciaDAO();
 
     @FXML public void initialize() {
+        lblMensagem.sceneProperty().addListener((obs,antes,cena) -> {
+            if(cena==null) return;
+            javafx.application.Platform.runLater(() -> {
+                for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
+                    if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
+                    String texto=button.getText();
+                    if("Relatórios".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,RELATORIO_CONSULTAR);
+                    if("Equipe Técnica".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,USUARIO_GERENCIAR);
+                }
+            });
+        });
+
+        exigir(FREQUENCIA_CONSULTAR);
+
         cmbStatus.setItems(FXCollections.observableArrayList(StatusPresenca.values()));
         cmbAtividade.setConverter(new StringConverter<>() {
             public String toString(Atividade a) { return a==null?"":a.getNomeAtividade(); }
@@ -47,7 +63,7 @@ public class RegistroFrequenciaController {
     }
 
     private void atualizarHoras(boolean sugerir) {
-        boolean contabiliza=cmbStatus.getValue()==StatusPresenca.PRESENTE
+        boolean contabiliza=pode(HORAS_PSC_REGISTRAR) && cmbStatus.getValue()==StatusPresenca.PRESENTE
                 && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC();
         txtHoras.setDisable(!contabiliza);
         if(!contabiliza) txtHoras.setText("0");
@@ -55,8 +71,10 @@ public class RegistroFrequenciaController {
     }
 
     public void carregar(long cpf,LocalDate data,Runnable retorno) {
+        exigir(FREQUENCIA_CONSULTAR);
+
         this.cpf=cpf; this.aoSalvar=retorno;
-        Adolescente a=new AdolescenteDAO().buscarPorCpf(cpf);
+        Adolescente a=new AdolescenteDAO().listarParaFrequencia().stream().filter(p -> p.getCpf()==cpf).findFirst().orElse(null);
         if(a==null) throw new IllegalArgumentException("Adolescente não encontrado.");
         lblAdolescente.setText(a.getNomeCompleto()+" · "+a.getCpfFormatado());
         cmbAtividade.setItems(FXCollections.observableArrayList(new AtividadeDAO().listar()));
@@ -66,7 +84,7 @@ public class RegistroFrequenciaController {
     private void carregarDia() {
         try {
             selecionada=null;
-            cmbMedida.setItems(FXCollections.observableArrayList(new MedidaSocioeducativaDAO().listarPorAdolescente(cpf)
+            cmbMedida.setItems(FXCollections.observableArrayList(new MedidaSocioeducativaDAO().listarParaFrequencia(cpf)
                     .stream().filter(m->m.vigenteEm(dpData.getValue())).toList()));
             listaRegistros.setItems(FXCollections.observableArrayList(dao.listar(cpf,dpData.getValue(),dpData.getValue())));
             novo();
@@ -93,6 +111,12 @@ public class RegistroFrequenciaController {
     @FXML public void semMedida() { cmbMedida.setValue(null); atualizarHoras(false); }
 
     @FXML public void salvar() {
+        try { exigir(selecionada==null ? FREQUENCIA_REGISTRAR : FREQUENCIA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try {
             LocalDate dataAnterior = dpData.getValue();
             dpData.commitValue();
@@ -106,6 +130,7 @@ public class RegistroFrequenciaController {
             f.setDataPresenca(dpData.getValue()); f.setStatusPresenca(cmbStatus.getValue());
             f.setHorasCumpridas(f.isPresente() && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC()?Integer.parseInt(txtHoras.getText().trim()):0);
             f.setIdMedida(cmbMedida.getValue()==null?null:cmbMedida.getValue().getIdMedida()); f.setObservacoes(txtObservacoes.getText());
+            if(f.getHorasContabilizadas()>0) exigir(HORAS_PSC_REGISTRAR);
             if(selecionada==null) dao.registrar(f); else dao.atualizar(f);
             carregarDia(); aoSalvar.run(); lblMensagem.setText("Frequência salva. Totais recalculados.");
         } catch(NumberFormatException e) { lblMensagem.setText("Informe horas inteiras entre 0 e 24."); }
@@ -113,6 +138,12 @@ public class RegistroFrequenciaController {
     }
 
     @FXML public void excluir() {
+        try { exigir(FREQUENCIA_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         if(selecionada==null) { lblMensagem.setText("Selecione o lançamento a excluir."); return; }
         Alert aviso=new Alert(Alert.AlertType.CONFIRMATION,"Excluir este lançamento? As horas serão recalculadas.",ButtonType.YES,ButtonType.NO);
         if(aviso.showAndWait().orElse(ButtonType.NO)!=ButtonType.YES) return;
@@ -121,6 +152,12 @@ public class RegistroFrequenciaController {
     }
 
     @FXML public void novaAtividade() {
+        try { exigir(ATIVIDADE_GERENCIAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         TextInputDialog nome=new TextInputDialog(); nome.setHeaderText("Nome da atividade (até 25 caracteres)");
         var n=nome.showAndWait(); if(n.isEmpty()) return;
         TextInputDialog carga=new TextInputDialog("4"); carga.setHeaderText("Carga horária do encontro (1 a 24 horas inteiras)");

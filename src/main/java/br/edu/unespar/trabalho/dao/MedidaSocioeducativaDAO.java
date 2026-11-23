@@ -38,6 +38,14 @@ public class MedidaSocioeducativaDAO {
                     try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Já há uma medida desse tipo neste período. Edite ou encerre a anterior antes de cadastrar outra."); }
                 }
                 if(edicao) {
+                    try(PreparedStatement s=c.prepareStatement("SELECT data_fim FROM MedidaSocioeducativa WHERE id_medida=? AND cpf_adolescente=?")) {
+                        s.setInt(1,m.getIdMedida()); s.setLong(2,m.getCpfAdolescente());
+                        try(ResultSet rs=s.executeQuery()) {
+                            if(rs.next() && !java.util.Objects.equals(rs.getObject(1,LocalDate.class),m.getDataFim()))
+                                exigir(MEDIDA_ENCERRAR);
+                        }
+                    }
+
                     try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM Frequencia WHERE id_medida=? AND (data_presenca<? OR data_presenca>COALESCE(?::date,'infinity'::date))")) {
                         s.setInt(1,m.getIdMedida()); s.setObject(2,m.getDataInicio()); s.setObject(3,m.getDataFim());
                         try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Há frequências fora do período informado. Corrija os lançamentos antes de mudar as datas."); }

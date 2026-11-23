@@ -20,7 +20,7 @@ import java.util.List;
 public class AdolescenteDAO {
 
     public boolean inserir(Adolescente adolescente) {
-        exigir(ADOLESCENTE_CADASTRAR);
+        exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR);
 
         String sqlPessoa = "INSERT INTO Pessoa (cpf, nome_completo, data_nascimento, contato, email) VALUES (?, ?, ?, ?, ?)";
         String sqlAdolescente = "INSERT INTO Adolescente (cpf_adolescente, naturalidade, genero, cor_raca, status) VALUES (?, ?, ?, ?, ?)";

@@ -308,7 +308,7 @@ public class DetalhesAdolescenteController {
                     +"\nEstuda: "+(estudo!=null && estudo.isEstuda()?"Sim · "+Formatadores.textoOuTraco(estudo.getEscola())+" · "+Formatadores.textoOuTraco(estudo.getSerie()):"Não")
                     +"\nTrabalha: "+(estudo!=null && estudo.isTrabalha()?"Sim · "+Formatadores.textoOuTraco(estudo.getLocalTrabalho())+" · "+Formatadores.textoOuTraco(estudo.getFuncao())+" · "+Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"Não")
                     +"\nUBS: "+(saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()))
-                    +" · Uso de SPA: "+(saude!=null && saude.isUsoSpa()?"Sim · "+Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"Não")
+                    +" · Uso de SPA: "+(!pode(SAUDE_CONSULTAR)?"Acesso restrito":saude!=null && saude.isUsoSpa()?"Sim · "+Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"Não")
                     +"\nIMM: "+(cadastro.isImm()?"Sim":"Não")+" · Vale-transporte: "+(cadastro.isValeTransporte()?"Sim":"Não")
                     +"\nObservações: "+Formatadores.textoOuTraco(cadastro.getObservacoes()));
             carregarAbaMedida();
@@ -341,7 +341,7 @@ public class DetalhesAdolescenteController {
                 }
             }
         }
-        lblTecnicoAtual.setText(atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
+        lblTecnicoAtual.setText(!pode(REFERENCIA_DEFINIR)?jovemAtual.getTecnico():atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
         cmbTecnico.setValue(atual);
     }
 

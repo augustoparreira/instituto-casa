@@ -28,6 +28,7 @@ public class VerificacaoCadastroFrequencia {
     private static final YearMonth JANEIRO=YearMonth.of(2025,1);
 
     public static void main(String[] args) throws Exception {
+        br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"teste","Teste","Teste",NivelAcesso.ADMINISTRADOR));
         testarRegras();
         if(Arrays.asList(args).contains("--integracao")) testarBanco(Arrays.asList(args).contains("--interface"));
         System.out.println("OK: "+verificacoes+" verificações concluídas.");
@@ -209,6 +210,7 @@ public class VerificacaoCadastroFrequencia {
                 freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,14),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 freq.excluir(hoje); verifica(mdao.consultarHorasDaMedida(nova.getIdMedida(),LocalDate.now())==0,"exclusão recalcula saldo");
                 testarAgenda();
+                testarPermissoesOperacionais();
                 if(interfaceFx) {
                     freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,6),StatusPresenca.PRESENTE,6));
                     testarInterface();
@@ -220,6 +222,26 @@ public class VerificacaoCadastroFrequencia {
                 s.execute("DROP SCHEMA "+schema+" CASCADE");
             }
         }
+    }
+
+    private static void testarPermissoesOperacionais() {
+        var admin=br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado();
+        try {
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"tecnico","Técnico","Teste",NivelAcesso.EQUIPE_TECNICA));
+            verifica(!new AdolescenteDAO().listarResumoDTO().isEmpty(),"técnico consulta listagem operacional");
+            verifica(new AdolescenteDAO().buscarPorCpf(CPF).getBairro()==null,"projeção técnica omite dados sociais");
+            rejeita(SecurityException.class,()->new SaudeDAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta de saúde");
+            rejeita(SecurityException.class,()->new SituacaoSocialDAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta social");
+            rejeita(SecurityException.class,()->new PIADAO().buscarPorCpf(CPF),"DAO bloqueia leitura direta de PIA");
+            rejeita(SecurityException.class,()->new RelatorioAcompanhamentoDAO().listar(),"DAO bloqueia relatório completo");
+            rejeita(SecurityException.class,()->new PerfilAdolescenteDAO().definirTecnicoReferencia(CPF,77777777770L),"DAO bloqueia alteração de referência");
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"educador","Educador","Teste",NivelAcesso.EDUCADOR));
+            verifica(!new FrequenciaMensalDAO().listar(JANEIRO).isEmpty(),"educador consulta frequência por projeções operacionais");
+            rejeita(SecurityException.class,()->new AdolescenteDAO().buscarPorCpf(CPF),"educador não consulta prontuário");
+            Frequencia f=frequencia(1,null,LocalDate.now(),StatusPresenca.PRESENTE,2);
+            rejeita(SecurityException.class,()->new FrequenciaDAO().registrar(f),"educador não registra horas");
+            rejeita(SecurityException.class,()->new FrequenciaDAO().excluir(f),"educador não exclui frequência");
+        } finally { br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(admin); }
     }
 
     private static void testarAgenda() {

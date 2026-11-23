@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.FrequenciaMensalDAO;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -27,6 +29,20 @@ public class FrequenciaController {
     private YearMonth mes=YearMonth.now();
 
     @FXML public void initialize() {
+        tabela.sceneProperty().addListener((obs,antes,cena) -> {
+            if(cena==null) return;
+            javafx.application.Platform.runLater(() -> {
+                for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
+                    if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
+                    String texto=button.getText();
+                    if("Relatórios".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,RELATORIO_CONSULTAR);
+                    if("Equipe Técnica".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,USUARIO_GERENCIAR);
+                }
+            });
+        });
+
+        exigir(FREQUENCIA_CONSULTAR);
+
         dpCompetencia.setValue(mes.atDay(1));
         tabela.setPlaceholder(new Label("Nenhum adolescente encontrado."));
         txtPesquisa.textProperty().addListener((o,a,b)->filtrar());
@@ -112,7 +128,7 @@ public class FrequenciaController {
         coluna("Pendentes",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPendentes()));
         coluna("IMM",70,l->l.getAdolescente().isImm()?"Sim":"Não");
         coluna("Vale-transporte",110,l->l.getAdolescente().isValeTransporte()?"Sim":"Não");
-        coluna("PIA enviado",95,l->l.isPiaEnviado()?"Sim":"Não");
+        if(pode(PIA_CONSULTAR)) coluna("PIA enviado",95,l->l.isPiaEnviado()?"Sim":"Não");
     }
 
     private TableColumn<FrequenciaMensalDTO,String> coluna(String titulo,int largura,Function<FrequenciaMensalDTO,String> valor) {

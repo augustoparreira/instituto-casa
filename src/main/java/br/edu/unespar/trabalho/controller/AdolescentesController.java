@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -51,6 +53,20 @@ public class AdolescentesController {
 
     @FXML
     public void initialize() {
+        txtPesquisa.sceneProperty().addListener((obs,antes,cena) -> {
+            if(cena==null) return;
+            javafx.application.Platform.runLater(() -> {
+                for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
+                    if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
+                    String texto=button.getText();
+                    if("Relatórios".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,RELATORIO_CONSULTAR);
+                    if("Equipe Técnica".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,USUARIO_GERENCIAR);
+                }
+            });
+        });
+
+        exigir(ADOLESCENTE_CONSULTAR);
+
         adolescenteDAO = new AdolescenteDAO();
 
         listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());
@@ -163,6 +179,8 @@ public class AdolescentesController {
 
     @FXML
     public void clicarAdolescente(MouseEvent event) {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         AdolescenteDTO selecionado = listAdolescentes.getSelectionModel().getSelectedItem();
         if (selecionado != null) {
             try {
@@ -189,6 +207,8 @@ public class AdolescentesController {
     @FXML public void irParaEquipeTecnica(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
     @FXML
     public void abrirTelaCadastro(ActionEvent event) {
+        exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR);
+
         NavegacaoUtil.mudarTela(event, "/View/CadastroAdolescenteView.fxml", "Novo Cadastro");
     }
 }

@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.IdUtil;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
@@ -18,6 +20,8 @@ import java.util.List;
 public class AdolescenteDAO {
 
     public boolean inserir(Adolescente adolescente) {
+        exigir(ADOLESCENTE_CADASTRAR);
+
         String sqlPessoa = "INSERT INTO Pessoa (cpf, nome_completo, data_nascimento, contato, email) VALUES (?, ?, ?, ?, ?)";
         String sqlAdolescente = "INSERT INTO Adolescente (cpf_adolescente, naturalidade, genero, cor_raca, status) VALUES (?, ?, ?, ?, ?)";
 
@@ -67,6 +71,8 @@ public class AdolescenteDAO {
     }
 
     public List<Adolescente> listar() {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         List<Adolescente> lista = new ArrayList<>();
         String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +
                 "a.naturalidade, a.genero, a.cor_raca, a.status " +
@@ -97,6 +103,8 @@ public class AdolescenteDAO {
     }
 
     public boolean atualizar(Adolescente adolescente) {
+        exigir(ADOLESCENTE_EDITAR);
+
         String sqlPessoa = "UPDATE Pessoa SET nome_completo = ?, data_nascimento = ?, contato = ?, email = ? WHERE cpf = ?";
         String sqlAdolescente = "UPDATE Adolescente SET naturalidade = ?, genero = ?, cor_raca = ?, status = ? WHERE cpf_adolescente = ?";
 
@@ -136,6 +144,8 @@ public class AdolescenteDAO {
     }
 
     public boolean excluir(long cpf) {
+        exigir(ADOLESCENTE_EXCLUIR);
+
         String sql = "UPDATE Adolescente SET status = 'INATIVO' WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -148,6 +158,8 @@ public class AdolescenteDAO {
     }
 
     public List<AdolescenteDTO> listarResumoDTO() {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         List<AdolescenteDTO> lista=new ArrayList<>();
         var linhas=new FrequenciaMensalDAO().listar(java.time.YearMonth.now());
         java.util.Map<Long,String> tecnicos=new java.util.HashMap<>();
@@ -169,9 +181,11 @@ public class AdolescenteDAO {
     }
 
     public List<Adolescente> listarCadastros() {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         List<Adolescente> lista=new ArrayList<>();
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
-                "SELECT p.*,a.*,ss.bairro FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf ORDER BY p.nome_completo"); ResultSet r=s.executeQuery()) {
+                consultaCadastro()+" ORDER BY p.nome_completo"); ResultSet r=s.executeQuery()) {
             while(r.next()) {
                 Adolescente a=new Adolescente(); a.setCpf(r.getLong("cpf")); a.setNomeCompleto(r.getString("nome_completo"));
                 a.setDataNascimento(r.getDate("data_nascimento").toLocalDate()); a.setGenero(r.getString("genero"));
@@ -185,8 +199,9 @@ public class AdolescenteDAO {
     }
 
     public Adolescente buscarPorCpf(long cpf) {
-        String sql = "SELECT p.*, a.*, ss.bairro FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf "
-                + "LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf WHERE p.cpf=?";
+        exigir(ADOLESCENTE_CONSULTAR);
+
+        String sql = consultaCadastro()+" WHERE p.cpf=?";
         try (Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
             s.setLong(1,cpf);
             try (ResultSet r=s.executeQuery()) {
@@ -207,8 +222,53 @@ public class AdolescenteDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível carregar o cadastro.",e); }
     }
 
+    public List<Adolescente> listarParaFrequencia() {
+        exigir(FREQUENCIA_CONSULTAR);
+        List<Adolescente> lista=new ArrayList<>();
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT p.cpf,p.nome_completo,a.status FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf ORDER BY p.nome_completo");
+            ResultSet rs=s.executeQuery()) {
+            while(rs.next()) {
+                Adolescente a=new Adolescente(); a.setCpf(rs.getLong(1)); a.setNomeCompleto(rs.getString(2));
+                a.setStatus(StatusAdolescente.fromCodigo(rs.getString(3))); lista.add(a);
+            }
+            return lista;
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar participantes.",e); }
+    }
+
+    private String consultaCadastro() {
+        String social = pode(SOCIAL_CONSULTAR) ? "ss.bairro" : "NULL::text AS bairro";
+        String pia = pode(PIA_CONSULTAR) ? "a.pia_enviado" : "false AS pia_enviado";
+        return "SELECT p.*,a.naturalidade,a.genero,a.cor_raca,a.status,a.observacoes,a.imm,a.vale_transporte,a.medida_protetiva,"
+                + pia + "," + social + " FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf"
+                + (pode(SOCIAL_CONSULTAR) ? " LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf" : "");
+    }
+
+    public boolean salvarDadosOperacionais(Adolescente a, EducacaoTrabalho estudo) {
+        exigir(ADOLESCENTE_EDITAR); exigir(EDUCACAO_ALTERAR);
+        if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80
+                || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))
+            throw new IllegalArgumentException("Confira nome e nascimento.");
+        estudo.validar();
+        try(Connection c=ConnectionFactory.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,status=?,observacoes=?,imm=?,vale_transporte=?,medida_protetiva=? WHERE cpf_adolescente=?",
+                        a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva(),a.getCpf())!=1)
+                    throw new IllegalArgumentException("Cadastro não encontrado.");
+                executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
+                        a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf());
+                executarCadastro(c,"INSERT INTO EducacaoTrabalho(id_educacaoTrabalho,estuda,escola,ano_serie,trabalha,local_trabalho,funcao,vinculo_empregaticio,cpf_adolescente) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(cpf_adolescente) DO UPDATE SET estuda=excluded.estuda,escola=excluded.escola,ano_serie=excluded.ano_serie,trabalha=excluded.trabalha,local_trabalho=excluded.local_trabalho,funcao=excluded.funcao,vinculo_empregaticio=excluded.vinculo_empregaticio",
+                        IdUtil.proximoId(c,"EducacaoTrabalho"),estudo.isEstuda(),estudo.getEscola(),estudo.getSerie(),estudo.isTrabalha(),estudo.getLocalTrabalho(),estudo.getFuncao(),estudo.getVinculoEmpregaticio(),a.getCpf());
+                c.commit(); return true;
+            } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar os dados operacionais.",e); }
+    }
+
     /** Dados pessoais, sociais, saúde e escolaridade são salvos juntos ou revertidos juntos. */
     public boolean salvarCadastro(Adolescente a, SituacaoSocial social, Saude saude, EducacaoTrabalho estudo, boolean edicao) {
+        exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR); exigir(EDUCACAO_ALTERAR); exigir(PIA_ALTERAR);
+
         if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80)
             throw new IllegalArgumentException("Informe o nome completo (até 80 caracteres).");
         if(a.getCpf()<=0 || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))

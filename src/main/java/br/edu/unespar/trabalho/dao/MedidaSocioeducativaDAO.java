@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
@@ -16,6 +18,8 @@ public class MedidaSocioeducativaDAO {
     public boolean atualizar(MedidaSocioeducativa m) { return salvar(m,true); }
 
     private boolean salvar(MedidaSocioeducativa m,boolean edicao) {
+        exigir(edicao ? MEDIDA_EDITAR : MEDIDA_CADASTRAR); if(m.getDataFim()!=null) exigir(MEDIDA_ENCERRAR);
+
         m.validar();
         if(m.getDataFim()!=null && m.getDataFim().isAfter(LocalDate.now()))
             throw new IllegalArgumentException("O encerramento deve ser uma data já ocorrida.");
@@ -57,6 +61,8 @@ public class MedidaSocioeducativaDAO {
     }
 
     public List<MedidaSocioeducativa> listarPorAdolescente(long cpf) {
+        exigir(MEDIDA_CONSULTAR);
+
         List<MedidaSocioeducativa> lista=new ArrayList<>();
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT * FROM MedidaSocioeducativa WHERE (?=0 OR cpf_adolescente=?) ORDER BY data_inicio DESC,id_medida DESC")) {
             s.setLong(1,cpf); s.setLong(2,cpf);
@@ -71,7 +77,25 @@ public class MedidaSocioeducativaDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar as medidas.",e); }
     }
 
+    public List<MedidaSocioeducativa> listarParaFrequencia(long cpf) {
+        exigir(FREQUENCIA_CONSULTAR);
+        List<MedidaSocioeducativa> lista=new ArrayList<>();
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT id_medida,cpf_adolescente,tipo_medida,data_inicio,data_fim,duracao_meses,duracao_horas FROM MedidaSocioeducativa WHERE (?=0 OR cpf_adolescente=?) ORDER BY data_inicio,id_medida")) {
+            s.setLong(1,cpf); s.setLong(2,cpf);
+            try(ResultSet rs=s.executeQuery()) { while(rs.next()) {
+                MedidaSocioeducativa m=new MedidaSocioeducativa();
+                m.setIdMedida(rs.getInt(1)); m.setCpfAdolescente(rs.getLong(2)); m.setTipoMedida(TipoMedida.fromCodigo(rs.getString(3)));
+                m.setDataInicio(rs.getDate(4).toLocalDate()); Date fim=rs.getDate(5); m.setDataFim(fim==null?null:fim.toLocalDate());
+                m.setDuracaoMeses((Integer)rs.getObject(6)); m.setDuracaoHoras((Integer)rs.getObject(7)); lista.add(m);
+            }}
+            return lista;
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar medidas da frequência.",e); }
+    }
+
     public int consultarHorasDaMedida(int id,LocalDate ate) {
+        exigir(MEDIDA_CONSULTAR);
+
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE id_medida=? AND upper(status_presenca)='PRESENTE' AND data_presenca<=?")) {
             s.setInt(1,id); s.setObject(2,ate);
             try(ResultSet r=s.executeQuery()) { r.next(); return r.getInt(1); }
@@ -80,6 +104,8 @@ public class MedidaSocioeducativaDAO {
 
     /** Compatibilidade com consultas antigas: soma apenas PSC vigentes, vinculadas por ID. */
     public int consultarHorasCumpridas(long cpf) {
+        exigir(MEDIDA_CONSULTAR);
+
         return listarPorAdolescente(cpf).stream().filter(m->m.isPSC() && m.vigenteEm(LocalDate.now()))
                 .mapToInt(m->consultarHorasDaMedida(m.getIdMedida(),LocalDate.now())).sum();
     }

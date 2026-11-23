@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import javafx.scene.control.*;
@@ -53,6 +55,22 @@ public class CadastroAdolescenteController {
 
     @FXML
     public void initialize() {
+        if(!pode(SOCIAL_ALTERAR)) for(var campo:java.util.List.of(txtEndereco,txtBairro,txtRenda,txtBeneficios,txtNis,txtCras)) campo.setDisable(true);
+        if(!pode(SAUDE_ALTERAR)) { txtUbs.setDisable(true); txtSpa.setDisable(true); chkSpa.setDisable(true); }
+        chkPiaEnviado.setDisable(!pode(PIA_ALTERAR));
+
+        txtNome.sceneProperty().addListener((obs,antes,cena) -> {
+            if(cena==null) return;
+            javafx.application.Platform.runLater(() -> {
+                for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
+                    if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
+                    String texto=button.getText();
+                    if("Relatórios".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,RELATORIO_CONSULTAR);
+                    if("Equipe Técnica".equals(texto)) br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(button,USUARIO_GERENCIAR);
+                }
+            });
+        });
+
         cmbGenero.setItems(FXCollections.observableArrayList("Masculino", "Feminino", "Outro", "Não informado"));
         cmbCorRaca.setItems(FXCollections.observableArrayList("Branca", "Preta", "Parda", "Amarela", "Indígena"));
 
@@ -149,10 +167,12 @@ public class CadastroAdolescenteController {
     }
 
     public void carregarParaEdicao(long cpf) {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         Adolescente a=adolescenteDAO.buscarPorCpf(cpf);
         if(a==null) throw new IllegalArgumentException("Cadastro não encontrado.");
-        SituacaoSocial ss=new SituacaoSocialDAO().buscarPorCpf(cpf);
-        saudeAtual=new SaudeDAO().buscarPorCpf(cpf);
+        SituacaoSocial ss=pode(SOCIAL_CONSULTAR)?new SituacaoSocialDAO().buscarPorCpf(cpf):null;
+        saudeAtual=pode(SAUDE_CONSULTAR)?new SaudeDAO().buscarPorCpf(cpf):null;
         EducacaoTrabalho et=new EducacaoTrabalhoDAO().buscarPorCpf(cpf);
         edicao=true; lblTitulo.setText("Editar cadastro"); txtCpf.setDisable(true);
         txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(a.getNomeCompleto());
@@ -177,6 +197,8 @@ public class CadastroAdolescenteController {
 
     @FXML
     public void salvarAdolescente(ActionEvent event) {
+        exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR);
+
         try {
             dpNascimento.commitValue();
 
@@ -206,7 +228,9 @@ public class CadastroAdolescenteController {
             a.setPiaEnviado(chkPiaEnviado.isSelected());
             a.setMedidaProtetiva("Sim".equals(cmbMedidaProtetiva.getValue()));
 
+            boolean completo=pode(SOCIAL_ALTERAR) && pode(SAUDE_ALTERAR) && pode(PIA_ALTERAR);
             SituacaoSocial ss=new SituacaoSocial();
+            if(completo) {
             ss.setRendaFamiliar(Double.parseDouble(txtRenda.getText().trim().replace(',','.')));
             ss.setEndereco(texto(txtEndereco,60,"Endereço"));
             ss.setBairro(texto(txtBairro,60,"Bairro"));
@@ -222,7 +246,9 @@ public class CadastroAdolescenteController {
             saude.setUbsReferencia(texto(txtUbs,120,"UBS"));
             saude.setUsoSpa(chkSpa.isSelected());
             saude.setSubstanciasUtilizadas(chkSpa.isSelected()?texto(txtSpa,90,"Substâncias"):null);
+            saudeAtual=saude;
 
+            }
             EducacaoTrabalho et=new EducacaoTrabalho();
             et.setEstuda(chkEstuda.isSelected());
             et.setEscola(et.isEstuda()?texto(txtEscola,120,"Escola"):null);
@@ -232,7 +258,11 @@ public class CadastroAdolescenteController {
             et.setFuncao(et.isTrabalha()?texto(txtFuncao,120,"Função"):null);
             et.setVinculoEmpregaticio(et.isTrabalha()?texto(txtVinculo,80,"Vínculo empregatício"):null);
 
-            adolescenteDAO.salvarCadastro(a,ss,saude,et,edicao);
+            if(completo) adolescenteDAO.salvarCadastro(a,ss,saudeAtual,et,edicao);
+            else {
+                if(!edicao) throw new IllegalArgumentException("A inclusão completa exige os dados sociais obrigatórios. Solicite o cadastro ao Administrador.");
+                adolescenteDAO.salvarDadosOperacionais(a,et);
+            }
             mostrarAlerta(Alert.AlertType.INFORMATION,"Cadastro salvo","Dados salvos com sucesso.");
             abrirPerfil(event,a.getCpf());
 

@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.EventoAgenda;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import java.sql.*;
@@ -15,6 +17,8 @@ public class EventoAgendaDAO {
     public boolean atualizar(EventoAgenda evento) { return salvar(evento,true); }
 
     private boolean salvar(EventoAgenda e,boolean edicao) {
+        exigir(edicao ? AGENDA_EDITAR : AGENDA_CADASTRAR);
+
         e.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
@@ -51,6 +55,8 @@ public class EventoAgendaDAO {
     }
 
     public List<EventoAgenda> listar(LocalDate inicio,LocalDate fim) {
+        exigir(AGENDA_CONSULTAR);
+
         List<EventoAgenda> eventos=new ArrayList<>();
         String sql="SELECT e.*,a.nome_completo AS nome_adolescente,t.nome_completo AS nome_tecnico FROM EventoAgenda e "
                 + "LEFT JOIN Pessoa a ON a.cpf=e.cpf_adolescente LEFT JOIN Pessoa t ON t.cpf=e.cpf_equipe "
@@ -70,6 +76,8 @@ public class EventoAgendaDAO {
     }
 
     public boolean excluir(int id) {
+        exigir(AGENDA_EXCLUIR);
+
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM EventoAgenda WHERE id_evento=?")) {
             s.setInt(1,id); return s.executeUpdate()==1;
         } catch(SQLException ex) { throw new IllegalStateException("Não foi possível excluir o compromisso.",ex); }

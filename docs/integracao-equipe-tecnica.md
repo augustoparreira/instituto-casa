@@ -17,3 +17,11 @@ Consultar a autorização antes das leituras indicadas, antes de carregar dados 
 PIA e Relatórios terão integração após a atualização funcional do desenvolvedor principal. Para PIA, conferir os futuros pontos equivalentes a carregarAbaPia e marcarPiaEnviado. O fluxo atual também oferece editarPia, salvarPia e exportarTextoPia. As assinaturas devem ser conferidas na versão entregue por ele.
 
 O acesso a saúde, renda, informações familiares, histórico infracional, justificativas, observações da agenda e conteúdo dos relatórios exige avaliação da matriz central. A política de sigilo, delegações, alcance das consultas e autorização para corrigir/excluir/exportar continuam provisórios. O vínculo de referência não é usado como restrição de consulta.
+
+## Integração com 69afe76
+
+As guardas utilizam AutorizacaoService e Operacao da base publicada. Saúde, social, PIA, referência, encerramento, exclusões e exportações seguem a matriz central. Consultas operacionais omitem bairro, renda e confirmação do PIA conforme a permissão. Frequência possui projeções específicas para Educador, sem carregar prontuário ou histórico infracional.
+
+A edição técnica de cadastro preserva social, saúde e PIA em uma transação própria para dados pessoais e educação. A inclusão completa continua exigindo SOCIAL_ALTERAR e SAUDE_ALTERAR porque o cadastro atual exige endereço/bairro e grava as fichas juntas. Essa operação precisa de definição conjunta antes de liberar a inclusão pelo técnico. Não foram criados valores sociais fictícios.
+
+A autenticação, o direcionamento inicial por perfil, a revalidação/expiração da sessão e o gerenciamento de contas dependem da integração do desenvolvedor principal. O Educador dispõe das entradas de frequência, mas o login atual ainda o direciona ao Dashboard, cuja consulta sua matriz nega. Os menus e guardas operacionais não substituem essa integração.

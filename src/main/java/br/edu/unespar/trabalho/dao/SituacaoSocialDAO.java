@@ -1,5 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.SituacaoSocial;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -15,6 +17,8 @@ import java.sql.Types;
 public class SituacaoSocialDAO {
 
     public boolean inserir(SituacaoSocial ss) {
+        exigir(SOCIAL_ALTERAR);
+
         String sql = "INSERT INTO SituacaoSocial (id_situacaoSocial, renda, beneficios_sociais, endereco, bairro, telefone, numero_nis, cras_referencia, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -46,6 +50,8 @@ public class SituacaoSocialDAO {
     }
 
     public SituacaoSocial buscarPorCpf(long cpfAdolescente) {
+        exigir(SOCIAL_CONSULTAR);
+
         String sql = "SELECT * FROM SituacaoSocial WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -76,6 +82,8 @@ public class SituacaoSocialDAO {
     }
 
     public boolean atualizar(SituacaoSocial ss) {
+        exigir(SOCIAL_ALTERAR);
+
         String sql = "UPDATE SituacaoSocial SET renda = ?, beneficios_sociais = ?, endereco = ?, bairro = ?, telefone = ?, numero_nis = ?, cras_referencia = ? WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

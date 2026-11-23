@@ -137,23 +137,6 @@ public class DetalhesAdolescenteController {
     private List<Frequencia> registrosFrequenciaGeral = List.of();
 
     @FXML private Label lblPiaStatus;
-    @FXML private Label lblPiaData;
-    @FXML private Label lblPiaTecnico;
-    @FXML private Label lblPiaDiagnostico;
-    @FXML private Label lblPiaVulnerabilidades;
-    @FXML private Label lblPiaPotencialidades;
-    @FXML private Label lblPiaEstrategias;
-    @FXML private Label lblPiaEnviado;
-    @FXML private Label lblPiaFormTitulo;
-    @FXML private VBox boxPiaCadastrado;
-    @FXML private VBox boxPiaForm;
-    @FXML private Button btnMarcarEnviado;
-    @FXML private Button btnCancelarPia;
-    @FXML private DatePicker dpPiaData;
-    @FXML private TextArea txtPiaDiagnostico;
-    @FXML private TextArea txtPiaVulnerabilidades;
-    @FXML private TextArea txtPiaPotencialidades;
-    @FXML private TextArea txtPiaEstrategias;
 
     @FXML private VBox boxResponsaveis;
     @FXML private VBox boxComposicao;
@@ -188,7 +171,7 @@ public class DetalhesAdolescenteController {
     private Integer idMedidaEdicao;
     private long cpfAtual;
     private AdolescenteDTO jovemAtual;
-    private PIA piaAtual;
+    @FXML private CheckBox chkEnvioPia;
     private boolean piaEnviadoAtual;
 
     @FXML
@@ -218,7 +201,7 @@ public class DetalhesAdolescenteController {
 
         aplicarMascaraData(dpInicioMedida);
         aplicarMascaraData(dpFimMedida);
-        aplicarMascaraData(dpPiaData);
+
 
         cmbTecnico.setConverter(new StringConverter<>() {
             @Override
@@ -574,187 +557,19 @@ public class DetalhesAdolescenteController {
     }
 
     private void carregarAbaPia() {
-        piaAtual = piaDAO.buscarPorCpf(cpfAtual);
-        alternar(lblPiaStatus, true);
+        piaEnviadoAtual = piaDAO.consultarEnvio(cpfAtual);
+        chkEnvioPia.setSelected(piaEnviadoAtual);
         lblPiaStatus.setText(piaEnviadoAtual ? "Documento enviado" : "Documento pendente");
         lblPiaStatus.getStyleClass().removeAll("badge-enviado", "badge-pendente");
         lblPiaStatus.getStyleClass().add(piaEnviadoAtual ? "badge-enviado" : "badge-pendente");
-
-        if (piaAtual == null) {
-            alternar(boxPiaCadastrado, false);
-            alternar(boxPiaForm, true);
-            prepararFormularioPia(null);
-            return;
-        }
-
-        boolean enviado = piaAtual.isDocumentoEnviado();
-        alternar(boxPiaCadastrado, true);
-        alternar(boxPiaForm, false);
-        alternar(lblPiaStatus, true);
-
-        lblPiaStatus.setText(enviado ? "Documento enviado" : "Documento pendente");
-        lblPiaStatus.getStyleClass().removeAll("badge-enviado", "badge-pendente");
-        lblPiaStatus.getStyleClass().add(enviado ? "badge-enviado" : "badge-pendente");
-
-        String autor = perfilDAO.buscarNomeAutorPia(piaAtual.getIdPia());
-        lblPiaData.setText(Formatadores.dataExtenso(piaAtual.getDataElaboracao()));
-        lblPiaTecnico.setText(Formatadores.textoOuTraco(autor));
-        lblPiaDiagnostico.setText(Formatadores.textoOuTraco(piaAtual.getDiagnostico()));
-        lblPiaVulnerabilidades.setText(Formatadores.textoOuTraco(piaAtual.getVulnerabilidades()));
-        lblPiaPotencialidades.setText(Formatadores.textoOuTraco(piaAtual.getPotencialidades()));
-        lblPiaEstrategias.setText(Formatadores.textoOuTraco(piaAtual.getEstrategias()));
-        lblPiaEnviado.setText(enviado ? "Sim" : "Não");
-        btnMarcarEnviado.setDisable(enviado);
     }
 
-    private void prepararFormularioPia(PIA modelo) {
-        boolean edicao = modelo != null;
-        lblPiaFormTitulo.setText(edicao ? "Editar PIA" : "Elaborar PIA");
-        dpPiaData.setValue(edicao ? modelo.getDataElaboracao() : LocalDate.now());
-        dpPiaData.setDisable(edicao);
-        txtPiaDiagnostico.setText(edicao ? textoOuVazio(modelo.getDiagnostico()) : "");
-        txtPiaVulnerabilidades.setText(edicao ? textoOuVazio(modelo.getVulnerabilidades()) : "");
-        txtPiaPotencialidades.setText(edicao ? textoOuVazio(modelo.getPotencialidades()) : "");
-        txtPiaEstrategias.setText(edicao ? textoOuVazio(modelo.getEstrategias()) : "");
-        alternar(btnCancelarPia, edicao);
-    }
-
-    @FXML
-    public void editarPia() {
-        if (piaAtual == null) return;
-        prepararFormularioPia(piaAtual);
-        alternar(boxPiaCadastrado, false);
-        alternar(boxPiaForm, true);
-    }
-
-    @FXML
-    public void cancelarEdicaoPia() {
+    @FXML public void salvarConfirmacaoPia() {
         try {
+            piaDAO.confirmarEnvio(cpfAtual, chkEnvioPia.isSelected());
             carregarAbaPia();
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    @FXML
-    public void salvarPia() {
-        String diagnostico = txtPiaDiagnostico.getText().trim();
-        if (dpPiaData.getValue() == null || diagnostico.isEmpty()) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Campos obrigatórios",
-                    "Informe a data de elaboração e o diagnóstico inicial.");
-            return;
-        }
-        if (dpPiaData.getValue().isAfter(LocalDate.now())) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Data inválida", "A data de elaboração não pode ser futura.");
-            return;
-        }
-        for (TextArea campo : new TextArea[]{txtPiaDiagnostico, txtPiaVulnerabilidades,
-                txtPiaPotencialidades, txtPiaEstrategias}) {
-            if (campo.getText().length() > LIMITE_TEXTO_PIA) {
-                mostrarAlerta(Alert.AlertType.WARNING, "Texto muito longo",
-                        "Cada campo do PIA pode ter no máximo " + LIMITE_TEXTO_PIA + " caracteres.");
-                return;
-            }
-        }
-
-        try {
-            boolean editando = piaAtual != null;
-            PIA pia = editando ? piaAtual : new PIA();
-            pia.setDiagnostico(diagnostico);
-            pia.setVulnerabilidades(nuloSeVazio(txtPiaVulnerabilidades.getText()));
-            pia.setPotencialidades(nuloSeVazio(txtPiaPotencialidades.getText()));
-            pia.setEstrategias(nuloSeVazio(txtPiaEstrategias.getText()));
-
-            boolean gravou;
-            if (editando) {
-                gravou = piaDAO.atualizar(pia);
-            } else {
-                EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-                if (usuario == null) {
-                    mostrarAlerta(Alert.AlertType.WARNING, "Sessão expirada",
-                            "Faça login novamente para elaborar o PIA.");
-                    return;
-                }
-                pia.setIdPia(IdUtil.proximoId("PIA"));
-                pia.setDataElaboracao(dpPiaData.getValue());
-                pia.setDocumentoEnviado(false);
-                pia.setCpfAdolescente(cpfAtual);
-                gravou = perfilDAO.criarPia(pia, usuario.getCpfEquipe());
-            }
-
-            if (gravou) {
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "PIA salvo com sucesso!");
-                carregarAbaPia();
-            } else {
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
-                        "Não foi possível salvar o PIA.");
-            }
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    @FXML
-    public void marcarPiaEnviado() {
-        if (piaAtual == null || piaAtual.isDocumentoEnviado()) return;
-
-        Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacao.setTitle("Marcar como enviado");
-        confirmacao.setHeaderText(null);
-        confirmacao.setContentText("Confirmar que o PIA foi enviado ao CREAS?");
-        Optional<ButtonType> resposta = confirmacao.showAndWait();
-        if (resposta.isEmpty() || resposta.get() != ButtonType.OK) return;
-
-        try {
-            piaAtual.setDocumentoEnviado(true);
-            if (piaDAO.atualizar(piaAtual)) {
-                carregarAbaPia();
-            } else {
-                piaAtual.setDocumentoEnviado(false);
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Não foi possível atualizar o PIA.");
-            }
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    @FXML
-    public void exportarTextoPia() {
-        if (piaAtual == null) return;
-
-        FileChooser seletor = new FileChooser();
-        seletor.setTitle("Salvar relatório do PIA");
-        seletor.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento de texto", "*.txt"));
-        seletor.setInitialFileName("PIA_" + nomeParaArquivo(jovemAtual.getNome()) + "_" + LocalDate.now() + ".txt");
-        File destino = seletor.showSaveDialog(lblNome.getScene().getWindow());
-        if (destino == null) return;
-
-        try (FileWriter arquivo = new FileWriter(destino, StandardCharsets.UTF_8)) {
-            EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-            String emitidoPor = usuario != null && usuario.getLogin() != null ? " por " + usuario.getLogin() : "";
-            arquivo.write("Plano Individual de Atendimento (PIA)" + System.lineSeparator());
-            arquivo.write("Instituto C.A.S.A. - emitido em " + Formatadores.dataCurta(LocalDate.now()) + emitidoPor + System.lineSeparator());
-            for (String[] campo : new String[][] {
-                    {"Adolescente", jovemAtual.getNome() + "  |  CPF " + jovemAtual.getCpf()},
-                    {"Medida socioeducativa", jovemAtual.getMedida() + "  |  Progresso: " + jovemAtual.getTextoProgresso()},
-                    {"Técnico de referência", jovemAtual.getTecnico()},
-                    {"Data de elaboração", Formatadores.dataExtenso(piaAtual.getDataElaboracao())},
-                    {"Técnico(a) responsável pelo PIA", perfilDAO.buscarNomeAutorPia(piaAtual.getIdPia())},
-                    {"Diagnóstico inicial", piaAtual.getDiagnostico()},
-                    {"Vulnerabilidades identificadas", piaAtual.getVulnerabilidades()},
-                    {"Potencialidades", piaAtual.getPotencialidades()},
-                    {"Estratégias de intervenção", piaAtual.getEstrategias()},
-                    {"Documento enviado ao CREAS", piaAtual.isDocumentoEnviado() ? "Sim" : "Não"}
-            }) {
-                arquivo.write(System.lineSeparator() + campo[0] + ":" + System.lineSeparator()
-                        + Formatadores.textoOuTraco(campo[1]) + System.lineSeparator());
-            }
-        } catch (IOException | RuntimeException e) {
-            e.printStackTrace();
-            mostrarAlerta(Alert.AlertType.ERROR, "Erro ao exportar", "Não foi possível salvar o arquivo de texto.");
-            return;
-        }
-        mostrarAlerta(Alert.AlertType.INFORMATION, "Relatório gerado", "Texto salvo em:\n" + destino.getAbsolutePath());
+            mostrarAlerta(Alert.AlertType.INFORMATION,"Envio do PIA","Confirmação salva.");
+        } catch(RuntimeException e) { erroBanco(e); }
     }
 
     private void carregarAbaFamilia() {

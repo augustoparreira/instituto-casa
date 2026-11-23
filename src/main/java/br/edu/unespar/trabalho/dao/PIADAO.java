@@ -10,6 +10,33 @@ import java.sql.*;
  */
 public class PIADAO {
 
+    public boolean consultarEnvio(long cpf) {
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT pia_enviado FROM Adolescente WHERE cpf_adolescente=?")) {
+            s.setLong(1,cpf);
+            try(ResultSet rs=s.executeQuery()) {
+                if(!rs.next()) throw new IllegalArgumentException("Adolescente não encontrado.");
+                return rs.getBoolean(1);
+            }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar o envio do PIA.",e); }
+    }
+
+    public void confirmarEnvio(long cpf, boolean enviado) {
+        try(Connection c=ConnectionFactory.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                try(PreparedStatement s=c.prepareStatement("UPDATE Adolescente SET pia_enviado=? WHERE cpf_adolescente=?")) {
+                    s.setBoolean(1,enviado); s.setLong(2,cpf);
+                    if(s.executeUpdate()!=1) throw new IllegalArgumentException("Adolescente não encontrado.");
+                }
+                try(PreparedStatement s=c.prepareStatement("UPDATE PIA SET documento_enviado=? WHERE cpf_adolescente=?")) {
+                    s.setBoolean(1,enviado); s.setLong(2,cpf); s.executeUpdate();
+                }
+                c.commit();
+            } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível confirmar o envio do PIA.",e); }
+    }
+
     public boolean inserir(PIA pia) {
         String sql = "INSERT INTO PIA (id_pia, data_elaboracao, diagnostico, vulnerabilidades, potencialidades, estrategias, documento_enviado, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 

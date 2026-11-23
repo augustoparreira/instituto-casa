@@ -266,79 +266,10 @@
 
                     <!-- ABA: PIA -->
                     <VBox fx:id="panePia" styleClass="content-box" spacing="16.0" visible="false" managed="false">
-                        <HBox alignment="CENTER_LEFT">
-                            <Label text="Plano Individual de Atendimento (PIA)" styleClass="box-title" />
-                            <Region HBox.hgrow="ALWAYS" />
-                            <Label fx:id="lblPiaStatus" text="Documento pendente" styleClass="badge-pendente" />
-                        </HBox>
-                        <Region styleClass="divider" />
-
-                        <!-- PIA já cadastrado (somente leitura) -->
-                        <VBox fx:id="boxPiaCadastrado" spacing="16.0" visible="false" managed="false">
-                            <VBox spacing="4.0">
-                                <Label text="DATA DE ELABORAÇÃO" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaData" text="-" styleClass="form-value-normal" />
-                            </VBox>
-                            <VBox spacing="4.0">
-                                <Label text="TÉCNICO(A) RESPONSÁVEL" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaTecnico" text="-" styleClass="form-value-normal" />
-                            </VBox>
-                            <VBox spacing="4.0">
-                                <Label text="DIAGNÓSTICO INICIAL" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaDiagnostico" text="-" styleClass="form-value-normal" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="4.0">
-                                <Label text="VULNERABILIDADES IDENTIFICADAS" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaVulnerabilidades" text="-" styleClass="form-value-normal" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="4.0">
-                                <Label text="POTENCIALIDADES" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaPotencialidades" text="-" styleClass="form-value-normal" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="4.0">
-                                <Label text="ESTRATÉGIAS DE INTERVENÇÃO" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaEstrategias" text="-" styleClass="form-value-normal" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="4.0">
-                                <Label text="DOCUMENTO ENVIADO AO CREAS" styleClass="form-label-mini" />
-                                <Label fx:id="lblPiaEnviado" text="Não" styleClass="form-value-normal" />
-                            </VBox>
-                            <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                <Button text="Exportar relatório" styleClass="btn-novo" onAction="#exportarTextoPia" />
-                                <Button fx:id="btnMarcarEnviado" text="Marcar como enviado" styleClass="btn-outline" onAction="#marcarPiaEnviado" />
-                                <Region HBox.hgrow="ALWAYS" />
-                                <Button text="Editar PIA" styleClass="btn-outline" onAction="#editarPia" />
-                            </HBox>
-                        </VBox>
-
-                        <!-- Formulário (novo PIA ou edição) -->
-                        <VBox fx:id="boxPiaForm" spacing="14.0">
-                            <Label fx:id="lblPiaFormTitulo" text="Elaborar PIA" styleClass="box-title" />
-                            <VBox spacing="5.0">
-                                <Label text="DATA DE ELABORAÇÃO *" styleClass="form-label-mini" />
-                                <DatePicker fx:id="dpPiaData" styleClass="search-field" maxWidth="260.0" />
-                            </VBox>
-                            <VBox spacing="5.0">
-                                <Label text="DIAGNÓSTICO INICIAL *" styleClass="form-label-mini" />
-                                <TextArea fx:id="txtPiaDiagnostico" prefRowCount="3" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="5.0">
-                                <Label text="VULNERABILIDADES IDENTIFICADAS" styleClass="form-label-mini" />
-                                <TextArea fx:id="txtPiaVulnerabilidades" prefRowCount="2" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="5.0">
-                                <Label text="POTENCIALIDADES" styleClass="form-label-mini" />
-                                <TextArea fx:id="txtPiaPotencialidades" prefRowCount="2" wrapText="true" />
-                            </VBox>
-                            <VBox spacing="5.0">
-                                <Label text="ESTRATÉGIAS DE INTERVENÇÃO" styleClass="form-label-mini" />
-                                <TextArea fx:id="txtPiaEstrategias" prefRowCount="3" wrapText="true" />
-                            </VBox>
-                            <HBox spacing="10.0" alignment="CENTER_RIGHT">
-                                <Button fx:id="btnCancelarPia" text="Cancelar" styleClass="btn-outline" onAction="#cancelarEdicaoPia" visible="false" managed="false" />
-                                <Button text="Salvar PIA" styleClass="btn-novo" onAction="#salvarPia" />
-                            </HBox>
-                        </VBox>
+                        <Label text="Envio do PIA" styleClass="box-title"/>
+                        <Label fx:id="lblPiaStatus" styleClass="badge-pendente"/>
+                        <CheckBox fx:id="chkEnvioPia" text="PIA enviado" styleClass="form-value-normal"/>
+                        <Button text="Salvar confirmação" styleClass="btn-novo" onAction="#salvarConfirmacaoPia"/>
                     </VBox>
 
                     <!-- ABA: Família e Social -->

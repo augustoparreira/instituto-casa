@@ -104,7 +104,7 @@ public class ResponsavelDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Erro ao listar responsáveis: " + e.getMessage());
+            throw new IllegalStateException("Não foi possível consultar os responsáveis.", e);
         }
 
         return lista;

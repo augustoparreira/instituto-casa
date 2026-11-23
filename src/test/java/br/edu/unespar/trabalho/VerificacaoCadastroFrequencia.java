@@ -217,6 +217,8 @@ public class VerificacaoCadastroFrequencia {
                 freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,14),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 freq.excluir(hoje); verifica(mdao.consultarHorasDaMedida(nova.getIdMedida(),LocalDate.now())==0,"exclusão recalcula saldo");
                 testarStatusProtegidos();
+                testarFalhasConsultaFamilia();
+                testarPreservacaoRendaFamiliar();
                 testarAgenda();
                 testarPermissoesOperacionais();
                 if(interfaceFx) {
@@ -287,6 +289,45 @@ public class VerificacaoCadastroFrequencia {
                     dao.excluir(primeira);
                 }
             } finally { update.setString(1,anterior.getCodigo()); update.executeUpdate(); }
+        }
+    }
+
+    private static void testarFalhasConsultaFamilia() throws SQLException {
+        // Executado exclusivamente dentro do schema aleatório criado por testarBanco.
+        try(Connection c=ConnectionFactory.getConnection(); Statement sql=c.createStatement()) {
+            sql.execute("ALTER TABLE Responsabiliza RENAME TO vinculo_teste_indisponivel");
+            try {
+                rejeita(IllegalStateException.class,()->new ResponsavelDAO().listarResponsaveis(CPF),
+                        "falha SQL de responsáveis não é apresentada como lista vazia");
+            } finally { sql.execute("ALTER TABLE vinculo_teste_indisponivel RENAME TO Responsabiliza"); }
+            sql.execute("ALTER TABLE ComposicaoFamiliar RENAME TO familia_teste_indisponivel");
+            try {
+                rejeita(IllegalStateException.class,()->new ComposicaoFamiliarDAO().listarPorAdolescente(CPF),
+                        "falha SQL de familiares não é apresentada como lista vazia");
+            } finally { sql.execute("ALTER TABLE familia_teste_indisponivel RENAME TO ComposicaoFamiliar"); }
+        }
+        verifica(new ComposicaoFamiliarDAO().listarPorAdolescente(CPF).isEmpty(),
+                "consulta familiar válida ainda admite lista vazia");
+    }
+
+    private static void testarPreservacaoRendaFamiliar() {
+        var admin=br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado();
+        var dao=new ComposicaoFamiliarDAO();
+        var familiar=new ComposicaoFamiliar(); familiar.setCpfAdolescente(CPF);
+        familiar.setNome("Familiar para teste"); familiar.setParentesco("Irmão"); familiar.setRenda(1500.0);
+        dao.inserir(familiar);
+        try {
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(new EquipeTecnicaDTO(77777777770L,"tecnico","Técnico","Teste",NivelAcesso.EQUIPE_TECNICA));
+            var tecnico=dao.listarPorAdolescente(CPF).getFirst();
+            verifica(tecnico.getRenda()==null,"consulta técnica não expõe renda familiar");
+            tecnico.setNome("Familiar com nome corrigido"); dao.atualizar(tecnico);
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(admin);
+            var salvo=dao.listarPorAdolescente(CPF).getFirst();
+            verifica(salvo.getRenda().equals(1500.0) && salvo.getNome().equals("Familiar com nome corrigido"),
+                    "edição técnica de familiar preserva renda protegida");
+        } finally {
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(admin);
+            dao.excluir(familiar.getIdComposicaoFamiliar(),CPF);
         }
     }
 

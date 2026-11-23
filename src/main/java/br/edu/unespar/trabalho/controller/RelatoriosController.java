@@ -103,7 +103,11 @@ public class RelatoriosController {
         carregando=false;
     }
     @FXML public void gerarNovoRelatorio() {
-        exigir(RELATORIO_ALTERAR);
+        try { exigir(RELATORIO_ALTERAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try {
             dpCompetencia.commitValue();
@@ -156,13 +160,21 @@ public class RelatoriosController {
         r.setRegistroFrequencia(txtRegistroFrequencia.getText()); r.setDescumprimento(txtDescumprimento.getText()); r.validar(); return r;
     }
     @FXML public void salvarAtualizacaoRelatorio() {
-        exigir(RELATORIO_ALTERAR);
+        try { exigir(RELATORIO_ALTERAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try { RelatorioAcompanhamento r=lerFormulario(); dao.salvar(r); exibir(r); atualizarLista(); lblMensagem.setText("Rascunho salvo no banco."); }
         catch(RuntimeException e) { erro(e); }
     }
     @FXML public void excluirRelatorio() {
-        exigir(RELATORIO_EXCLUIR);
+        try { exigir(RELATORIO_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         if(documento==null || documento.getIdRelatorio()==0) { lblMensagem.setText("Abra um relatório salvo para excluir."); return; }
         if(!confirmar("Excluir este relatório salvo?")) return;
@@ -173,7 +185,11 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     @FXML public void exportarTexto() {
-        exigir(RELATORIO_EXPORTAR);
+        try { exigir(RELATORIO_EXPORTAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try {
             RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r);
@@ -207,7 +223,11 @@ public class RelatoriosController {
             throw new IllegalArgumentException("Para exportar o relatório, informe o número do processo e revise as duas seções do relatório. Se não houve descumprimento, registre isso explicitamente.");
     }
     @FXML public void visualizarRelatorio() {
-        exigir(RELATORIO_CONSULTAR);
+        try { exigir(RELATORIO_CONSULTAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try {
             RelatorioAcompanhamento r=lerFormulario(); VBox pagina=new VBox(12); pagina.setStyle("-fx-background-color: white; -fx-padding: 35; -fx-text-fill: black;");

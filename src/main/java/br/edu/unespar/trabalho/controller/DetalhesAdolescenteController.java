@@ -434,7 +434,11 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void salvarMedida() {
-        exigir(idMedidaEdicao==null ? MEDIDA_CADASTRAR : MEDIDA_EDITAR); if(dpFimMedida.getValue()!=null) exigir(MEDIDA_ENCERRAR);
+        try { exigir(idMedidaEdicao==null ? MEDIDA_CADASTRAR : MEDIDA_EDITAR); if(dpFimMedida.getValue()!=null) exigir(MEDIDA_ENCERRAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try { dpInicioMedida.commitValue(); dpFimMedida.commitValue(); }
         catch(RuntimeException e) {
@@ -488,7 +492,11 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void definirTecnico() {
-        exigir(REFERENCIA_DEFINIR);
+        try { exigir(REFERENCIA_DEFINIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         EquipeTecnica tecnico = cmbTecnico.getValue();
         if (tecnico == null) {

@@ -126,8 +126,8 @@ public class FrequenciaController {
         coluna("Horas PSC",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPrevistas()));
         coluna("Cumpridas",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasCumpridas()));
         coluna("Pendentes",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPendentes()));
-        coluna("IMM",70,l->l.getAdolescente().isImm()?"Sim":"Não");
-        coluna("Vale-transporte",110,l->l.getAdolescente().isValeTransporte()?"Sim":"Não");
+        if(pode(ADOLESCENTE_CONSULTAR)) coluna("IMM",70,l->l.getAdolescente().isImm()?"Sim":"Não");
+        if(pode(ADOLESCENTE_CONSULTAR)) coluna("Vale-transporte",110,l->l.getAdolescente().isValeTransporte()?"Sim":"Não");
         if(pode(PIA_CONSULTAR)) coluna("PIA enviado",95,l->l.isPiaEnviado()?"Sim":"Não");
     }
 

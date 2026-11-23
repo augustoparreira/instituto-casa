@@ -207,7 +207,11 @@ public class AdolescentesController {
     @FXML public void irParaEquipeTecnica(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
     @FXML
     public void abrirTelaCadastro(ActionEvent event) {
-        exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR);
+        try { exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         NavegacaoUtil.mudarTela(event, "/View/CadastroAdolescenteView.fxml", "Novo Cadastro");
     }

@@ -197,7 +197,11 @@ public class CadastroAdolescenteController {
 
     @FXML
     public void salvarAdolescente(ActionEvent event) {
-        exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR);
+        try { exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try {
             dpNascimento.commitValue();

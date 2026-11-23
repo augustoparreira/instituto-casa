@@ -111,7 +111,11 @@ public class RegistroFrequenciaController {
     @FXML public void semMedida() { cmbMedida.setValue(null); atualizarHoras(false); }
 
     @FXML public void salvar() {
-        exigir(selecionada==null ? FREQUENCIA_REGISTRAR : FREQUENCIA_EDITAR);
+        try { exigir(selecionada==null ? FREQUENCIA_REGISTRAR : FREQUENCIA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try {
             LocalDate dataAnterior = dpData.getValue();
@@ -134,7 +138,11 @@ public class RegistroFrequenciaController {
     }
 
     @FXML public void excluir() {
-        exigir(FREQUENCIA_EXCLUIR);
+        try { exigir(FREQUENCIA_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         if(selecionada==null) { lblMensagem.setText("Selecione o lançamento a excluir."); return; }
         Alert aviso=new Alert(Alert.AlertType.CONFIRMATION,"Excluir este lançamento? As horas serão recalculadas.",ButtonType.YES,ButtonType.NO);
@@ -144,7 +152,11 @@ public class RegistroFrequenciaController {
     }
 
     @FXML public void novaAtividade() {
-        exigir(ATIVIDADE_GERENCIAR);
+        try { exigir(ATIVIDADE_GERENCIAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         TextInputDialog nome=new TextInputDialog(); nome.setHeaderText("Nome da atividade (até 25 caracteres)");
         var n=nome.showAndWait(); if(n.isEmpty()) return;

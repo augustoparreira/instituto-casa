@@ -160,7 +160,11 @@ public class AgendaController {
     @FXML public void abrirModalNovoEvento(ActionEvent e) { abrirFormulario(null); }
 
     private void abrirFormulario(EventoAgenda existente) {
-        exigir(existente==null ? AGENDA_CADASTRAR : AGENDA_EDITAR);
+        try { exigir(existente==null ? AGENDA_CADASTRAR : AGENDA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         try {
             Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle(existente==null?"Novo compromisso":"Editar compromisso");
@@ -238,7 +242,11 @@ public class AgendaController {
         } catch(RuntimeException e) { erro(e); }
     }
     private void alterarStatus(EventoAgenda evento,EventoAgenda.Status status) {
-        exigir(AGENDA_EDITAR);
+        try { exigir(AGENDA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         if(status==EventoAgenda.Status.CANCELADO && !confirmar("Cancelar este compromisso? Ele ficará no histórico.")) return;
         EventoAgenda.Status anterior=evento.getStatus(); evento.setStatus(status);
@@ -246,7 +254,11 @@ public class AgendaController {
         catch(RuntimeException e) { evento.setStatus(anterior); erro(e); }
     }
     private void excluir(EventoAgenda e) {
-        exigir(AGENDA_EXCLUIR);
+        try { exigir(AGENDA_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
 
         if(!confirmar("Excluir definitivamente este compromisso? Para preservar o histórico, use Cancelar.")) return;
         try { if(!dao.excluir(e.getIdEvento())) throw new IllegalArgumentException("O compromisso não existe mais."); atualizarAgenda(); }

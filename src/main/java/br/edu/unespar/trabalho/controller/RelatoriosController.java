@@ -48,10 +48,13 @@ public class RelatoriosController {
     private static final String DESCUMPRIMENTO="2. DESCUMPRIMENTO DA MEDIDA E CONTATO COM A FAMÍLIA E ACORDO FIRMADO";
 
     @FXML public void initialize() {
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpCompetencia);
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpEmissao);
+
         exigir(RELATORIO_CONSULTAR);
 
         var usuario=Sessao.getUsuarioLogado();
-        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getLogin());
+        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getNomeCompleto());
         lblCargoUsuario.setText(usuario==null?"":usuario.getCargoFuncao());
         dpCompetencia.setValue(LocalDate.now().withDayOfMonth(1)); dpEmissao.setValue(LocalDate.now());
         cmbAdolescente.setConverter(new StringConverter<>() {
@@ -269,7 +272,8 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     private boolean confirmar(String texto) { return new Alert(Alert.AlertType.CONFIRMATION,texto,ButtonType.YES,ButtonType.NO).showAndWait().orElse(ButtonType.NO)==ButtonType.YES; }
-    private void erro(RuntimeException e) { lblMensagem.setText(e.getMessage()); if(!(e instanceof IllegalArgumentException)) e.printStackTrace(); }
+    private void erro(RuntimeException e) { lblMensagem.setText(e instanceof java.time.DateTimeException
+            ? "Informe datas existentes no formato DD/MM/AAAA." : e.getMessage()); if(!(e instanceof IllegalArgumentException) && !(e instanceof java.time.DateTimeException)) e.printStackTrace(); }
     @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/Dashboard.fxml","Painel de Controle"); }
     @FXML public void irParaAdolescentes(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AdolescentesView.fxml","Adolescentes"); }
     @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AgendaView.fxml","Agenda institucional"); }

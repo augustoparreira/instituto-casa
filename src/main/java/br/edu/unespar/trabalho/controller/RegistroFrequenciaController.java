@@ -30,9 +30,12 @@ public class RegistroFrequenciaController {
     private final FrequenciaDAO dao = new FrequenciaDAO();
 
     @FXML public void initialize() {
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpData);
+
         lblMensagem.sceneProperty().addListener((obs,antes,cena) -> {
             if(cena==null) return;
             javafx.application.Platform.runLater(() -> {
+                br.edu.unespar.trabalho.util.ApresentacaoAcesso.identificar(cena.getRoot());
                 for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
                     if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
                     String texto=button.getText();
@@ -134,6 +137,7 @@ public class RegistroFrequenciaController {
             if(selecionada==null) dao.registrar(f); else dao.atualizar(f);
             carregarDia(); aoSalvar.run(); lblMensagem.setText("Frequência salva. Totais recalculados.");
         } catch(NumberFormatException e) { lblMensagem.setText("Informe horas inteiras entre 0 e 24."); }
+        catch(java.time.DateTimeException e) { lblMensagem.setText("Informe uma data existente no formato DD/MM/AAAA."); }
         catch(RuntimeException e) { erro(e); }
     }
 

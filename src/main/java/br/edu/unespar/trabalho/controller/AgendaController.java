@@ -41,6 +41,7 @@ public class AgendaController {
         gridCalendario.sceneProperty().addListener((obs,antes,cena) -> {
             if(cena==null) return;
             javafx.application.Platform.runLater(() -> {
+                br.edu.unespar.trabalho.util.ApresentacaoAcesso.identificar(cena.getRoot());
                 for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
                     if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
                     String texto=button.getText();
@@ -56,7 +57,7 @@ public class AgendaController {
         chkCancelados.selectedProperty().addListener((o,a,b)-> { atualizarCalendario(); atualizarPainelLateral(); });
         lblIrParaHojeTexto.setText("Ir para hoje — "+LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         var usuario=Sessao.getUsuarioLogado();
-        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getLogin());
+        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getNomeCompleto());
         lblCargoUsuario.setText(usuario==null?"":usuario.getCargoFuncao());
         atualizarAgenda();
     }
@@ -176,6 +177,7 @@ public class AgendaController {
             ComboBox<EventoAgenda.Tipo> tipo=new ComboBox<>(FXCollections.observableArrayList(EventoAgenda.Tipo.values()));
             tipo.setValue(existente==null?EventoAgenda.Tipo.ATENDIMENTO:existente.getTipo()); tipo.setId("cmbEventoTipo");
             DatePicker data=new DatePicker(existente==null?dataSelecionada:existente.getData()); data.setId("dpEventoData");
+            br.edu.unespar.trabalho.util.DatasFormulario.configurar(data);
             TextField inicio=new TextField(existente==null?"09:00":existente.getHoraInicio().format(HORA)); inicio.setId("txtEventoInicio");
             TextField fim=new TextField(existente==null?"10:00":existente.getHoraFim().format(HORA)); fim.setId("txtEventoFim");
             TextField local=new TextField(existente==null?"":existente.getLocal()); local.setId("txtEventoLocal");

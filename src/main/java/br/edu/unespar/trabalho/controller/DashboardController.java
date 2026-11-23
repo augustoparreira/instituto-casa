@@ -55,6 +55,7 @@ public class DashboardController {
         vboxAdolescentes.sceneProperty().addListener((obs,antes,cena) -> {
             if(cena==null) return;
             javafx.application.Platform.runLater(() -> {
+                br.edu.unespar.trabalho.util.ApresentacaoAcesso.identificar(cena.getRoot());
                 for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
                     if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
                     String texto=button.getText();

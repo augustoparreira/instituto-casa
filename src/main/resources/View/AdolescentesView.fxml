@@ -42,8 +42,8 @@
                 <HBox spacing="12.0" alignment="CENTER_LEFT">
                     <Circle radius="18.0" styleClass="user-avatar" />
                     <VBox spacing="2.0">
-                        <Label text="Ana Paula Costa" styleClass="user-name" />
-                        <Label text="Assistente Social" styleClass="user-role" />
+                        <Label text="Usuário" styleClass="user-name" />
+                        <Label text="" styleClass="user-role" />
                     </VBox>
                 </HBox>
                 <Button text="Sair do sistema" styleClass="logout-button" onAction="#fazerLogout" maxWidth="Infinity" alignment="CENTER_LEFT" />

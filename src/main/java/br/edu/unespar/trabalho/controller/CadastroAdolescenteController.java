@@ -62,6 +62,7 @@ public class CadastroAdolescenteController {
         txtNome.sceneProperty().addListener((obs,antes,cena) -> {
             if(cena==null) return;
             javafx.application.Platform.runLater(() -> {
+                br.edu.unespar.trabalho.util.ApresentacaoAcesso.identificar(cena.getRoot());
                 for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
                     if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
                     String texto=button.getText();
@@ -134,6 +135,7 @@ public class CadastroAdolescenteController {
     }
 
     private void aplicarMascaraData(DatePicker datePicker) {
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(datePicker);
         TextField editor = datePicker.getEditor();
         editor.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null) return;

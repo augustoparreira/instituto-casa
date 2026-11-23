@@ -29,9 +29,12 @@ public class FrequenciaController {
     private YearMonth mes=YearMonth.now();
 
     @FXML public void initialize() {
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpCompetencia);
+
         tabela.sceneProperty().addListener((obs,antes,cena) -> {
             if(cena==null) return;
             javafx.application.Platform.runLater(() -> {
+                br.edu.unespar.trabalho.util.ApresentacaoAcesso.identificar(cena.getRoot());
                 for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
                     if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
                     String texto=button.getText();
@@ -56,6 +59,8 @@ public class FrequenciaController {
             if(dpCompetencia.getValue()==null) throw new IllegalArgumentException("Informe o mês de referência.");
             mes=YearMonth.from(dpCompetencia.getValue());
             carregarMes();
+        } catch(java.time.DateTimeException e) {
+            new Alert(Alert.AlertType.WARNING,"Informe uma data existente no formato DD/MM/AAAA para consultar o mês.").showAndWait();
         } catch(RuntimeException e) { e.printStackTrace(); new Alert(Alert.AlertType.ERROR,"Não foi possível carregar a frequência. "+e.getMessage()).showAndWait(); }
     }
 

@@ -183,6 +183,7 @@ public class DetalhesAdolescenteController {
         lblNome.sceneProperty().addListener((obs,antes,cena) -> {
             if(cena==null) return;
             javafx.application.Platform.runLater(() -> {
+                br.edu.unespar.trabalho.util.ApresentacaoAcesso.identificar(cena.getRoot());
                 for(javafx.scene.Node node:cena.getRoot().lookupAll(".button")) {
                     if(!(node instanceof javafx.scene.control.Button button) || button.getOnAction()==null) continue;
                     String texto=button.getText();
@@ -235,6 +236,7 @@ public class DetalhesAdolescenteController {
     }
 
     private void aplicarMascaraData(DatePicker datePicker) {
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(datePicker);
         if (datePicker == null) return;
         TextField editor = datePicker.getEditor();
         editor.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -269,7 +271,7 @@ public class DetalhesAdolescenteController {
         lblCpf.setText(jovem.getCpf());
         lblStatus.setText(jovem.getStatus());
         lblTipoMedida.setText(jovem.getMedida());
-        lblResponsavel.setText("Responsável: " + jovem.getTecnico());
+        lblResponsavel.setText("Técnico de referência: " + jovem.getTecnico());
         lblPorcentagem.setText((int) (jovem.getProgresso() * 100) + "%");
         lblHoras.setText(jovem.getTextoProgresso());
 
@@ -746,6 +748,8 @@ public class DetalhesAdolescenteController {
         });
 
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
+            try { dpNascimento.commitValue(); }
+            catch(java.time.DateTimeException invalida) { return "Informe uma data existente no formato DD/MM/AAAA."; }
             String nome = txtNome.getText().trim();
             if (nome.isEmpty() || nome.length() > 80) return "Informe o nome (até 80 caracteres).";
             String cpf = Formatadores.soDigitos(txtCpf.getText());

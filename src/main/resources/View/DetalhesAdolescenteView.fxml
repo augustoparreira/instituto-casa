@@ -44,8 +44,8 @@
                 <HBox spacing="12.0" alignment="CENTER_LEFT">
                     <Circle radius="18.0" styleClass="user-avatar" />
                     <VBox spacing="2.0">
-                        <Label text="Ana Paula Costa" styleClass="user-name" />
-                        <Label text="Assistente Social" styleClass="user-role" />
+                        <Label text="Usuário" styleClass="user-name" />
+                        <Label text="" styleClass="user-role" />
                     </VBox>
                 </HBox>
                 <Button text="Sair do sistema" styleClass="logout-button" onAction="#fazerLogout" maxWidth="Infinity" alignment="CENTER_LEFT" />
@@ -74,7 +74,7 @@
                         <Label fx:id="lblTipoMedida" text="PSC" styleClass="badge-psc" />
                     </HBox>
                     <Label fx:id="lblCpf" text="123.456.789-00" styleClass="profile-sub" />
-                    <Label fx:id="lblResponsavel" text="Responsável: Dra. Ana Paula Costa" styleClass="profile-sub" />
+                    <Label fx:id="lblResponsavel" text="Técnico de referência" styleClass="profile-sub" />
                 </VBox>
 
                 <!-- Progresso Direita -->

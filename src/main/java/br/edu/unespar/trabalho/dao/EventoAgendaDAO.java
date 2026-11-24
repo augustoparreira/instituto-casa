@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.model.EventoAgenda;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import java.sql.*;
@@ -15,11 +14,14 @@ import java.util.List;
  */
 public class EventoAgendaDAO {
     public boolean inserir(EventoAgenda evento) {
-        AutorizacaoService.exigir(AGENDA_CADASTRAR); return salvar(evento,false); }
+        exigir(AGENDA_CADASTRAR); return salvar(evento,false); }
     public boolean atualizar(EventoAgenda evento) {
-        AutorizacaoService.exigir(AGENDA_EDITAR); return salvar(evento,true); }
+        exigir(AGENDA_EDITAR); return salvar(evento,true); }
 
     private boolean salvar(EventoAgenda e,boolean edicao) {
+        boolean alterarNotas = pode(SIGILOSO_ALTERAR);
+        if (!alterarNotas && e.getObservacoes() != null && !e.getObservacoes().isBlank()) exigir(SIGILOSO_ALTERAR);
+
         e.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
@@ -37,12 +39,12 @@ public class EventoAgendaDAO {
                         try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("O adolescente ou técnico já tem um compromisso agendado nesse horário."); }
                     }
                 }
-                String sql=edicao ? "UPDATE EventoAgenda SET titulo=?,tipo=?,data_evento=?,hora_inicio=?,hora_fim=?,local_evento=?,observacoes=?,status=?,cpf_adolescente=?,cpf_equipe=? WHERE id_evento=? RETURNING id_evento"
+                String sql=edicao ? "UPDATE EventoAgenda SET titulo=?,tipo=?,data_evento=?,hora_inicio=?,hora_fim=?,local_evento=?,observacoes=" + (alterarNotas ? "?" : "COALESCE(?,observacoes)") + ",status=?,cpf_adolescente=?,cpf_equipe=? WHERE id_evento=? RETURNING id_evento"
                         : "INSERT INTO EventoAgenda(titulo,tipo,data_evento,hora_inicio,hora_fim,local_evento,observacoes,status,cpf_adolescente,cpf_equipe) VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING id_evento";
                 try(PreparedStatement s=c.prepareStatement(sql)) {
                     s.setString(1,e.getTitulo().trim()); s.setString(2,e.getTipo().name()); s.setObject(3,e.getData());
                     s.setObject(4,e.getHoraInicio()); s.setObject(5,e.getHoraFim()); s.setString(6,e.getLocal()==null?"":e.getLocal().trim());
-                    s.setString(7,e.getObservacoes()==null?"":e.getObservacoes().trim()); s.setString(8,e.getStatus().name());
+                    s.setString(7,edicao && !alterarNotas ? null : e.getObservacoes()==null?"":e.getObservacoes().trim()); s.setString(8,e.getStatus().name());
                     s.setObject(9,e.getCpfAdolescente()); s.setObject(10,e.getCpfEquipe());
                     if(edicao) s.setInt(11,e.getIdEvento());
                     try(ResultSet r=s.executeQuery()) {
@@ -56,9 +58,12 @@ public class EventoAgendaDAO {
     }
 
     public List<EventoAgenda> listar(LocalDate inicio,LocalDate fim) {
-        AutorizacaoService.exigir(AGENDA_CONSULTAR);
+        exigir(AGENDA_CONSULTAR);
+
         List<EventoAgenda> eventos=new ArrayList<>();
-        String sql="SELECT e.*,a.nome_completo AS nome_adolescente,t.nome_completo AS nome_tecnico FROM EventoAgenda e "
+        String notas = pode(SIGILOSO_CONSULTAR) ? "e.observacoes" : "''::text AS observacoes";
+        String sql="SELECT e.id_evento,e.titulo,e.tipo,e.status,e.data_evento,e.hora_inicio,e.hora_fim,e.local_evento,"
+                + "e.cpf_adolescente,e.cpf_equipe,"+notas+",a.nome_completo AS nome_adolescente,t.nome_completo AS nome_tecnico FROM EventoAgenda e "
                 + "LEFT JOIN Pessoa a ON a.cpf=e.cpf_adolescente LEFT JOIN Pessoa t ON t.cpf=e.cpf_equipe "
                 + "WHERE data_evento BETWEEN ? AND ? ORDER BY data_evento,hora_inicio,id_evento";
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
@@ -76,7 +81,8 @@ public class EventoAgendaDAO {
     }
 
     public boolean excluir(int id) {
-        AutorizacaoService.exigir(AGENDA_EXCLUIR);
+        exigir(AGENDA_EXCLUIR);
+
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM EventoAgenda WHERE id_evento=?")) {
             s.setInt(1,id); return s.executeUpdate()==1;
         } catch(SQLException ex) { throw new IllegalStateException("Não foi possível excluir o compromisso.",ex); }

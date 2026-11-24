@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import javafx.collections.FXCollections;
@@ -31,7 +30,10 @@ public class RegistroFrequenciaController {
     private final FrequenciaDAO dao = new FrequenciaDAO();
 
     @FXML public void initialize() {
-        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpData);
+
+
+        exigir(FREQUENCIA_CONSULTAR);
         cmbStatus.setItems(FXCollections.observableArrayList(StatusPresenca.values()));
         cmbAtividade.setConverter(new StringConverter<>() {
             public String toString(Atividade a) { return a==null?"":a.getNomeAtividade(); }
@@ -47,21 +49,22 @@ public class RegistroFrequenciaController {
             atualizarHoras(selecionada==null);
         });
         dpData.valueProperty().addListener((o,a,b)-> { if(cpf!=0 && b!=null) carregarDia(); });
-        listaRegistros.getSelectionModel().selectedItemProperty().addListener((o,a,b)-> { if(b!=null && AutorizacaoService.pode(FREQUENCIA_EDITAR)) preencher(b); });
+        listaRegistros.getSelectionModel().selectedItemProperty().addListener((o,a,b)-> { if(b!=null && pode(FREQUENCIA_EDITAR)) preencher(b); });
     }
 
     private void atualizarHoras(boolean sugerir) {
-        boolean contabiliza=cmbStatus.getValue()==StatusPresenca.PRESENTE
+        boolean contabiliza=pode(HORAS_PSC_REGISTRAR) && cmbStatus.getValue()==StatusPresenca.PRESENTE
                 && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC();
-        txtHoras.setDisable(!contabiliza || !AutorizacaoService.pode(HORAS_PSC_REGISTRAR));
+        txtHoras.setDisable(!contabiliza);
         if(!contabiliza) txtHoras.setText("0");
         else if(sugerir) txtHoras.setText(cmbAtividade.getValue()==null?"0":Integer.toString(cmbAtividade.getValue().getCargaHoraria()));
     }
 
     public void carregar(long cpf,LocalDate data,Runnable retorno) {
+        exigir(FREQUENCIA_CONSULTAR);
+
         this.cpf=cpf; this.aoSalvar=retorno;
-        Adolescente a=new FrequenciaMensalDAO().listarParticipantes().stream()
-                .filter(pessoa -> pessoa.getCpf()==cpf).findFirst().orElse(null);
+        Adolescente a=new AdolescenteDAO().listarParaFrequencia().stream().filter(p -> p.getCpf()==cpf).findFirst().orElse(null);
         if(a==null) throw new IllegalArgumentException("Adolescente não encontrado.");
         lblAdolescente.setText(a.getNomeCompleto()+" · "+a.getCpfFormatado());
         cmbAtividade.setItems(FXCollections.observableArrayList(new AtividadeDAO().listar()));
@@ -71,8 +74,8 @@ public class RegistroFrequenciaController {
     private void carregarDia() {
         try {
             selecionada=null;
-            cmbMedida.setDisable(!AutorizacaoService.pode(MEDIDA_CONSULTAR));
-            cmbMedida.setItems(FXCollections.observableArrayList(cmbMedida.isDisabled() ? java.util.List.of() : new MedidaSocioeducativaDAO().listarPorAdolescente(cpf)
+            cmbMedida.setDisable(!pode(MEDIDA_CONSULTAR));
+            cmbMedida.setItems(FXCollections.observableArrayList(cmbMedida.isDisabled() ? java.util.List.of() : new MedidaSocioeducativaDAO().listarParaFrequencia(cpf)
                     .stream().filter(m->m.vigenteEm(dpData.getValue())).toList()));
             listaRegistros.setItems(FXCollections.observableArrayList(dao.listar(cpf,dpData.getValue(),dpData.getValue())));
             novo();
@@ -99,6 +102,12 @@ public class RegistroFrequenciaController {
     @FXML public void semMedida() { cmbMedida.setValue(null); atualizarHoras(false); }
 
     @FXML public void salvar() {
+        try { exigir(selecionada==null ? FREQUENCIA_REGISTRAR : FREQUENCIA_EDITAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try {
             LocalDate dataAnterior = dpData.getValue();
             dpData.commitValue();
@@ -112,21 +121,40 @@ public class RegistroFrequenciaController {
             f.setDataPresenca(dpData.getValue()); f.setStatusPresenca(cmbStatus.getValue());
             f.setHorasCumpridas(f.isPresente() && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC()?Integer.parseInt(txtHoras.getText().trim()):0);
             f.setIdMedida(cmbMedida.getValue()==null?null:cmbMedida.getValue().getIdMedida()); f.setObservacoes(txtObservacoes.getText());
+            if(f.getHorasContabilizadas()>0) exigir(HORAS_PSC_REGISTRAR);
             if(selecionada==null) dao.registrar(f); else dao.atualizar(f);
             carregarDia(); aoSalvar.run(); lblMensagem.setText("Frequência salva. Totais recalculados.");
         } catch(NumberFormatException e) { lblMensagem.setText("Informe horas inteiras entre 0 e 24."); }
+        catch(java.time.DateTimeException e) { lblMensagem.setText("Informe uma data existente no formato DD/MM/AAAA."); }
         catch(RuntimeException e) { erro(e); }
     }
 
     @FXML public void excluir() {
+        try { exigir(FREQUENCIA_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         if(selecionada==null) { lblMensagem.setText("Selecione o lançamento a excluir."); return; }
         Alert aviso=new Alert(Alert.AlertType.CONFIRMATION,"Excluir este lançamento? As horas serão recalculadas.",ButtonType.YES,ButtonType.NO);
         if(aviso.showAndWait().orElse(ButtonType.NO)!=ButtonType.YES) return;
-        try { dao.excluir(selecionada); carregarDia(); aoSalvar.run(); }
+        try {
+            boolean excluiu=dao.excluir(selecionada);
+            carregarDia(); aoSalvar.run();
+            lblMensagem.setText(excluiu ? "Frequência excluída. Totais recalculados."
+                    : "O lançamento já foi removido. A lista foi atualizada.");
+        }
         catch(RuntimeException e) { erro(e); }
     }
 
     @FXML public void novaAtividade() {
+        try { exigir(ATIVIDADE_GERENCIAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         TextInputDialog nome=new TextInputDialog(); nome.setHeaderText("Nome da atividade (até 25 caracteres)");
         var n=nome.showAndWait(); if(n.isEmpty()) return;
         TextInputDialog carga=new TextInputDialog("4"); carga.setHeaderText("Carga horária do encontro (1 a 24 horas inteiras)");

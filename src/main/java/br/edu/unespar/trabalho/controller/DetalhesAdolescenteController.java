@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.FrequenciaMensalDTO;
 import br.edu.unespar.trabalho.dao.ComposicaoFamiliarDAO;
@@ -140,23 +139,6 @@ public class DetalhesAdolescenteController {
     private List<Frequencia> registrosFrequenciaGeral = List.of();
 
     @FXML private Label lblPiaStatus;
-    @FXML private Label lblPiaData;
-    @FXML private Label lblPiaTecnico;
-    @FXML private Label lblPiaDiagnostico;
-    @FXML private Label lblPiaVulnerabilidades;
-    @FXML private Label lblPiaPotencialidades;
-    @FXML private Label lblPiaEstrategias;
-    @FXML private Label lblPiaEnviado;
-    @FXML private Label lblPiaFormTitulo;
-    @FXML private VBox boxPiaCadastrado;
-    @FXML private VBox boxPiaForm;
-    @FXML private Button btnMarcarEnviado;
-    @FXML private Button btnCancelarPia;
-    @FXML private DatePicker dpPiaData;
-    @FXML private TextArea txtPiaDiagnostico;
-    @FXML private TextArea txtPiaVulnerabilidades;
-    @FXML private TextArea txtPiaPotencialidades;
-    @FXML private TextArea txtPiaEstrategias;
 
     @FXML private VBox boxResponsaveis;
     @FXML private VBox boxComposicao;
@@ -191,12 +173,16 @@ public class DetalhesAdolescenteController {
     private Integer idMedidaEdicao;
     private long cpfAtual;
     private AdolescenteDTO jovemAtual;
-    private PIA piaAtual;
+    @FXML private CheckBox chkEnvioPia;
     private boolean piaEnviadoAtual;
 
     @FXML
     public void initialize() {
-        AutorizacaoService.exigir(SIGILOSO_CONSULTAR);
+        exigir(ADOLESCENTE_CONSULTAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnAbaPia,PIA_CONSULTAR);
+        dpFimMedida.setDisable(!pode(MEDIDA_ENCERRAR));
+        txtHistorico.setDisable(!pode(SIGILOSO_ALTERAR));
+        btnEditarSocial.setDisable(!pode(SOCIAL_ALTERAR));
         dpMesFrequencia.setValue(LocalDate.now().withDayOfMonth(1));
         btnCorrigirFrequencia.disableProperty().bind(listaFrequenciaPerfil.getSelectionModel().selectedItemProperty().isNull());
         listaFrequenciaPerfil.setPlaceholder(textoVazio("Nenhum lançamento neste mês. Dias sem lançamento não são faltas."));
@@ -222,7 +208,7 @@ public class DetalhesAdolescenteController {
 
         aplicarMascaraData(dpInicioMedida);
         aplicarMascaraData(dpFimMedida);
-        aplicarMascaraData(dpPiaData);
+
 
         cmbTecnico.setConverter(new StringConverter<>() {
             @Override
@@ -240,6 +226,7 @@ public class DetalhesAdolescenteController {
     }
 
     private void aplicarMascaraData(DatePicker datePicker) {
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(datePicker);
         if (datePicker == null) return;
         TextField editor = datePicker.getEditor();
         editor.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -263,6 +250,8 @@ public class DetalhesAdolescenteController {
     }
 
     public void carregarDados(AdolescenteDTO jovem) {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         if (jovem == null) return;
 
         jovemAtual = jovem;
@@ -272,7 +261,7 @@ public class DetalhesAdolescenteController {
         lblCpf.setText(jovem.getCpf());
         lblStatus.setText(jovem.getStatus());
         lblTipoMedida.setText(jovem.getMedida());
-        lblResponsavel.setText("Responsável: " + jovem.getTecnico());
+        lblResponsavel.setText("Técnico de referência: " + jovem.getTecnico());
         lblPorcentagem.setText((int) (jovem.getProgresso() * 100) + "%");
         lblHoras.setText(jovem.getTextoProgresso());
 
@@ -287,19 +276,19 @@ public class DetalhesAdolescenteController {
             var cadastro=adolescenteDAO.buscarPorCpf(cpfAtual);
             piaEnviadoAtual = cadastro.isPiaEnviado();
             var estudo=new EducacaoTrabalhoDAO().buscarPorCpf(cpfAtual);
-            var saude=saudeDAO.buscarPorCpf(cpfAtual);
+            var saude=pode(SAUDE_CONSULTAR)?saudeDAO.buscarPorCpf(cpfAtual):null;
             lblDadosComplementares.setText("Idade: "+cadastro.getIdade()+" anos · aniversário: "+cadastro.getDataNascimento().getMonthValue()
                     +"\nNaturalidade: "+Formatadores.textoOuTraco(cadastro.getNaturalidade())+" · Cor/raça: "+Formatadores.textoOuTraco(cadastro.getCorRaca())
                     +"\nTelefone: "+Formatadores.textoOuTraco(cadastro.getContato())+" · E-mail: "+Formatadores.textoOuTraco(cadastro.getEmail())
                     +"\nEstuda: "+(estudo!=null && estudo.isEstuda()?"Sim · "+Formatadores.textoOuTraco(estudo.getEscola())+" · "+Formatadores.textoOuTraco(estudo.getSerie()):"Não")
                     +"\nTrabalha: "+(estudo!=null && estudo.isTrabalha()?"Sim · "+Formatadores.textoOuTraco(estudo.getLocalTrabalho())+" · "+Formatadores.textoOuTraco(estudo.getFuncao())+" · "+Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"Não")
                     +"\nUBS: "+(saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()))
-                    +" · Uso de SPA: "+(saude!=null && saude.isUsoSpa()?"Sim · "+Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"Não")
+                    +" · Uso de SPA: "+(!pode(SAUDE_CONSULTAR)?"Acesso restrito":saude!=null && saude.isUsoSpa()?"Sim · "+Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"Não")
                     +"\nIMM: "+(cadastro.isImm()?"Sim":"Não")+" · Vale-transporte: "+(cadastro.isValeTransporte()?"Sim":"Não")
                     +"\nObservações: "+Formatadores.textoOuTraco(cadastro.getObservacoes()));
             carregarAbaMedida();
             carregarAbaFrequencia();
-            carregarAbaPia();
+            if(pode(PIA_CONSULTAR)) carregarAbaPia();
             carregarAbaFamilia();
         } catch (RuntimeException e) {
             erroBanco(e);
@@ -315,7 +304,8 @@ public class DetalhesAdolescenteController {
         alternar(boxMedidaCadastrada,!medidas.isEmpty());
         exibirMedidaSelecionada();
 
-        cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listar()));
+        if(pode(REFERENCIA_DEFINIR)) cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listar()));
+        cmbTecnico.setDisable(!pode(REFERENCIA_DEFINIR));
         Long cpfReferencia = perfilDAO.buscarCpfTecnicoReferencia(cpfAtual);
         EquipeTecnica atual = null;
         if (cpfReferencia != null) {
@@ -326,7 +316,7 @@ public class DetalhesAdolescenteController {
                 }
             }
         }
-        lblTecnicoAtual.setText(atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
+        lblTecnicoAtual.setText(!pode(REFERENCIA_DEFINIR)?jovemAtual.getTecnico():atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
         cmbTecnico.setValue(atual);
     }
 
@@ -377,6 +367,7 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void mostrarAba(ActionEvent event) {
+        if(event.getSource()==btnAbaPia) exigir(PIA_CONSULTAR);
         Object origem = event.getSource();
         if (origem == btnAbaDados) ativarAba(btnAbaDados, paneDados);
         else if (origem == btnAbaMedida) ativarAba(btnAbaMedida, paneMedida);
@@ -418,6 +409,12 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void salvarMedida() {
+        try { exigir(idMedidaEdicao==null ? MEDIDA_CADASTRAR : MEDIDA_EDITAR); if(dpFimMedida.getValue()!=null) exigir(MEDIDA_ENCERRAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try { dpInicioMedida.commitValue(); dpFimMedida.commitValue(); }
         catch(RuntimeException e) {
             mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","A data informada está incompleta ou inválida. Verifique o dia, mês e ano.");
@@ -470,6 +467,12 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void definirTecnico() {
+        try { exigir(REFERENCIA_DEFINIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         EquipeTecnica tecnico = cmbTecnico.getValue();
         if (tecnico == null) {
             mostrarAlerta(Alert.AlertType.WARNING, "Técnico não selecionado", "Selecione um membro da equipe.");
@@ -578,188 +581,21 @@ public class DetalhesAdolescenteController {
     }
 
     private void carregarAbaPia() {
-        piaAtual = piaDAO.buscarPorCpf(cpfAtual);
-        alternar(lblPiaStatus, true);
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_CONSULTAR);
+        piaEnviadoAtual = piaDAO.consultarEnvio(cpfAtual);
+        chkEnvioPia.setSelected(piaEnviadoAtual);
         lblPiaStatus.setText(piaEnviadoAtual ? "Documento enviado" : "Documento pendente");
         lblPiaStatus.getStyleClass().removeAll("badge-enviado", "badge-pendente");
         lblPiaStatus.getStyleClass().add(piaEnviadoAtual ? "badge-enviado" : "badge-pendente");
-
-        if (piaAtual == null) {
-            alternar(boxPiaCadastrado, false);
-            alternar(boxPiaForm, true);
-            prepararFormularioPia(null);
-            return;
-        }
-
-        boolean enviado = piaAtual.isDocumentoEnviado();
-        alternar(boxPiaCadastrado, true);
-        alternar(boxPiaForm, false);
-        alternar(lblPiaStatus, true);
-
-        lblPiaStatus.setText(enviado ? "Documento enviado" : "Documento pendente");
-        lblPiaStatus.getStyleClass().removeAll("badge-enviado", "badge-pendente");
-        lblPiaStatus.getStyleClass().add(enviado ? "badge-enviado" : "badge-pendente");
-
-        String autor = perfilDAO.buscarNomeAutorPia(piaAtual.getIdPia());
-        lblPiaData.setText(Formatadores.dataExtenso(piaAtual.getDataElaboracao()));
-        lblPiaTecnico.setText(Formatadores.textoOuTraco(autor));
-        lblPiaDiagnostico.setText(Formatadores.textoOuTraco(piaAtual.getDiagnostico()));
-        lblPiaVulnerabilidades.setText(Formatadores.textoOuTraco(piaAtual.getVulnerabilidades()));
-        lblPiaPotencialidades.setText(Formatadores.textoOuTraco(piaAtual.getPotencialidades()));
-        lblPiaEstrategias.setText(Formatadores.textoOuTraco(piaAtual.getEstrategias()));
-        lblPiaEnviado.setText(enviado ? "Sim" : "Não");
-        btnMarcarEnviado.setDisable(enviado);
     }
 
-    private void prepararFormularioPia(PIA modelo) {
-        boolean edicao = modelo != null;
-        lblPiaFormTitulo.setText(edicao ? "Editar PIA" : "Elaborar PIA");
-        dpPiaData.setValue(edicao ? modelo.getDataElaboracao() : LocalDate.now());
-        dpPiaData.setDisable(edicao);
-        txtPiaDiagnostico.setText(edicao ? textoOuVazio(modelo.getDiagnostico()) : "");
-        txtPiaVulnerabilidades.setText(edicao ? textoOuVazio(modelo.getVulnerabilidades()) : "");
-        txtPiaPotencialidades.setText(edicao ? textoOuVazio(modelo.getPotencialidades()) : "");
-        txtPiaEstrategias.setText(edicao ? textoOuVazio(modelo.getEstrategias()) : "");
-        alternar(btnCancelarPia, edicao);
-    }
-
-    @FXML
-    public void editarPia() {
-        if (piaAtual == null) return;
-        prepararFormularioPia(piaAtual);
-        alternar(boxPiaCadastrado, false);
-        alternar(boxPiaForm, true);
-    }
-
-    @FXML
-    public void cancelarEdicaoPia() {
+    @FXML public void salvarConfirmacaoPia() {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_ALTERAR);
         try {
+            piaDAO.confirmarEnvio(cpfAtual, chkEnvioPia.isSelected());
             carregarAbaPia();
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    @FXML
-    public void salvarPia() {
-        String diagnostico = txtPiaDiagnostico.getText().trim();
-        if (dpPiaData.getValue() == null || diagnostico.isEmpty()) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Campos obrigatórios",
-                    "Informe a data de elaboração e o diagnóstico inicial.");
-            return;
-        }
-        if (dpPiaData.getValue().isAfter(LocalDate.now())) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Data inválida", "A data de elaboração não pode ser futura.");
-            return;
-        }
-        for (TextArea campo : new TextArea[]{txtPiaDiagnostico, txtPiaVulnerabilidades,
-                txtPiaPotencialidades, txtPiaEstrategias}) {
-            if (campo.getText().length() > LIMITE_TEXTO_PIA) {
-                mostrarAlerta(Alert.AlertType.WARNING, "Texto muito longo",
-                        "Cada campo do PIA pode ter no máximo " + LIMITE_TEXTO_PIA + " caracteres.");
-                return;
-            }
-        }
-
-        try {
-            boolean editando = piaAtual != null;
-            PIA pia = editando ? piaAtual : new PIA();
-            pia.setDiagnostico(diagnostico);
-            pia.setVulnerabilidades(nuloSeVazio(txtPiaVulnerabilidades.getText()));
-            pia.setPotencialidades(nuloSeVazio(txtPiaPotencialidades.getText()));
-            pia.setEstrategias(nuloSeVazio(txtPiaEstrategias.getText()));
-
-            boolean gravou;
-            if (editando) {
-                gravou = piaDAO.atualizar(pia);
-            } else {
-                EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-                if (usuario == null) {
-                    mostrarAlerta(Alert.AlertType.WARNING, "Sessão expirada",
-                            "Faça login novamente para elaborar o PIA.");
-                    return;
-                }
-                pia.setIdPia(IdUtil.proximoId("PIA"));
-                pia.setDataElaboracao(dpPiaData.getValue());
-                pia.setDocumentoEnviado(false);
-                pia.setCpfAdolescente(cpfAtual);
-                gravou = perfilDAO.criarPia(pia, usuario.getCpfEquipe());
-            }
-
-            if (gravou) {
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Sucesso", "PIA salvo com sucesso!");
-                carregarAbaPia();
-            } else {
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro ao salvar",
-                        "Não foi possível salvar o PIA.");
-            }
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    @FXML
-    public void marcarPiaEnviado() {
-        if (piaAtual == null || piaAtual.isDocumentoEnviado()) return;
-
-        Alert confirmacao = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacao.setTitle("Marcar como enviado");
-        confirmacao.setHeaderText(null);
-        confirmacao.setContentText("Confirmar que o PIA foi enviado ao CREAS?");
-        Optional<ButtonType> resposta = confirmacao.showAndWait();
-        if (resposta.isEmpty() || resposta.get() != ButtonType.OK) return;
-
-        try {
-            piaAtual.setDocumentoEnviado(true);
-            if (piaDAO.atualizar(piaAtual)) {
-                carregarAbaPia();
-            } else {
-                piaAtual.setDocumentoEnviado(false);
-                mostrarAlerta(Alert.AlertType.ERROR, "Erro", "Não foi possível atualizar o PIA.");
-            }
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
-    }
-
-    @FXML
-    public void exportarTextoPia() {
-        AutorizacaoService.exigir(PIA_CONSULTAR);
-        if (piaAtual == null) return;
-
-        FileChooser seletor = new FileChooser();
-        seletor.setTitle("Salvar relatório do PIA");
-        seletor.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento de texto", "*.txt"));
-        seletor.setInitialFileName("PIA_" + nomeParaArquivo(jovemAtual.getNome()) + "_" + LocalDate.now() + ".txt");
-        File destino = seletor.showSaveDialog(lblNome.getScene().getWindow());
-        if (destino == null) return;
-
-        try (FileWriter arquivo = new FileWriter(destino, StandardCharsets.UTF_8)) {
-            EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-            String emitidoPor = usuario != null && usuario.getNomeCompleto() != null ? " por " + usuario.getNomeCompleto() : "";
-            arquivo.write("Plano Individual de Atendimento (PIA)" + System.lineSeparator());
-            arquivo.write("Instituto C.A.S.A. - emitido em " + Formatadores.dataCurta(LocalDate.now()) + emitidoPor + System.lineSeparator());
-            for (String[] campo : new String[][] {
-                    {"Adolescente", jovemAtual.getNome() + "  |  CPF " + jovemAtual.getCpf()},
-                    {"Medida socioeducativa", jovemAtual.getMedida() + "  |  Progresso: " + jovemAtual.getTextoProgresso()},
-                    {"Técnico de referência", jovemAtual.getTecnico()},
-                    {"Data de elaboração", Formatadores.dataExtenso(piaAtual.getDataElaboracao())},
-                    {"Técnico(a) responsável pelo PIA", perfilDAO.buscarNomeAutorPia(piaAtual.getIdPia())},
-                    {"Diagnóstico inicial", piaAtual.getDiagnostico()},
-                    {"Vulnerabilidades identificadas", piaAtual.getVulnerabilidades()},
-                    {"Potencialidades", piaAtual.getPotencialidades()},
-                    {"Estratégias de intervenção", piaAtual.getEstrategias()},
-                    {"Documento enviado ao CREAS", piaAtual.isDocumentoEnviado() ? "Sim" : "Não"}
-            }) {
-                arquivo.write(System.lineSeparator() + campo[0] + ":" + System.lineSeparator()
-                        + Formatadores.textoOuTraco(campo[1]) + System.lineSeparator());
-            }
-        } catch (IOException | RuntimeException e) {
-            e.printStackTrace();
-            mostrarAlerta(Alert.AlertType.ERROR, "Erro ao exportar", "Não foi possível salvar o arquivo de texto.");
-            return;
-        }
-        mostrarAlerta(Alert.AlertType.INFORMATION, "Relatório gerado", "Texto salvo em:\n" + destino.getAbsolutePath());
+            mostrarAlerta(Alert.AlertType.INFORMATION,"Envio do PIA","Confirmação salva.");
+        } catch(RuntimeException e) { erroBanco(e); }
     }
 
     private void carregarAbaFamilia() {
@@ -800,8 +636,8 @@ public class DetalhesAdolescenteController {
             cartao.getChildren().addAll(editar,remover); boxComposicao.getChildren().add(cartao);
         }
 
-        SituacaoSocial social = situacaoSocialDAO.buscarPorCpf(cpfAtual);
-        Saude saude = saudeDAO.buscarPorCpf(cpfAtual);
+        SituacaoSocial social = pode(SOCIAL_CONSULTAR)?situacaoSocialDAO.buscarPorCpf(cpfAtual):null;
+        Saude saude = pode(SAUDE_CONSULTAR)?saudeDAO.buscarPorCpf(cpfAtual):null;
         boolean temDados = social != null || saude != null;
 
         alternar(boxSocialVazio, !temDados);
@@ -853,6 +689,8 @@ public class DetalhesAdolescenteController {
 
     @FXML public void adicionarResponsavel() { formularioResponsavel(null); }
     private void formularioResponsavel(Responsavel existente) {
+        exigir(FAMILIA_ALTERAR);
+
         Dialog<ButtonType> dialogo = criarDialogo(existente==null?"Adicionar responsável":"Editar responsável");
 
         TextField txtNome = new TextField();
@@ -900,6 +738,8 @@ public class DetalhesAdolescenteController {
         });
 
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
+            try { dpNascimento.commitValue(); }
+            catch(java.time.DateTimeException invalida) { return "Informe uma data existente no formato DD/MM/AAAA."; }
             String nome = txtNome.getText().trim();
             if (nome.isEmpty() || nome.length() > 80) return "Informe o nome (até 80 caracteres).";
             String cpf = Formatadores.soDigitos(txtCpf.getText());
@@ -940,6 +780,8 @@ public class DetalhesAdolescenteController {
 
     @FXML public void adicionarFamiliar() { formularioFamiliar(null); }
     private void formularioFamiliar(ComposicaoFamiliar existente) {
+        exigir(FAMILIA_ALTERAR);
+
         Dialog<ButtonType> dialogo = criarDialogo(existente==null?"Adicionar familiar":"Editar familiar");
 
         TextField txtNome = new TextField();
@@ -947,6 +789,7 @@ public class DetalhesAdolescenteController {
         TextField txtIdade = new TextField();
         TextField txtRenda = new TextField();
         txtRenda.setPromptText("Ex.: 1500,00");
+        txtRenda.setDisable(!pode(SOCIAL_ALTERAR));
         TextField txtEscolaridade = new TextField();
         txtEscolaridade.setPromptText("Ex.: Ensino médio");
         TextField txtProfissao = new TextField();

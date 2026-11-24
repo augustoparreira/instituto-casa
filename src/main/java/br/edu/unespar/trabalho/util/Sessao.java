@@ -2,12 +2,12 @@ package br.edu.unespar.trabalho.util;
 
 import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
 import java.time.Duration;
-import java.util.function.BooleanSupplier;
+import br.edu.unespar.trabalho.dao.EquipeTecnicaDAO;
+import br.edu.unespar.trabalho.service.AuthServiceImpl;
 
 public class Sessao {
     private static EquipeTecnicaDTO usuarioLogado;
     private static long ultimaAtividade;
-    private static BooleanSupplier validarConta = () -> false;
     private static Duration limite = Duration.ofMinutes(Math.max(1, Long.getLong("casa.sessao.minutos", 15L)));
 
     public static synchronized EquipeTecnicaDTO getUsuarioLogado() {
@@ -15,20 +15,16 @@ public class Sessao {
         return usuarioLogado;
     }
 
-    public static synchronized void setUsuarioLogado(EquipeTecnicaDTO usuario) {
-        iniciar(usuario, () -> new br.edu.unespar.trabalho.dao.EquipeTecnicaDAO().sessaoValida(usuario));
-    }
-
-    public static synchronized void iniciar(EquipeTecnicaDTO usuario, BooleanSupplier validacao) {
-        if (validacao == null) throw new IllegalArgumentException("Validação da conta obrigatória.");
-        usuarioLogado = usuario;
-        validarConta = validacao;
+    public static synchronized EquipeTecnicaDTO entrar(String login, String senha) throws Exception {
+        limparSessao();
+        usuarioLogado = new AuthServiceImpl().autenticar(login, senha);
         ultimaAtividade = System.nanoTime();
+        return usuarioLogado;
     }
 
     public static synchronized boolean validarContaAtual() {
         if (getUsuarioLogado() == null) return false;
-        try { if (validarConta.getAsBoolean()) return true; }
+        try { if (new EquipeTecnicaDAO().sessaoValida(usuarioLogado)) return true; }
         catch (RuntimeException e) { /* Falha de conexão não mantém autorização antiga. */ }
         limparSessao();
         return false;
@@ -46,6 +42,5 @@ public class Sessao {
 
     public static synchronized void limparSessao() {
         usuarioLogado = null;
-        validarConta = () -> false;
     }
 }

@@ -44,7 +44,7 @@
                 <HBox spacing="12.0" alignment="CENTER_LEFT">
                     <Circle radius="18.0" styleClass="user-avatar" />
                     <VBox spacing="2.0">
-                        <Label fx:id="lblNomeUsuario" text="Gabriel Henrique" styleClass="user-name" />
+                        <Label fx:id="lblNomeUsuario" text="Usuário" styleClass="user-name" />
                         <Label fx:id="lblCargoUsuario" text="Administrador" styleClass="user-role" />
                     </VBox>
                 </HBox>
@@ -90,7 +90,8 @@
                     <HBox spacing="8" alignment="CENTER_RIGHT">
                         <Button text="Visualizar" onAction="#visualizarRelatorio"/>
                         <Button text="Salvar rascunho" onAction="#salvarAtualizacaoRelatorio" styleClass="btn-novo-evento"/>
-                        <Button text="Exportar" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
+                        <Button text="Imprimir / salvar PDF" onAction="#imprimirRelatorio" styleClass="btn-novo"/>
+                <Button text="Exportar" onAction="#exportarTexto" styleClass="btn-novo-evento"/>
                     </HBox>
                 </VBox>
             </HBox>

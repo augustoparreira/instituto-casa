@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.model.RelatorioItem;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import javafx.collections.FXCollections;
@@ -34,11 +33,14 @@ public class RelatorioDAO {
     }
 
     public ObservableList<RelatorioItem> getListaRelatorios() {
-        AutorizacaoService.exigir(RELATORIO_CONSULTAR);
+        exigir(RELATORIO_CONSULTAR);
+
         return listaRelatorios;
     }
 
     private void carregarDoBanco() {
+        exigir(RELATORIO_CONSULTAR);
+
         listaRelatorios.clear();
         String sql = "SELECT id_documento, tipo, data_geracao, status_envio FROM Documento ORDER BY data_geracao DESC";
 
@@ -60,7 +62,8 @@ public class RelatorioDAO {
     }
 
     public void adicionar(RelatorioItem item) {
-        AutorizacaoService.exigir(RELATORIO_ALTERAR);
+        exigir(RELATORIO_ALTERAR);
+
         String sql = "INSERT INTO Documento (id_documento, tipo, data_geracao, status_envio, cpf_adolescente) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -84,7 +87,8 @@ public class RelatorioDAO {
     }
 
     public void remover(RelatorioItem item) {
-        AutorizacaoService.exigir(RELATORIO_EXCLUIR);
+        exigir(RELATORIO_EXCLUIR);
+
         // Remove apenas da coleção; o documento permanece no banco.
         listaRelatorios.remove(item);
     }

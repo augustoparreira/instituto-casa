@@ -1,8 +1,6 @@
 package br.edu.unespar.trabalho.controller;
 
 import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
-import br.edu.unespar.trabalho.service.AuthService;
-import br.edu.unespar.trabalho.service.AuthServiceImpl;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.Sessao;
 import javafx.event.ActionEvent;
@@ -24,8 +22,6 @@ public class LoginController {
     @FXML private PasswordField txtSenha;
     @FXML private Button btnEntrar;
 
-    private AuthService authService = new AuthServiceImpl();
-
     @FXML
     public void fazerLogin(ActionEvent event) {
         String usuario = txtLogin.getText();
@@ -38,11 +34,9 @@ public class LoginController {
 
         try {
 
-            EquipeTecnicaDTO usuarioLogado = authService.autenticar(usuario, senha);
+            EquipeTecnicaDTO usuarioLogado = Sessao.entrar(usuario, senha);
 
             if (usuarioLogado != null) {
-
-                Sessao.setUsuarioLogado(usuarioLogado);
 
                 String destino = usuarioLogado.getPerfil() == br.edu.unespar.trabalho.model.NivelAcesso.EDUCADOR
                         ? "/View/FrequenciaView.fxml" : "/View/Dashboard.fxml";

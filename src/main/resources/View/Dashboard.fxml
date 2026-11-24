@@ -93,7 +93,7 @@
                     <VBox fx:id="cardPrazoGabriel" styleClass="alert-card" spacing="6.0" onMouseClicked="#clicarAdolescenteAlerta" style="-fx-cursor: hand;" visible="false" managed="false">
                         <HBox spacing="8.0" alignment="CENTER_LEFT">
                             <Label text="⚠" styleClass="alert-icon" />
-                            <Label text="Prazos próximos" styleClass="alert-title" />
+                            <Label text="Previsão do período de LA" styleClass="alert-title" />
                         </HBox>
                         <Label fx:id="lblNomeAlerta" text="..." styleClass="alert-name" />
                         <Label fx:id="lblDataAlerta" text="..." styleClass="alert-date" />

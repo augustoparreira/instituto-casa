@@ -40,4 +40,4 @@ SENHA_PROPRIA_ALTERAR.
 Não implementar outra matriz, `pode` ou `exigir` nos módulos. Não alterar lógica de PIA/PDF
 para integrar este contrato. Expiração e revalidação da conta serão adicionadas mantendo as assinaturas.
 
-Teste sem banco: executar `VerificacaoAutorizacao` com assertions habilitadas (`-ea`).
+`VerificacaoAutorizacao` verifica a recusa sem sessão com `-ea`. O cenário integrado com PostgreSQL verifica a matriz e o contexto sigiloso após login real dos três perfis.

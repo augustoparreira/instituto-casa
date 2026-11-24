@@ -26,7 +26,9 @@ O administrador gerencia as contas pelo menu **Equipe Técnica**. Desativação 
 os vínculos. A senha própria é alterada pelo menu lateral e requer novo login.
 `-Dcasa.sessao.minutos=15` configura o prazo de inatividade, com 15 minutos por padrão.
 
-O contrato de autorização permanece o da branch compartilhada. Nesta branch, o cadastro
-e o perfil completo mesclam dados comuns e sigilosos e ficam restritos ao Administrador.
-O Educador abre uma planilha reduzida e pode registrar presença e faltas, com justificativa
-quando exigida. Os demais acessos dependem da matriz provisória e da separação dos dados.
+O serviço central aplica a matriz de `CONTRATO_AUTORIZACAO.md`. O Administrador
+gerencia as contas e o cadastro completo. A Equipe Técnica consulta e edita os
+dados operacionais, com projeções específicas e preservação dos campos protegidos.
+Saúde, renda, PIA, relatórios e observações livres de cadastro e agenda ficam
+restritos ao Administrador até confirmação da ONG. O Educador entra diretamente
+na frequência para registrar presenças e faltas, com justificativa quando exigida.

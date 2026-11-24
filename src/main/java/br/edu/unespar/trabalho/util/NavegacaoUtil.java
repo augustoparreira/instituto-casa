@@ -30,7 +30,7 @@ public class NavegacaoUtil {
         Operacao op = switch(caminho) {
             case "/View/Dashboard.fxml" -> Operacao.PAINEL_CONSULTAR;
             case "/View/AdolescentesView.fxml" -> Operacao.ADOLESCENTE_CONSULTAR;
-            case "/View/CadastroAdolescenteView.fxml", "/View/DetalhesAdolescenteView.fxml" -> Operacao.SIGILOSO_CONSULTAR;
+            case "/View/CadastroAdolescenteView.fxml", "/View/DetalhesAdolescenteView.fxml" -> Operacao.ADOLESCENTE_CONSULTAR;
             case "/View/AgendaView.fxml" -> Operacao.AGENDA_CONSULTAR;
             case "/View/FrequenciaView.fxml", "/View/RegistroFrequenciaView.fxml" -> Operacao.FREQUENCIA_CONSULTAR;
             case "/View/RelatoriosView.fxml" -> Operacao.RELATORIO_CONSULTAR;

@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.model.PIA;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -13,8 +12,38 @@ import java.sql.*;
  */
 public class PIADAO {
 
+    public boolean consultarEnvio(long cpf) {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_CONSULTAR);
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT pia_enviado FROM Adolescente WHERE cpf_adolescente=?")) {
+            s.setLong(1,cpf);
+            try(ResultSet rs=s.executeQuery()) {
+                if(!rs.next()) throw new IllegalArgumentException("Adolescente não encontrado.");
+                return rs.getBoolean(1);
+            }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar o envio do PIA.",e); }
+    }
+
+    public void confirmarEnvio(long cpf, boolean enviado) {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.PIA_ALTERAR);
+        try(Connection c=ConnectionFactory.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                try(PreparedStatement s=c.prepareStatement("UPDATE Adolescente SET pia_enviado=? WHERE cpf_adolescente=?")) {
+                    s.setBoolean(1,enviado); s.setLong(2,cpf);
+                    if(s.executeUpdate()!=1) throw new IllegalArgumentException("Adolescente não encontrado.");
+                }
+                try(PreparedStatement s=c.prepareStatement("UPDATE PIA SET documento_enviado=? WHERE cpf_adolescente=?")) {
+                    s.setBoolean(1,enviado); s.setLong(2,cpf); s.executeUpdate();
+                }
+                c.commit();
+            } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível confirmar o envio do PIA.",e); }
+    }
+
     public boolean inserir(PIA pia) {
-        AutorizacaoService.exigir(PIA_ALTERAR);
+        exigir(PIA_ALTERAR);
+
         String sql = "INSERT INTO PIA (id_pia, data_elaboracao, diagnostico, vulnerabilidades, potencialidades, estrategias, documento_enviado, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -45,7 +74,8 @@ public class PIADAO {
     }
 
     public PIA buscarPorCpf(long cpfAdolescente) {
-        AutorizacaoService.exigir(PIA_CONSULTAR);
+        exigir(PIA_CONSULTAR);
+
         String sql = "SELECT p.*, a.pia_enviado AS envio_confirmado FROM PIA p "
                 + "JOIN Adolescente a ON a.cpf_adolescente=p.cpf_adolescente WHERE p.cpf_adolescente = ?";
 
@@ -75,7 +105,8 @@ public class PIADAO {
     }
 
     public boolean atualizar(PIA pia) {
-        AutorizacaoService.exigir(PIA_ALTERAR);
+        exigir(PIA_ALTERAR);
+
         String sql = "UPDATE PIA SET diagnostico = ?, vulnerabilidades = ?, potencialidades = ?, estrategias = ?, documento_enviado = ? WHERE id_pia = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -113,7 +144,8 @@ public class PIADAO {
     }
 
     public boolean excluir(int idPia) {
-        AutorizacaoService.exigir(PIA_ALTERAR);
+        exigir(PIA_ALTERAR);
+
         String sql = "DELETE FROM PIA WHERE id_pia = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();

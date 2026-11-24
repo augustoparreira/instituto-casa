@@ -33,17 +33,19 @@ final class VerificacaoContas {
         rejeitar(() -> dao.criarPrimeiroAdministrador(admin), IllegalStateException.class);
         try (var c = ConnectionFactory.getConnection(); var s = c.createStatement()) {
             s.execute("INSERT INTO EquipeTecnica SELECT * FROM conta_legada_teste");
+            s.execute("INSERT INTO Acompanhamento(cpf_adolescente,cpf_equipe,tecnico_referencia) VALUES(10000000001,77777777770,true)");
         }
         assert auth.autenticar("agenda_teste", "senha fictícia") == null;
         assert dao.migrarSenhasLegadas() == 1;
         assert dao.migrarSenhasLegadas() == 0;
-        assert auth.autenticar("agenda_teste", "senha fictícia") != null;
+        entrar("agenda_teste", "senha fictícia");
+        VerificacaoAutorizacao.verificarPerfil(NivelAcesso.EQUIPE_TECNICA);
+        assert new PerfilAdolescenteDAO().buscarCpfTecnicoReferencia(10000000001L) == 77777777770L;
         assert auth.autenticar(admin.getLogin(), "incorreta") == null;
         var sessaoAdmin = auth.autenticar(" ADMIN-TESTE ", SENHA);
         assert sessaoAdmin != null && sessaoAdmin.getNomeCompleto().equals(admin.getNomeCompleto());
-        Sessao.iniciar(sessaoAdmin, () -> dao.sessaoValida(sessaoAdmin));
-        for (Operacao op : Operacao.values())
-            assert AutorizacaoService.pode(op,new ContextoAcesso(1L,1,null,true));
+        entrar(admin.getLogin(), SENHA);
+        VerificacaoAutorizacao.verificarPerfil(NivelAcesso.ADMINISTRADOR);
         rejeitar(() -> dao.definirAtivo(admin.getCpf(),false), IllegalArgumentException.class);
         admin.setNivelAcesso(NivelAcesso.EDUCADOR);
         rejeitar(() -> dao.atualizar(admin), IllegalArgumentException.class);
@@ -65,8 +67,8 @@ final class VerificacaoContas {
         assert dao.definirAtivo(educador.getCpf(),true);
         dao.redefinirSenha(educador.getCpf(),NOVA);
         assert auth.autenticar(educador.getLogin(),SENHA) == null;
-        var sessaoNova = auth.autenticar(educador.getLogin(),NOVA);
-        Sessao.iniciar(sessaoNova, () -> dao.sessaoValida(sessaoNova));
+        entrar(educador.getLogin(), NOVA);
+        VerificacaoAutorizacao.verificarPerfil(NivelAcesso.EDUCADOR);
         assert !new FrequenciaMensalDAO().listar(YearMonth.of(2024,1)).isEmpty();
         rejeitar(dao::listar,AcessoNegadoException.class);
         rejeitar(() -> new SaudeDAO().buscarPorCpf(10000000001L),AcessoNegadoException.class);
@@ -85,15 +87,20 @@ final class VerificacaoContas {
         assert !Sessao.validarContaAtual() && Sessao.getUsuarioLogado() == null;
         assert auth.autenticar(educador.getLogin(),SENHA) != null;
         Sessao.configurarInatividade(Duration.ofNanos(1));
-        Sessao.iniciar(sessaoAdmin, () -> dao.sessaoValida(sessaoAdmin));
+        entrar(admin.getLogin(), SENHA);
         assert !AutorizacaoService.pode(Operacao.PAINEL_CONSULTAR);
         Sessao.configurarInatividade(Duration.ofMinutes(15));
-        Sessao.iniciar(sessaoAdmin, () -> dao.sessaoValida(sessaoAdmin));
+        entrar(admin.getLogin(), SENHA);
         assert new FrequenciaDAO().excluir(frequencia);
         System.out.println("OK: migração, contas, senhas, sessões e acesso por perfil.");
     }
 
-    private static EquipeTecnica conta(long cpf,String login,NivelAcesso perfil) {
+    static void entrar(String login, String senha) throws Exception {
+        var usuario = Sessao.entrar(login, senha);
+        if (usuario == null) throw new AssertionError("Falha no login da conta fictícia.");
+    }
+
+    static EquipeTecnica conta(long cpf,String login,NivelAcesso perfil) {
         var membro = new EquipeTecnica();
         membro.setCpf(cpf); membro.setLogin(login); membro.setSenha(SENHA);
         membro.setNomeCompleto("Profissional fictício"); membro.setCargoFuncao("Teste");

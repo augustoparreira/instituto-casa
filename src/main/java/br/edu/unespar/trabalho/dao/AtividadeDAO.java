@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.model.Atividade;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
@@ -17,7 +16,8 @@ import java.util.List;
 public class AtividadeDAO {
 
     public boolean inserir(Atividade a) {
-        AutorizacaoService.exigir(ATIVIDADE_GERENCIAR);
+        exigir(ATIVIDADE_GERENCIAR);
+
         if(a.getNomeAtividade()==null || a.getNomeAtividade().isBlank() || a.getNomeAtividade().length()>25 || a.getCargaHoraria()<1 || a.getCargaHoraria()>24)
             throw new IllegalArgumentException("Confira o nome da atividade e a carga horária (1 a 24).");
         try(Connection c=ConnectionFactory.getConnection()) {
@@ -30,7 +30,8 @@ public class AtividadeDAO {
     }
 
     public List<Atividade> listar() {
-        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
+        exigir(FREQUENCIA_CONSULTAR);
+
         List<Atividade> lista = new ArrayList<>();
         String sql = "SELECT id_atividade, nome_atividade, tipo, carga_horaria FROM Atividade ORDER BY nome_atividade";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -44,7 +45,8 @@ public class AtividadeDAO {
     }
 
     public Atividade buscarPorId(int idAtividade) {
-        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
+        exigir(FREQUENCIA_CONSULTAR);
+
         String sql = "SELECT id_atividade, nome_atividade, tipo, carga_horaria FROM Atividade WHERE id_atividade = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -59,7 +61,8 @@ public class AtividadeDAO {
     }
 
     public boolean atualizar(Atividade a) {
-        AutorizacaoService.exigir(ATIVIDADE_GERENCIAR);
+        exigir(ATIVIDADE_GERENCIAR);
+
         String sql = "UPDATE Atividade SET nome_atividade = ?, tipo = ?, carga_horaria = ? WHERE id_atividade = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -77,7 +80,8 @@ public class AtividadeDAO {
 
     // Falha (retorna false) se já existir frequência registrada para a atividade (FK).
     public boolean excluir(int idAtividade) {
-        AutorizacaoService.exigir(ATIVIDADE_GERENCIAR);
+        exigir(ATIVIDADE_GERENCIAR);
+
         String sql = "DELETE FROM Atividade WHERE id_atividade = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

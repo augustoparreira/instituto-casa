@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -54,7 +53,7 @@ public class AdolescentesController {
 
     @FXML
     public void initialize() {
-        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
+        exigir(ADOLESCENTE_CONSULTAR);
         adolescenteDAO = new AdolescenteDAO();
 
         listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());
@@ -167,6 +166,8 @@ public class AdolescentesController {
 
     @FXML
     public void clicarAdolescente(MouseEvent event) {
+        exigir(ADOLESCENTE_CONSULTAR);
+
         AdolescenteDTO selecionado = listAdolescentes.getSelectionModel().getSelectedItem();
         if (selecionado != null) {
             try {
@@ -193,6 +194,12 @@ public class AdolescentesController {
     @FXML public void irParaEquipeTecnica(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
     @FXML
     public void abrirTelaCadastro(ActionEvent event) {
+        try { exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         NavegacaoUtil.mudarTela(event, "/View/CadastroAdolescenteView.fxml", "Novo Cadastro");
     }
 }

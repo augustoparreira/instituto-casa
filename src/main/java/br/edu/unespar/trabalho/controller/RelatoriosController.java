@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
@@ -49,7 +48,11 @@ public class RelatoriosController {
     private static final String DESCUMPRIMENTO="2. DESCUMPRIMENTO DA MEDIDA E CONTATO COM A FAMÍLIA E ACORDO FIRMADO";
 
     @FXML public void initialize() {
-        AutorizacaoService.exigir(RELATORIO_CONSULTAR);
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpCompetencia);
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpEmissao);
+
+        exigir(RELATORIO_CONSULTAR);
+
         var usuario=Sessao.getUsuarioLogado();
         lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getNomeCompleto());
         lblCargoUsuario.setText(usuario==null?"":usuario.getCargoFuncao());
@@ -103,6 +106,12 @@ public class RelatoriosController {
         carregando=false;
     }
     @FXML public void gerarNovoRelatorio() {
+        try { exigir(RELATORIO_ALTERAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try {
             dpCompetencia.commitValue();
             if(cmbAdolescente.getValue()==null || dpCompetencia.getValue()==null) throw new IllegalArgumentException("Selecione o adolescente e a competência para preparar o relatório.");
@@ -154,10 +163,22 @@ public class RelatoriosController {
         r.setRegistroFrequencia(txtRegistroFrequencia.getText()); r.setDescumprimento(txtDescumprimento.getText()); r.validar(); return r;
     }
     @FXML public void salvarAtualizacaoRelatorio() {
+        try { exigir(RELATORIO_ALTERAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try { RelatorioAcompanhamento r=lerFormulario(); dao.salvar(r); exibir(r); atualizarLista(); lblMensagem.setText("Rascunho salvo no banco."); }
         catch(RuntimeException e) { erro(e); }
     }
     @FXML public void excluirRelatorio() {
+        try { exigir(RELATORIO_EXCLUIR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         if(documento==null || documento.getIdRelatorio()==0) { lblMensagem.setText("Abra um relatório salvo para excluir."); return; }
         if(!confirmar("Excluir este relatório salvo?")) return;
         try {
@@ -167,7 +188,12 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     @FXML public void exportarTexto() {
-        AutorizacaoService.exigir(RELATORIO_EXPORTAR);
+        try { exigir(RELATORIO_EXPORTAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try {
             RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r);
             FileChooser escolha=new FileChooser(); escolha.setTitle("Salvar relatório de acompanhamento");
@@ -178,11 +204,13 @@ public class RelatoriosController {
         } catch(Exception e) { lblMensagem.setText(e.getMessage()); }
     }
     public void exportarPara(Path destino) throws java.io.IOException {
-        AutorizacaoService.exigir(RELATORIO_EXPORTAR);
+        exigir(RELATORIO_EXPORTAR);
+
         RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r); salvarTexto(r,destino);
     }
     private void salvarTexto(RelatorioAcompanhamento r,Path destino) throws java.io.IOException {
-        AutorizacaoService.exigir(RELATORIO_EXPORTAR);
+        exigir(RELATORIO_EXPORTAR);
+
         try(FileWriter arquivo=new FileWriter(destino.toFile(),StandardCharsets.UTF_8)) {
             for(String linha:new String[]{INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,"",TITULO,
                     r.getCompetencia().format(DateTimeFormatter.ofPattern("MM/yyyy")),"","Identificação:"})
@@ -193,31 +221,59 @@ public class RelatoriosController {
             arquivo.write(System.lineSeparator()+"Apucarana, "+r.getDataEmissao().format(DATA)+System.lineSeparator());
         }
     }
+    @FXML public void imprimirRelatorio() {
+        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.RELATORIO_EXPORTAR);
+        try {
+            RelatorioAcompanhamento r=lerFormulario();
+            validarExportacao(r);
+            br.edu.unespar.trabalho.util.ImpressaoRelatorio.imprimir(gridIdentificacao.getScene().getWindow(),conteudoRelatorio(r));
+        } catch(RuntimeException e) { erro(e); }
+    }
+
+    private List<String> conteudoRelatorio(RelatorioAcompanhamento r) {
+        List<String> blocos=new java.util.ArrayList<>();
+        blocos.addAll(List.of(INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,TITULO,
+                r.getCompetencia().format(DateTimeFormatter.ofPattern("MM/yyyy")),"Identificação"));
+        for(Campo campo:Campo.values()) blocos.add(campo.getRotulo()+": "+r.getCampo(campo));
+        blocos.addAll(List.of(FREQUENCIA,r.getRegistroFrequencia(),DESCUMPRIMENTO,r.getDescumprimento(),
+                "Apucarana, "+r.getDataEmissao().format(DATA)));
+        return blocos;
+    }
+
     private void validarExportacao(RelatorioAcompanhamento r) {
         if(r.getCampo(Campo.PROCESSO).isBlank() || r.getRegistroFrequencia().isBlank() || r.getDescumprimento().isBlank())
             throw new IllegalArgumentException("Para exportar o relatório, informe o número do processo e revise as duas seções do relatório. Se não houve descumprimento, registre isso explicitamente.");
     }
     @FXML public void visualizarRelatorio() {
-        AutorizacaoService.exigir(RELATORIO_CONSULTAR);
+        try { exigir(RELATORIO_CONSULTAR); }
+        catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
+            return;
+        }
+
         try {
-            RelatorioAcompanhamento r=lerFormulario(); VBox pagina=new VBox(12); pagina.setStyle("-fx-background-color: white; -fx-padding: 35; -fx-text-fill: black;");
-            for(String texto:new String[]{INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,TITULO,r.getCompetencia().toString(),"Identificação:"}) {
-                Label l=new Label(texto); l.setWrapText(true); l.setMaxWidth(Double.MAX_VALUE); l.setStyle("-fx-text-fill: black; -fx-font-weight: bold;"); pagina.getChildren().add(l);
+            RelatorioAcompanhamento r=lerFormulario();
+            VBox paginas=new VBox(16);
+            paginas.setStyle("-fx-background-color: #dddddd; -fx-padding: 16;");
+            // A4 em pontos com as mesmas margens de 36 pontos usadas na impressão.
+            double largura=javafx.print.Paper.A4.getWidth()-72;
+            double altura=javafx.print.Paper.A4.getHeight()-72;
+            for(VBox folha:br.edu.unespar.trabalho.util.ImpressaoRelatorio.prepararPaginas(conteudoRelatorio(r),largura,altura)) {
+                VBox papel=new VBox(folha);
+                papel.setStyle("-fx-background-color: white; -fx-padding: 36;");
+                papel.setMinSize(largura+72,altura+72);
+                papel.setPrefSize(largura+72,altura+72);
+                papel.setMaxWidth(largura+72);
+                paginas.getChildren().add(papel);
             }
-            for(Campo campo:Campo.values()) { Label l=new Label(campo.getRotulo()+": "+r.getCampo(campo)); l.setWrapText(true); l.setStyle("-fx-text-fill: black;"); pagina.getChildren().add(l); }
-            for(String[] secao:new String[][]{{FREQUENCIA,r.getRegistroFrequencia()},{DESCUMPRIMENTO,r.getDescumprimento()}}) {
-                Label titulo=new Label(secao[0]), corpo=new Label(secao[1]); titulo.setWrapText(true); corpo.setWrapText(true);
-                titulo.setStyle("-fx-text-fill: black; -fx-font-weight: bold;"); corpo.setStyle("-fx-text-fill: black; -fx-border-color: black; -fx-padding: 10;"); corpo.setMinHeight(90); corpo.setMaxWidth(Double.MAX_VALUE);
-                pagina.getChildren().addAll(titulo,corpo);
-            }
-            Label data=new Label("Apucarana, "+r.getDataEmissao().format(DATA)); data.setStyle("-fx-text-fill: black;"); pagina.getChildren().add(data);
-            ScrollPane scroll=new ScrollPane(pagina); scroll.setFitToWidth(true); scroll.setPrefViewportWidth(620); scroll.setPrefViewportHeight(600);
+            ScrollPane scroll=new ScrollPane(paginas); scroll.setPrefViewportWidth(650); scroll.setPrefViewportHeight(600);
             Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle("Prévia do conteúdo do relatório"); dialogo.getDialogPane().setContent(scroll);
             dialogo.getDialogPane().getButtonTypes().add(ButtonType.CLOSE); dialogo.setResizable(true); dialogo.showAndWait();
         } catch(RuntimeException e) { erro(e); }
     }
     private boolean confirmar(String texto) { return new Alert(Alert.AlertType.CONFIRMATION,texto,ButtonType.YES,ButtonType.NO).showAndWait().orElse(ButtonType.NO)==ButtonType.YES; }
-    private void erro(RuntimeException e) { lblMensagem.setText(e.getMessage()); if(!(e instanceof IllegalArgumentException)) e.printStackTrace(); }
+    private void erro(RuntimeException e) { lblMensagem.setText(e instanceof java.time.DateTimeException
+            ? "Informe datas existentes no formato DD/MM/AAAA." : e.getMessage()); if(!(e instanceof IllegalArgumentException) && !(e instanceof java.time.DateTimeException)) e.printStackTrace(); }
     @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/Dashboard.fxml","Painel de Controle"); }
     @FXML public void irParaAdolescentes(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AdolescentesView.fxml","Adolescentes"); }
     @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AgendaView.fxml","Agenda institucional"); }

@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.controller;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.dao.FrequenciaMensalDAO;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -30,7 +29,10 @@ public class FrequenciaController {
     private YearMonth mes=YearMonth.now();
 
     @FXML public void initialize() {
-        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
+        br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpCompetencia);
+
+
+        exigir(FREQUENCIA_CONSULTAR);
         dpCompetencia.setValue(mes.atDay(1));
         tabela.setPlaceholder(new Label("Nenhum adolescente encontrado."));
         txtPesquisa.textProperty().addListener((o,a,b)->filtrar());
@@ -44,6 +46,8 @@ public class FrequenciaController {
             if(dpCompetencia.getValue()==null) throw new IllegalArgumentException("Informe o mês de referência.");
             mes=YearMonth.from(dpCompetencia.getValue());
             carregarMes();
+        } catch(java.time.DateTimeException e) {
+            new Alert(Alert.AlertType.WARNING,"Informe uma data existente no formato DD/MM/AAAA para consultar o mês.").showAndWait();
         } catch(RuntimeException e) { e.printStackTrace(); new Alert(Alert.AlertType.ERROR,"Não foi possível carregar a frequência. "+e.getMessage()).showAndWait(); }
     }
 
@@ -104,20 +108,20 @@ public class FrequenciaController {
                     if(!vazio) {
                         setStyle("-fx-alignment:center; -fx-background-color:"+(item.contains("A")?"#f9dfdf":item.contains("J")?"#fff1cf":item.contains("P")?"#e2f1e8":"#fafaf7")+";");
                         var linha=getTableRow()==null?null:getTableRow().getItem();
-                        String detalhes=linha==null?"":linha.getRegistrosDia(dia).stream().map(f->f+" · "+f.getObservacoes()).collect(java.util.stream.Collectors.joining("\n"));
+                        String detalhes=linha==null?"":linha.getRegistrosDia(dia).stream().map(f -> f + (f.getObservacoes()==null || f.getObservacoes().isBlank() ? "" : " · "+f.getObservacoes())).collect(java.util.stream.Collectors.joining("\n"));
                         setTooltip(new Tooltip(mes.atDay(dia)+"\n"+detalhes+"\nDuplo clique para registrar ou corrigir."));
                     }
                 }
             });
         }
-        if (!AutorizacaoService.pode(MEDIDA_CONSULTAR)) return;
+        if (!pode(MEDIDA_CONSULTAR)) return;
         coluna("MSE",95,FrequenciaMensalDTO::getMse); coluna("Meses LA",95,FrequenciaMensalDTO::getMeses);
         coluna("Horas PSC",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPrevistas()));
         coluna("Cumpridas",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasCumpridas()));
         coluna("Pendentes",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPendentes()));
-        coluna("IMM",70,l->l.getAdolescente().isImm()?"Sim":"Não");
-        coluna("Vale-transporte",110,l->l.getAdolescente().isValeTransporte()?"Sim":"Não");
-        coluna("PIA enviado",95,l->l.isPiaEnviado()?"Sim":"Não");
+        if(pode(ADOLESCENTE_CONSULTAR)) coluna("IMM",70,l->l.getAdolescente().isImm()?"Sim":"Não");
+        if(pode(ADOLESCENTE_CONSULTAR)) coluna("Vale-transporte",110,l->l.getAdolescente().isValeTransporte()?"Sim":"Não");
+        if(pode(PIA_CONSULTAR)) coluna("PIA enviado",95,l->l.isPiaEnviado()?"Sim":"Não");
     }
 
     private TableColumn<FrequenciaMensalDTO,String> coluna(String titulo,int largura,Function<FrequenciaMensalDTO,String> valor) {

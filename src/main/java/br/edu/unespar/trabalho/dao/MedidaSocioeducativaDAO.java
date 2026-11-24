@@ -1,8 +1,7 @@
 package br.edu.unespar.trabalho.dao;
 
-import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
-
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
@@ -16,15 +15,15 @@ import java.util.List;
  */
 public class MedidaSocioeducativaDAO {
     public boolean inserir(MedidaSocioeducativa m) {
-        AutorizacaoService.exigir(MEDIDA_CADASTRAR); return salvar(m,false); }
+        exigir(MEDIDA_CADASTRAR); return salvar(m,false); }
     public boolean atualizar(MedidaSocioeducativa m) {
-        AutorizacaoService.exigir(MEDIDA_EDITAR); return salvar(m,true); }
+        exigir(MEDIDA_EDITAR); return salvar(m,true); }
 
     private boolean salvar(MedidaSocioeducativa m,boolean edicao) {
-        if (m.getDataFim() != null) AutorizacaoService.exigir(MEDIDA_ENCERRAR);
-        boolean podeAlterarHistorico = AutorizacaoService.pode(SIGILOSO_ALTERAR);
+        if (m.getDataFim() != null) exigir(MEDIDA_ENCERRAR);
+        boolean podeAlterarHistorico = pode(SIGILOSO_ALTERAR);
         if (!podeAlterarHistorico && m.getHistoricoInfracional() != null
-                && !m.getHistoricoInfracional().isBlank()) AutorizacaoService.exigir(SIGILOSO_ALTERAR);
+                && !m.getHistoricoInfracional().isBlank()) exigir(SIGILOSO_ALTERAR);
         m.validar();
         if(m.getDataFim()!=null && m.getDataFim().isAfter(LocalDate.now()))
             throw new IllegalArgumentException("O encerramento deve ser uma data já ocorrida.");
@@ -43,6 +42,14 @@ public class MedidaSocioeducativaDAO {
                     try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Já há uma medida desse tipo neste período. Edite ou encerre a anterior antes de cadastrar outra."); }
                 }
                 if(edicao) {
+                    try(PreparedStatement s=c.prepareStatement("SELECT data_fim FROM MedidaSocioeducativa WHERE id_medida=? AND cpf_adolescente=?")) {
+                        s.setInt(1,m.getIdMedida()); s.setLong(2,m.getCpfAdolescente());
+                        try(ResultSet rs=s.executeQuery()) {
+                            if(rs.next() && !java.util.Objects.equals(rs.getObject(1,LocalDate.class),m.getDataFim()))
+                                exigir(MEDIDA_ENCERRAR);
+                        }
+                    }
+
                     try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM Frequencia WHERE id_medida=? AND (data_presenca<? OR data_presenca>COALESCE(?::date,'infinity'::date))")) {
                         s.setInt(1,m.getIdMedida()); s.setObject(2,m.getDataInicio()); s.setObject(3,m.getDataFim());
                         try(ResultSet r=s.executeQuery()) { if(r.next()) throw new IllegalArgumentException("Há frequências fora do período informado. Corrija os lançamentos antes de mudar as datas."); }
@@ -69,9 +76,10 @@ public class MedidaSocioeducativaDAO {
     }
 
     public List<MedidaSocioeducativa> listarPorAdolescente(long cpf) {
-        AutorizacaoService.exigir(MEDIDA_CONSULTAR);
+        exigir(MEDIDA_CONSULTAR);
+
         List<MedidaSocioeducativa> lista=new ArrayList<>();
-        String historico = AutorizacaoService.pode(SIGILOSO_CONSULTAR) ? "historico_infracional" : "NULL AS historico_infracional";
+        String historico = pode(SIGILOSO_CONSULTAR) ? "historico_infracional" : "NULL AS historico_infracional";
         String sql = "SELECT id_medida,cpf_adolescente,tipo_medida,data_inicio,data_fim,reincidencia,duracao_meses,duracao_horas,"
                 + historico + " FROM MedidaSocioeducativa WHERE (?=0 OR cpf_adolescente=?) ORDER BY data_inicio DESC,id_medida DESC";
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
@@ -87,8 +95,26 @@ public class MedidaSocioeducativaDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar as medidas.",e); }
     }
 
+    public List<MedidaSocioeducativa> listarParaFrequencia(long cpf) {
+        exigir(FREQUENCIA_CONSULTAR);
+        exigir(MEDIDA_CONSULTAR);
+        List<MedidaSocioeducativa> lista=new ArrayList<>();
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "SELECT id_medida,cpf_adolescente,tipo_medida,data_inicio,data_fim,duracao_meses,duracao_horas FROM MedidaSocioeducativa WHERE (?=0 OR cpf_adolescente=?) ORDER BY data_inicio,id_medida")) {
+            s.setLong(1,cpf); s.setLong(2,cpf);
+            try(ResultSet rs=s.executeQuery()) { while(rs.next()) {
+                MedidaSocioeducativa m=new MedidaSocioeducativa();
+                m.setIdMedida(rs.getInt(1)); m.setCpfAdolescente(rs.getLong(2)); m.setTipoMedida(TipoMedida.fromCodigo(rs.getString(3)));
+                m.setDataInicio(rs.getDate(4).toLocalDate()); Date fim=rs.getDate(5); m.setDataFim(fim==null?null:fim.toLocalDate());
+                m.setDuracaoMeses((Integer)rs.getObject(6)); m.setDuracaoHoras((Integer)rs.getObject(7)); lista.add(m);
+            }}
+            return lista;
+        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar medidas da frequência.",e); }
+    }
+
     public int consultarHorasDaMedida(int id,LocalDate ate) {
-        AutorizacaoService.exigir(MEDIDA_CONSULTAR);
+        exigir(MEDIDA_CONSULTAR);
+
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE id_medida=? AND upper(status_presenca)='PRESENTE' AND data_presenca<=?")) {
             s.setInt(1,id); s.setObject(2,ate);
             try(ResultSet r=s.executeQuery()) { r.next(); return r.getInt(1); }
@@ -97,7 +123,8 @@ public class MedidaSocioeducativaDAO {
 
     /** Compatibilidade com consultas antigas: soma apenas PSC vigentes, vinculadas por ID. */
     public int consultarHorasCumpridas(long cpf) {
-        AutorizacaoService.exigir(MEDIDA_CONSULTAR);
+        exigir(MEDIDA_CONSULTAR);
+
         return listarPorAdolescente(cpf).stream().filter(m->m.isPSC() && m.vigenteEm(LocalDate.now()))
                 .mapToInt(m->consultarHorasDaMedida(m.getIdMedida(),LocalDate.now())).sum();
     }

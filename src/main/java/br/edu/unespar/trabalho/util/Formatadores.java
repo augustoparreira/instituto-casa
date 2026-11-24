@@ -42,7 +42,7 @@ public class Formatadores {
             t = t.replace(".", "").replace(",", ".");
         }
         double v = Double.parseDouble(t);
-        if (v < 0) {
+        if (!Double.isFinite(v) || v < 0) {
             throw new NumberFormatException("valor negativo");
         }
         return v;

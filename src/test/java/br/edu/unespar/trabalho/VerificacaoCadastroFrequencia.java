@@ -105,7 +105,14 @@ public class VerificacaoCadastroFrequencia {
                 saude.setUbsReferencia("UBS Centro"); saude.setUsoSpa(true); saude.setSubstanciasUtilizadas("Dado fictício");
                 EducacaoTrabalho estudo=new EducacaoTrabalho(); estudo.setEstuda(true); estudo.setEscola("Escola de teste"); estudo.setSerie("2º ano");
                 a.setMedidaProtetiva(true);
+                a.setStatus(StatusAdolescente.INATIVO);
                 adao.salvarCadastro(a,social,saude,estudo,false);
+                verifica(adao.buscarPorCpf(CPF).getStatus()==StatusAdolescente.ATIVO,
+                        "inclusão do administrador grava Ativo mesmo quando recebe outro status");
+                adao.salvarCadastro(a,social,saude,estudo,true);
+                verifica(adao.buscarPorCpf(CPF).getStatus()==StatusAdolescente.INATIVO,
+                        "administrador pode alterar a situação após a inclusão");
+                a.setStatus(StatusAdolescente.ATIVO);
                 verifica(adao.buscarPorCpf(CPF).isMedidaProtetiva(),"cadastro persiste medida protetiva Sim");
                 verifica(adao.buscarPorCpf(CPF).getNomeCompleto().equals(a.getNomeCompleto()),"cadastro persiste e relê identificação");
                 verifica(new SituacaoSocialDAO().buscarPorCpf(CPF).getNumeroNis()==12345678901L,"NIS de 11 dígitos e CRAS textual");
@@ -123,6 +130,9 @@ public class VerificacaoCadastroFrequencia {
                 rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(a,incompleta,saude,estudo,true),"endereço obrigatório");
                 incompleta.setEndereco("Rua fictícia"); incompleta.setBairro("");
                 rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(a,incompleta,saude,estudo,true),"bairro obrigatório");
+                SituacaoSocial semRenda=new SituacaoSocial();
+                semRenda.setEndereco(social.getEndereco()); semRenda.setBairro(social.getBairro());
+                rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(a,semRenda,saude,estudo,true),"renda ausente não é persistida como zero");
                 String telefone=a.getContato(); a.setContato(" ");
                 rejeita(IllegalArgumentException.class,()->adao.salvarCadastro(a,social,saude,estudo,true),"telefone obrigatório");
                 a.setContato(telefone);
@@ -486,7 +496,8 @@ public class VerificacaoCadastroFrequencia {
                     }
                     if(controller instanceof CadastroAdolescenteController cadastro) {
                         verifica(((TextField)root.lookup("#txtCras")).getText().equals("CRAS Centro"),"FXML de edição carrega CRAS textual");
-                        verifica(((TextField)root.lookup("#txtCpf")).isDisabled(),"edição protege a chave CPF");
+                        verifica(root.lookup("#txtCpf").isDisabled() && ((Label)root.lookup("#lblCpf")).getText().equals("CPF"),
+                                "CPF fica protegido e sem asterisco na edição");
                         ComboBox<String> protetiva=(ComboBox<String>)root.lookup("#cmbMedidaProtetiva");
                         verifica("Não".equals(protetiva.getValue()) && protetiva.getItems().equals(List.of("Não","Sim")),"tela carrega medida protetiva e oferece Sim/Não");
                         protetiva.setValue("Sim");
@@ -739,8 +750,21 @@ public class VerificacaoCadastroFrequencia {
             ((Button)lista.lookup("#btnNovoAdolescente")).fire();
             Parent cadastro = janela.getScene().getRoot();
             cadastro.applyCss(); cadastro.layout();
-            verifica(cadastro!=lista && cadastro.lookup("#cmbStatus").isDisabled()
-                    && cadastro.lookup("#txtEndereco").isDisabled(),"novo cadastro técnico abre com situação e endereço social protegidos");
+            var protegida = (Parent)cadastro.lookup("#secaoProtegida");
+            verifica(cadastro!=lista && protegida!=null && !protegida.isVisible() && !protegida.isManaged()
+                    && protegida.isDisabled() && cadastro.lookup("#lblAvisoOperacional").isVisible(),
+                    "cadastro técnico oculta fichas protegidas e explica o fluxo operacional");
+            verifica(!cadastro.lookup("#cmbStatus").isVisible() && ((Label)cadastro.lookup("#lblSituacao")).getText().equals("Ativo"),
+                    "tela técnica apresenta situação inicial fixa");
+            var obrigatorios = cadastro.lookupAll(".form-label-mini").stream().filter(Label.class::isInstance)
+                    .map(Label.class::cast).filter(l -> l.getText().endsWith("*"))
+                    .filter(l -> {
+                        for (javafx.scene.Node no=l; no!=null; no=no.getParent())
+                            if (!no.isVisible()) return false;
+                        return true;
+                    }).map(Label::getText).collect(java.util.stream.Collectors.toSet());
+            verifica(obrigatorios.equals(Set.of("NOME COMPLETO *","CPF *","DATA DE NASCIMENTO *","TELEFONE/CONTATO *")),
+                    "cadastro técnico marca apenas os quatro campos básicos exigidos");
             ((TextField)cadastro.lookup("#txtCpf")).setText("12345678950");
             ((TextField)cadastro.lookup("#txtNome")).setText("Cadastro técnico pela interface");
             ((TextField)cadastro.lookup("#txtContato")).setText("43999995555");
@@ -749,7 +773,13 @@ public class VerificacaoCadastroFrequencia {
             ((Button)cadastro.lookupAll(".button").stream()
                     .filter(n -> n instanceof Button b && "Salvar cadastro".equalsIgnoreCase(b.getText()))
                     .findFirst().orElseThrow()).fire();
-            verifica(new AdolescenteDAO().buscarPorCpf(12345678950L)!=null,"cadastro técnico pela interface persiste sem ficha social");
+            verifica(new AdolescenteDAO().buscarPorCpf(12345678950L).getStatus()==StatusAdolescente.ATIVO,
+                    "cadastro técnico pela interface grava adolescente ativo");
+            VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
+            verifica(new SituacaoSocialDAO().buscarPorCpf(12345678950L)==null
+                    && new SaudeDAO().buscarPorCpf(12345678950L)==null,
+                    "cadastro pela tela técnica não inventa fichas sociais nem de saúde");
+            VerificacaoContas.entrar("agenda_teste", "senha fictícia");
 
             FXMLLoader detalhes = new FXMLLoader(VerificacaoCadastroFrequencia.class.getResource("/View/DetalhesAdolescenteView.fxml"));
             Parent perfil = detalhes.load(); janela.getScene().setRoot(perfil);

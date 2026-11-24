@@ -41,7 +41,8 @@ public class CadastroAdolescenteController {
     @FXML private ComboBox<String> cmbCorRaca;
     @FXML private TextField txtBairro;
 
-    @FXML private Label lblTitulo, lblIdade, lblAvisoIdade;
+    @FXML private Label lblTitulo, lblIdade, lblAvisoIdade, lblCpf, lblSituacao, lblAvisoOperacional;
+    @FXML private Parent secaoProtegida, linhaEstudo, camposTrabalho, camposSpa;
     @FXML private ComboBox<String> cmbMedidaProtetiva;
     @FXML private TextField txtEndereco, txtRenda, txtBeneficios, txtNis, txtCras;
     @FXML private TextField txtUbs, txtSpa, txtEscola, txtSerie, txtLocalTrabalho, txtFuncao, txtVinculo;
@@ -57,19 +58,24 @@ public class CadastroAdolescenteController {
     @FXML
     public void initialize() {
         exigir(ADOLESCENTE_CONSULTAR);
-        if(!pode(SOCIAL_ALTERAR)) for(var campo:java.util.List.of(txtEndereco,txtBairro,txtRenda,txtBeneficios,txtNis,txtCras)) campo.setDisable(true);
-        if(!pode(SAUDE_ALTERAR)) { txtUbs.setDisable(true); txtSpa.setDisable(true); chkSpa.setDisable(true); }
-        txtObservacoes.setDisable(!pode(SIGILOSO_ALTERAR));
-        chkPiaEnviado.setDisable(!pode(PIA_ALTERAR));
+        boolean completo = podeSalvarCadastroCompleto();
+        exibir(secaoProtegida, completo);
+        secaoProtegida.setDisable(!completo);
+        exibir(lblAvisoOperacional, !completo);
         cmbGenero.setItems(FXCollections.observableArrayList("Masculino", "Feminino", "Outro", "Não informado"));
         cmbCorRaca.setItems(FXCollections.observableArrayList("Branca", "Preta", "Parda", "Amarela", "Indígena"));
 
-        cmbStatus.setDisable(!pode(ADOLESCENTE_SITUACAO_ALTERAR));
+        cmbStatus.setDisable(true);
         cmbStatus.setItems(FXCollections.observableArrayList(StatusAdolescente.values()));
         cmbStatus.setValue(StatusAdolescente.ATIVO);
         cmbMedidaProtetiva.setItems(FXCollections.observableArrayList("Não", "Sim"));
         cmbMedidaProtetiva.setValue("Não");
-        txtRenda.setText("0");
+        linhaEstudo.visibleProperty().bind(chkEstuda.selectedProperty());
+        linhaEstudo.managedProperty().bind(linhaEstudo.visibleProperty());
+        camposTrabalho.visibleProperty().bind(chkTrabalha.selectedProperty());
+        camposTrabalho.managedProperty().bind(camposTrabalho.visibleProperty());
+        camposSpa.visibleProperty().bind(chkSpa.selectedProperty());
+        camposSpa.managedProperty().bind(camposSpa.visibleProperty());
         txtEscola.disableProperty().bind(chkEstuda.selectedProperty().not());
         txtSerie.disableProperty().bind(chkEstuda.selectedProperty().not());
         txtLocalTrabalho.disableProperty().bind(chkTrabalha.selectedProperty().not());
@@ -80,6 +86,16 @@ public class CadastroAdolescenteController {
         aplicarMascaraCPF(txtCpf);
         aplicarMascaraTelefone(txtContato);
         aplicarMascaraData(dpNascimento);
+    }
+
+    private boolean podeSalvarCadastroCompleto() {
+        return pode(SOCIAL_ALTERAR) && pode(SAUDE_ALTERAR) && pode(PIA_ALTERAR)
+                && pode(SIGILOSO_ALTERAR) && pode(EDUCACAO_ALTERAR);
+    }
+
+    private void exibir(Node componente, boolean visivel) {
+        componente.setVisible(visivel);
+        componente.setManaged(visivel);
     }
 
     private void aplicarMascaraCPF(TextField textField) {
@@ -167,11 +183,18 @@ public class CadastroAdolescenteController {
         saudeAtual=pode(SAUDE_CONSULTAR)?new SaudeDAO().buscarPorCpf(cpf):null;
         EducacaoTrabalho et=new EducacaoTrabalhoDAO().buscarPorCpf(cpf);
         edicao=true; lblTitulo.setText("Editar cadastro"); txtCpf.setDisable(true);
+        lblCpf.setText("CPF");
         txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(a.getNomeCompleto());
         dpNascimento.setValue(a.getDataNascimento()); txtContato.setText(a.getContato()); txtEmail.setText(a.getEmail());
         txtNaturalidade.setText(a.getNaturalidade()); cmbGenero.setValue(a.getGenero()); cmbCorRaca.setValue(a.getCorRaca());
         situacaoOriginal=a.getStatus();
-        cmbStatus.setValue(situacaoOriginal); txtObservacoes.setText(a.getObservacoes());
+        cmbStatus.setValue(situacaoOriginal);
+        lblSituacao.setText(situacaoOriginal==null ? "Não informada" : situacaoOriginal.getDescricao());
+        boolean podeAlterarSituacao = pode(ADOLESCENTE_SITUACAO_ALTERAR);
+        cmbStatus.setDisable(!podeAlterarSituacao);
+        exibir(cmbStatus, podeAlterarSituacao);
+        exibir(lblSituacao, !podeAlterarSituacao);
+        txtObservacoes.setText(a.getObservacoes());
         chkImm.setSelected(a.isImm()); chkValeTransporte.setSelected(a.isValeTransporte());
         chkPiaEnviado.setSelected(a.isPiaEnviado());
         cmbMedidaProtetiva.setValue(a.isMedidaProtetiva() ? "Sim" : "Não");
@@ -214,38 +237,18 @@ public class CadastroAdolescenteController {
             a.setNomeCompleto(texto(txtNome,80,"Nome"));
             a.setDataNascimento(dpNascimento.getValue());
             a.setContato(texto(txtContato,30,"Telefone"));
+            if (a.getContato().isBlank()) throw new IllegalArgumentException("Informe o telefone/contato.");
             a.setEmail(email);
             a.setNaturalidade(texto(txtNaturalidade,120,"Naturalidade"));
             a.setGenero(cmbGenero.getValue()==null ? "Não informado" : cmbGenero.getValue());
             a.setCorRaca(cmbCorRaca.getValue()==null ? "Não informada" : cmbCorRaca.getValue());
-            a.setStatus(cmbStatus.getValue());
-            if (!txtObservacoes.isDisabled()) a.setObservacoes(txtObservacoes.getText() == null ? "" : txtObservacoes.getText().trim());
+            boolean alterarSituacao = edicao && pode(ADOLESCENTE_SITUACAO_ALTERAR)
+                    && cmbStatus.getValue()!=situacaoOriginal;
+            a.setStatus(alterarSituacao ? cmbStatus.getValue() : StatusAdolescente.ATIVO);
             a.setImm(chkImm.isSelected());
             a.setValeTransporte(chkValeTransporte.isSelected());
-            a.setPiaEnviado(chkPiaEnviado.isSelected());
             a.setMedidaProtetiva("Sim".equals(cmbMedidaProtetiva.getValue()));
 
-            boolean completo=pode(SOCIAL_ALTERAR) && pode(SAUDE_ALTERAR) && pode(PIA_ALTERAR);
-            SituacaoSocial ss=new SituacaoSocial();
-            if(completo) {
-            ss.setRendaFamiliar(Double.parseDouble(txtRenda.getText().trim().replace(',','.')));
-            ss.setEndereco(texto(txtEndereco,60,"Endereço"));
-            ss.setBairro(texto(txtBairro,60,"Bairro"));
-            ss.setBeneficioSocial(texto(txtBeneficios,256,"Benefícios"));
-            ss.setCrasNome(texto(txtCras,120,"CRAS"));
-
-            String nis=txtNis.getText().trim();
-            if(!nis.isEmpty() && !nis.matches("[0-9]{1,11}")) throw new IllegalArgumentException("NIS: informe até 11 dígitos.");
-            ss.setNumeroNis(nis.isEmpty()?0:Long.parseLong(nis));
-            a.setBairro(ss.getBairro());
-
-            Saude saude=saudeAtual==null ? new Saude() : saudeAtual;
-            saude.setUbsReferencia(texto(txtUbs,120,"UBS"));
-            saude.setUsoSpa(chkSpa.isSelected());
-            saude.setSubstanciasUtilizadas(chkSpa.isSelected()?texto(txtSpa,90,"Substâncias"):null);
-            saudeAtual=saude;
-
-            }
             EducacaoTrabalho et=new EducacaoTrabalho();
             et.setEstuda(chkEstuda.isSelected());
             et.setEscola(et.isEstuda()?texto(txtEscola,120,"Escola"):null);
@@ -255,8 +258,18 @@ public class CadastroAdolescenteController {
             et.setFuncao(et.isTrabalha()?texto(txtFuncao,120,"Função"):null);
             et.setVinculoEmpregaticio(et.isTrabalha()?texto(txtVinculo,80,"Vínculo empregatício"):null);
 
-            if(completo) adolescenteDAO.salvarCadastro(a,ss,saudeAtual,et,edicao,!edicao || a.getStatus()!=situacaoOriginal);
-            else adolescenteDAO.salvarDadosOperacionais(a, et, edicao);
+            if (podeSalvarCadastroCompleto()) {
+                SituacaoSocial social = lerSituacaoSocial();
+                Saude saude = saudeAtual==null ? new Saude() : saudeAtual;
+                saude.setUbsReferencia(texto(txtUbs,120,"UBS"));
+                saude.setUsoSpa(chkSpa.isSelected());
+                saude.setSubstanciasUtilizadas(chkSpa.isSelected() ? texto(txtSpa,90,"Substâncias") : null);
+                a.setObservacoes(txtObservacoes.getText()==null ? "" : txtObservacoes.getText().trim());
+                a.setPiaEnviado(chkPiaEnviado.isSelected());
+                adolescenteDAO.salvarCadastro(a,social,saude,et,edicao,alterarSituacao);
+            } else {
+                adolescenteDAO.salvarDadosOperacionais(a, et, edicao);
+            }
             mostrarAlerta(Alert.AlertType.INFORMATION,"Cadastro salvo","Dados salvos com sucesso.");
             abrirPerfil(event,a.getCpf());
 
@@ -271,6 +284,25 @@ public class CadastroAdolescenteController {
             e.printStackTrace();
             mostrarAlerta(Alert.AlertType.ERROR,"Erro ao salvar",e.getMessage());
         }
+    }
+
+    private SituacaoSocial lerSituacaoSocial() {
+        SituacaoSocial social = new SituacaoSocial();
+        social.setEndereco(texto(txtEndereco,60,"Endereço"));
+        social.setBairro(texto(txtBairro,60,"Bairro"));
+        social.setBeneficioSocial(texto(txtBeneficios,256,"Benefícios"));
+        social.setCrasNome(texto(txtCras,120,"CRAS"));
+
+        String renda = txtRenda.getText().trim();
+        if (renda.isEmpty()) throw new IllegalArgumentException("Informe a renda familiar em salários mínimos.");
+        social.setRendaFamiliar(Double.parseDouble(renda.replace(',','.')));
+        social.validarCadastro();
+
+        String nis = txtNis.getText().trim();
+        if (!nis.isEmpty() && !nis.matches("[0-9]{1,11}"))
+            throw new IllegalArgumentException("NIS: informe até 11 dígitos.");
+        social.setNumeroNis(nis.isEmpty() ? 0 : Long.parseLong(nis));
+        return social;
     }
 
     private String texto(TextField campo,int max,String nome) {

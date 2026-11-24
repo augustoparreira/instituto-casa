@@ -84,9 +84,27 @@ public class VerificacaoPreparacaoEntrega {
             verificar(nascimento.getValue().equals(LocalDate.of(2008,2,29)),"máscara confirma nascimento bissexto");
             verificar(texto(raiz,"txtCpf").getText().equals("123.456.789-09")
                     && texto(raiz,"txtContato").getText().equals("(11) 98765-4321"),"máscaras preservam CPF e telefone colados");
+            var formulario = (CadastroAdolescenteController)cadastro.getController();
+            verificar(raiz.lookup("#secaoProtegida").isVisible() && !raiz.lookup("#cmbStatus").isVisible()
+                    && ((Label)raiz.lookup("#lblSituacao")).getText().equals("Ativo"),
+                    "inclusão administrativa mostra dados protegidos e situação inicial fixa");
+            verificar(texto(raiz,"txtRenda").getText().isBlank()
+                    && raiz.lookupAll(".form-label-mini").stream().filter(Label.class::isInstance).map(Label.class::cast)
+                    .anyMatch(l -> l.getText().startsWith("RENDA FAMILIAR") && l.getText().endsWith("*")),
+                    "renda começa em branco e está marcada como obrigatória no fluxo completo");
+            dialogo(ButtonType.OK,p -> verificar(p.lookupAll(".label").stream().filter(Label.class::isInstance)
+                    .map(Label.class::cast).anyMatch(l -> l.getText()!=null && l.getText().contains("Informe a renda familiar")),
+                    "formulário completo exige renda antes de salvar"));
+            formulario.salvarAdolescente(new ActionEvent(raiz,raiz)); conferirDialogo();
+            verificar(new AdolescenteDAO().buscarPorCpf(CPF)==null,"renda vazia não cria cadastro parcial");
+            texto(raiz,"txtRenda").setText("1,25");
             dialogo(ButtonType.OK,p -> {});
-            ((CadastroAdolescenteController)cadastro.getController()).salvarAdolescente(new ActionEvent(raiz,raiz));
-            verificar(new AdolescenteDAO().buscarPorCpf(CPF).getDataNascimento().equals(nascimento.getValue()),"cadastro pela tela persiste data confirmada");
+            formulario.salvarAdolescente(new ActionEvent(raiz,raiz));
+            var salvoCadastro = new AdolescenteDAO().buscarPorCpf(CPF);
+            verificar(salvoCadastro.getDataNascimento().equals(nascimento.getValue())
+                    && salvoCadastro.getStatus()==StatusAdolescente.ATIVO
+                    && new SituacaoSocialDAO().buscarPorCpf(CPF).getRendaFamiliar()==1.25,
+                    "cadastro completo pela tela persiste data, renda declarada e situação Ativo");
 
             FXMLLoader perfil=carregar("DetalhesAdolescenteView");
             Parent perfilRaiz=perfil.getRoot();

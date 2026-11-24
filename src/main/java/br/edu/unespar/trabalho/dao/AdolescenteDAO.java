@@ -20,54 +20,8 @@ import java.util.List;
 public class AdolescenteDAO {
 
     public boolean inserir(Adolescente adolescente) {
-        exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR);
-
-        String sqlPessoa = "INSERT INTO Pessoa (cpf, nome_completo, data_nascimento, contato, email) VALUES (?, ?, ?, ?, ?)";
-        String sqlAdolescente = "INSERT INTO Adolescente (cpf_adolescente, naturalidade, genero, cor_raca, status) VALUES (?, ?, ?, ?, ?)";
-
-        String sqlSituacao = "INSERT INTO SituacaoSocial (id_situacaoSocial, renda, endereco, bairro, telefone, numero_nis, cras_referencia, cpf_adolescente) VALUES ((SELECT COALESCE(MAX(id_situacaoSocial), 0) + 1 FROM SituacaoSocial), 0, 'Não informado', ?, ?, 0, NULL, ?)";
-
-        Connection conn = null;
-
-        try {
-            conn = ConnectionFactory.getConnection();
-            conn.setAutoCommit(false);
-
-            try (PreparedStatement stmtPessoa = conn.prepareStatement(sqlPessoa)) {
-                stmtPessoa.setLong(1, adolescente.getCpf());
-                stmtPessoa.setString(2, adolescente.getNomeCompleto());
-                stmtPessoa.setDate(3, Date.valueOf(adolescente.getDataNascimento()));
-                stmtPessoa.setString(4, adolescente.getContato());
-                stmtPessoa.setString(5, adolescente.getEmail());
-                stmtPessoa.executeUpdate();
-            }
-
-            try (PreparedStatement stmtAdolescente = conn.prepareStatement(sqlAdolescente)) {
-                stmtAdolescente.setLong(1, adolescente.getCpf());
-                stmtAdolescente.setString(2, adolescente.getNaturalidade());
-                stmtAdolescente.setString(3, adolescente.getGenero());
-                stmtAdolescente.setString(4, adolescente.getCorRaca());
-                stmtAdolescente.setString(5, adolescente.getStatus() != null ? adolescente.getStatus().getCodigo() : null);
-                stmtAdolescente.executeUpdate();
-            }
-
-            try (PreparedStatement stmtSituacao = conn.prepareStatement(sqlSituacao)) {
-                stmtSituacao.setString(1, adolescente.getBairro() != null && !adolescente.getBairro().trim().isEmpty() ? adolescente.getBairro() : "Não informado");
-                stmtSituacao.setString(2, adolescente.getContato() != null ? adolescente.getContato() : "Não informado");
-                stmtSituacao.setLong(3, adolescente.getCpf());
-                stmtSituacao.executeUpdate();
-            }
-
-            conn.commit();
-            return true;
-
-        } catch (SQLException e) {
-            System.err.println("Erro ao salvar adolescente: " + e.getMessage());
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) { }
-            return false;
-        } finally {
-            try { if (conn != null) { conn.setAutoCommit(true); conn.close(); } } catch (SQLException e) { }
-        }
+        exigir(SOCIAL_ALTERAR);
+        return salvarDadosOperacionais(adolescente, new EducacaoTrabalho(), false);
     }
 
     public List<Adolescente> listar() {
@@ -291,19 +245,20 @@ public class AdolescenteDAO {
     public boolean salvarCadastro(Adolescente a, SituacaoSocial social, Saude saude,
                                   EducacaoTrabalho estudo, boolean edicao, boolean alterarSituacao) {
         exigir(SIGILOSO_ALTERAR);
-        if (!edicao || alterarSituacao) exigir(ADOLESCENTE_SITUACAO_ALTERAR);
+        if (edicao && alterarSituacao) {
+            exigir(ADOLESCENTE_SITUACAO_ALTERAR);
+            if (a.getStatus()==null) throw new IllegalArgumentException("Informe a situação do cadastro.");
+        }
         exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR); exigir(EDUCACAO_ALTERAR); exigir(PIA_ALTERAR);
 
         if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80)
             throw new IllegalArgumentException("Informe o nome completo (até 80 caracteres).");
         if(a.getCpf()<=0 || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))
             throw new IllegalArgumentException("CPF ou data de nascimento inválidos.");
-        if(!Double.isFinite(social.getRendaFamiliar()) || social.getRendaFamiliar()<0)
-            throw new IllegalArgumentException("Renda deve ser um valor não negativo em salários mínimos.");
-        if (social.getEndereco()==null || social.getEndereco().isBlank()
-                || social.getBairro()==null || social.getBairro().isBlank()
-                || a.getContato()==null || a.getContato().isBlank())
-            throw new IllegalArgumentException("Endereço, bairro e telefone são obrigatórios.");
+        if (a.getContato()==null || a.getContato().isBlank())
+            throw new IllegalArgumentException("Informe o telefone/contato.");
+        if (social==null) throw new IllegalArgumentException("Informe os dados da situação social.");
+        social.validarCadastro();
         saude.validar(); estudo.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
@@ -322,7 +277,7 @@ public class AdolescenteDAO {
                     executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
                             a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail());
                     executarCadastro(c,"INSERT INTO Adolescente(cpf_adolescente,naturalidade,genero,cor_raca,status,observacoes,imm,vale_transporte,pia_enviado,medida_protetiva) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                            a.getCpf(),a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva());
+                            a.getCpf(),a.getNaturalidade(),a.getGenero(),a.getCorRaca(),StatusAdolescente.ATIVO.getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva());
                 }
                 executarCadastro(c,"INSERT INTO SituacaoSocial(id_situacaoSocial,renda,beneficios_sociais,endereco,bairro,telefone,numero_nis,cras_nome,cpf_adolescente) "
                         + "VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(cpf_adolescente) DO UPDATE SET renda=excluded.renda,beneficios_sociais=excluded.beneficios_sociais,"

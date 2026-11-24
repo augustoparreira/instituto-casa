@@ -2,7 +2,7 @@ package br.edu.unespar.trabalho.model;
 
 public class SituacaoSocial {
     private int idSituacaoSocial;
-    private double rendaFamiliar;      // coluna: renda
+    private double rendaFamiliar = Double.NaN;      // coluna: renda
     private String beneficioSocial;    // coluna: beneficios_sociais (opcional)
     private String endereco;           // NOT NULL
     private String bairro;             // NOT NULL
@@ -13,6 +13,13 @@ public class SituacaoSocial {
     public String getCrasNome() { return crasNome; }
     public void setCrasNome(String v) { crasNome = v; }
     private long cpfAdolescente;
+
+    public void validarCadastro() {
+        if (!Double.isFinite(rendaFamiliar) || rendaFamiliar<0)
+            throw new IllegalArgumentException("Informe a renda familiar como valor não negativo em salários mínimos.");
+        if (endereco==null || endereco.isBlank() || bairro==null || bairro.isBlank())
+            throw new IllegalArgumentException("Informe o endereço e o bairro/comunidade.");
+    }
 
     public int getIdSituacaoSocial() { return idSituacaoSocial; }
     public void setIdSituacaoSocial(int v) { this.idSituacaoSocial = v; }

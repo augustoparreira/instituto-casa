@@ -62,11 +62,13 @@
 
             <VBox spacing="4.0">
                 <Label fx:id="lblTitulo" text="Novo cadastro" styleClass="page-title" />
-                <Label text="Dados pessoais, situação social, saúde, escola e trabalho." styleClass="page-subtitle" />
+                <Label fx:id="lblAvisoOperacional" text="O cadastro operacional pode ser salvo sem preencher as fichas sociais, de saúde e os campos sigilosos."
+                       styleClass="page-subtitle" wrapText="true" visible="false" managed="false" />
             </VBox>
 
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;"><VBox styleClass="content-box" spacing="20.0">
-                <Label text="Informações Pessoais" styleClass="box-title" />
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent;">
+            <VBox styleClass="content-box" spacing="20.0">
+                <Label text="Identificação básica" styleClass="box-title" />
 
                 <HBox spacing="20.0">
                     <VBox spacing="5.0" HBox.hgrow="ALWAYS">
@@ -74,7 +76,7 @@
                         <TextField fx:id="txtNome" promptText="Nome do adolescente" styleClass="search-field" />
                     </VBox>
                     <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                        <Label text="CPF *" styleClass="form-label-mini" />
+                        <Label fx:id="lblCpf" text="CPF *" styleClass="form-label-mini" />
                         <TextField fx:id="txtCpf" promptText="Somente números" styleClass="search-field" />
                     </VBox>
                 </HBox>
@@ -112,39 +114,113 @@
                     </VBox>
                 </HBox>
 
-                <HBox spacing="20.0">
-                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                        <Label text="BAIRRO / COMUNIDADE *" styleClass="form-label-mini" />
-                        <TextField fx:id="txtBairro" promptText="Ex: Jardim Paulista" styleClass="search-field" />
+                <Label fx:id="lblIdade" text="Idade e mês de aniversário calculados pelo nascimento." styleClass="page-subtitle" />
+                <Label fx:id="lblAvisoIdade" visible="false" managed="false" wrapText="true" style="-fx-text-fill: #9a5700;" />
+
+                <Label text="Acompanhamento operacional" styleClass="box-title" />
+                <HBox spacing="20">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="MEDIDA PROTETIVA" styleClass="form-label-mini" />
+                        <ComboBox fx:id="cmbMedidaProtetiva" styleClass="search-field" maxWidth="Infinity" />
                     </VBox>
-                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                        <!-- Espaço vazio para manter o alinhamento de 2 colunas -->
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="SITUAÇÃO DO CADASTRO" styleClass="form-label-mini" />
+                        <Label fx:id="lblSituacao" text="Ativo" styleClass="form-value-normal" />
+                        <ComboBox fx:id="cmbStatus" maxWidth="Infinity" styleClass="search-field" visible="false" managed="false" />
                     </VBox>
                 </HBox>
+                <CheckBox fx:id="chkEstuda" text="Estuda" />
+                <HBox fx:id="linhaEstudo" spacing="20">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="ESCOLA" styleClass="form-label-mini" />
+                        <TextField fx:id="txtEscola" styleClass="search-field" />
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="ANO / SÉRIE" styleClass="form-label-mini" />
+                        <TextField fx:id="txtSerie" styleClass="search-field" />
+                    </VBox>
+                </HBox>
+                <CheckBox fx:id="chkTrabalha" text="Trabalha" />
+                <VBox fx:id="camposTrabalho" spacing="12">
+                    <HBox spacing="20">
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="LOCAL DE TRABALHO" styleClass="form-label-mini" />
+                            <TextField fx:id="txtLocalTrabalho" styleClass="search-field" />
+                        </VBox>
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="FUNÇÃO" styleClass="form-label-mini" />
+                            <TextField fx:id="txtFuncao" styleClass="search-field" />
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="VÍNCULO EMPREGATÍCIO" styleClass="form-label-mini" />
+                        <TextField fx:id="txtVinculo" styleClass="search-field" />
+                    </VBox>
+                </VBox>
+                <HBox spacing="20">
+                    <CheckBox fx:id="chkImm" text="Cadastrado no IMM" />
+                    <CheckBox fx:id="chkValeTransporte" text="Recebe vale-transporte" />
+                </HBox>
 
-<Label fx:id="lblIdade" text="Idade e mês de aniversário calculados pelo nascimento." styleClass="page-subtitle"/>
-<Label fx:id="lblAvisoIdade" visible="false" managed="false" wrapText="true" style="-fx-text-fill: #9a5700;"/>
-<VBox spacing="5"><Label text="MEDIDA PROTETIVA" styleClass="form-label-mini"/><ComboBox fx:id="cmbMedidaProtetiva" maxWidth="Infinity" styleClass="search-field"/></VBox>
-<HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="SITUAÇÃO DO CADASTRO" styleClass="form-label-mini"/><ComboBox fx:id="cmbStatus" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<Label text="Situação social" styleClass="box-title"/>
-<HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="ENDEREÇO *" styleClass="form-label-mini"/><TextField fx:id="txtEndereco" maxWidth="Infinity" styleClass="search-field"/></VBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="CRAS DE REFERÊNCIA (NOME / UNIDADE)" styleClass="form-label-mini"/><TextField fx:id="txtCras" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="RENDA FAMILIAR (SALÁRIOS MÍNIMOS)" styleClass="form-label-mini"/><TextField fx:id="txtRenda" maxWidth="Infinity" styleClass="search-field"/></VBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="BENEFÍCIOS SOCIAIS" styleClass="form-label-mini"/><TextField fx:id="txtBeneficios" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="NIS (OPCIONAL)" styleClass="form-label-mini"/><TextField fx:id="txtNis" maxWidth="Infinity" styleClass="search-field"/></VBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="UBS DE REFERÊNCIA" styleClass="form-label-mini"/><TextField fx:id="txtUbs" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<CheckBox fx:id="chkSpa" text="Faz uso de SPA"/><HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="SUBSTÂNCIAS UTILIZADAS" styleClass="form-label-mini"/><TextField fx:id="txtSpa" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<CheckBox fx:id="chkPiaEnviado" text="PIA já foi enviado"/>
-<Label text="Confirmação de envio, inclusive de documento elaborado fora do sistema." styleClass="page-subtitle" wrapText="true"/>
-<Label text="Educação e trabalho" styleClass="box-title"/><CheckBox fx:id="chkEstuda" text="Estuda"/>
-<HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="ESCOLA" styleClass="form-label-mini"/><TextField fx:id="txtEscola" maxWidth="Infinity" styleClass="search-field"/></VBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="ANO / SÉRIE" styleClass="form-label-mini"/><TextField fx:id="txtSerie" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<CheckBox fx:id="chkTrabalha" text="Trabalha"/><HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="LOCAL DE TRABALHO" styleClass="form-label-mini"/><TextField fx:id="txtLocalTrabalho" maxWidth="Infinity" styleClass="search-field"/></VBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="FUNÇÃO" styleClass="form-label-mini"/><TextField fx:id="txtFuncao" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<HBox spacing="20"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="VÍNCULO EMPREGATÍCIO" styleClass="form-label-mini"/><TextField fx:id="txtVinculo" maxWidth="Infinity" styleClass="search-field"/></VBox></HBox>
-<HBox spacing="20"><CheckBox fx:id="chkImm" text="Cadastrado no IMM"/><CheckBox fx:id="chkValeTransporte" text="Recebe vale-transporte"/></HBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="OBSERVAÇÕES / DIAS DE COMPARECIMENTO" styleClass="form-label-mini"/><TextArea fx:id="txtObservacoes" prefRowCount="3" wrapText="true" styleClass="search-field"/></VBox>                <Region VBox.vgrow="ALWAYS" />
+                <VBox fx:id="secaoProtegida" spacing="14" visible="false" managed="false">
+                    <Label text="Informações protegidas" styleClass="box-title" />
+                    <Label text="SITUAÇÃO SOCIAL" styleClass="form-label-mini" />
+                    <HBox spacing="20">
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="BAIRRO / COMUNIDADE *" styleClass="form-label-mini" />
+                            <TextField fx:id="txtBairro" styleClass="search-field" />
+                        </VBox>
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="ENDEREÇO *" styleClass="form-label-mini" />
+                            <TextField fx:id="txtEndereco" styleClass="search-field" />
+                        </VBox>
+                    </HBox>
+                    <HBox spacing="20">
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="CRAS DE REFERÊNCIA (NOME / UNIDADE)" styleClass="form-label-mini" />
+                            <TextField fx:id="txtCras" styleClass="search-field" />
+                        </VBox>
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="RENDA FAMILIAR (SALÁRIOS MÍNIMOS) *" styleClass="form-label-mini" />
+                            <TextField fx:id="txtRenda" styleClass="search-field" />
+                        </VBox>
+                    </HBox>
+                    <HBox spacing="20">
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="BENEFÍCIOS SOCIAIS" styleClass="form-label-mini" />
+                            <TextField fx:id="txtBeneficios" styleClass="search-field" />
+                        </VBox>
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="NIS (OPCIONAL)" styleClass="form-label-mini" />
+                            <TextField fx:id="txtNis" styleClass="search-field" />
+                        </VBox>
+                    </HBox>
+                    <Label text="SAÚDE" styleClass="form-label-mini" />
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="UBS DE REFERÊNCIA" styleClass="form-label-mini" />
+                        <TextField fx:id="txtUbs" styleClass="search-field" />
+                    </VBox>
+                    <CheckBox fx:id="chkSpa" text="Faz uso de SPA" />
+                    <VBox fx:id="camposSpa" spacing="5">
+                        <Label text="SUBSTÂNCIAS UTILIZADAS" styleClass="form-label-mini" />
+                        <TextField fx:id="txtSpa" styleClass="search-field" />
+                    </VBox>
+                    <Label text="PIA E OBSERVAÇÕES" styleClass="form-label-mini" />
+                    <CheckBox fx:id="chkPiaEnviado" text="PIA já foi enviado" />
+                    <Label text="Confirmação de envio, inclusive de documento elaborado fora do sistema." styleClass="page-subtitle" wrapText="true" />
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="OBSERVAÇÕES / DIAS DE COMPARECIMENTO" styleClass="form-label-mini" />
+                        <TextArea fx:id="txtObservacoes" styleClass="search-field" prefRowCount="3" wrapText="true" />
+                    </VBox>
+                </VBox>
 
                 <!-- Botões de Ação -->
                 <HBox spacing="15.0" alignment="CENTER_RIGHT">
                     <Button text="Cancelar" styleClass="filter-btn" onAction="#voltarParaLista" />
                     <Button text="Salvar Cadastro" styleClass="btn-novo" onAction="#salvarAdolescente" />
                 </HBox>
-            </VBox></ScrollPane>
+            </VBox>
+            </ScrollPane>
         </VBox>
     </center>
 </BorderPane>

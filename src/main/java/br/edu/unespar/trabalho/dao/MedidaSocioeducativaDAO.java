@@ -113,7 +113,7 @@ public class MedidaSocioeducativaDAO {
     }
 
     public int consultarHorasDaMedida(int id,LocalDate ate) {
-        exigir(MEDIDA_CONSULTAR);
+        exigir(HORAS_PSC_CONSULTAR);
 
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE id_medida=? AND upper(status_presenca)='PRESENTE' AND data_presenca<=?")) {
             s.setInt(1,id); s.setObject(2,ate);
@@ -124,6 +124,7 @@ public class MedidaSocioeducativaDAO {
     /** Compatibilidade com consultas antigas: soma apenas PSC vigentes, vinculadas por ID. */
     public int consultarHorasCumpridas(long cpf) {
         exigir(MEDIDA_CONSULTAR);
+        exigir(HORAS_PSC_CONSULTAR);
 
         return listarPorAdolescente(cpf).stream().filter(m->m.isPSC() && m.vigenteEm(LocalDate.now()))
                 .mapToInt(m->consultarHorasDaMedida(m.getIdMedida(),LocalDate.now())).sum();

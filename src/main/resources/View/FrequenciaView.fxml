@@ -38,7 +38,7 @@
 <padding><Insets top="25" left="25" right="25" bottom="25"/></padding>
 <Label text="Frequência mensal" styleClass="page-title"/>
 <Label text="P = presença · A = ausência injustificada · J = justificada. Dias sem lançamento ficam em branco." styleClass="page-subtitle" wrapText="true"/>
-<HBox spacing="10" alignment="CENTER_LEFT"><Button text="&lt;" onAction="#anterior"/><DatePicker fx:id="dpCompetencia"/><Button text="&gt;" onAction="#proximo"/><Button text="Consultar mês" onAction="#atualizar" styleClass="filter-btn"/><TextField fx:id="txtPesquisa" promptText="Nome ou CPF" HBox.hgrow="ALWAYS"/><Button text="Registrar / corrigir" onAction="#registrar" styleClass="btn-novo"/></HBox>
+<HBox spacing="10" alignment="CENTER_LEFT"><Button text="&lt;" onAction="#anterior"/><DatePicker fx:id="dpCompetencia"/><Button text="&gt;" onAction="#proximo"/><Button text="Consultar mês" onAction="#atualizar" styleClass="filter-btn"/><TextField fx:id="txtPesquisa" promptText="Nome ou CPF" HBox.hgrow="ALWAYS"/><Button fx:id="btnRelatorioOperacional" text="Relatório operacional" onAction="#gerarRelatorioOperacional" styleClass="filter-btn"/><Button fx:id="btnRegistrar" text="Registrar / corrigir" onAction="#registrar" styleClass="btn-novo"/></HBox>
 <CheckBox fx:id="chkInativos" text="Mostrar também cadastros inativos sem lançamentos no mês"/>
 <TableView fx:id="tabela" VBox.vgrow="ALWAYS"/>
 <Label fx:id="lblResumo" wrapText="true"/>

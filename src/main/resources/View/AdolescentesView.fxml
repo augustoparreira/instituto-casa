@@ -65,7 +65,7 @@
                     <Label fx:id="lblTotalRegistros" text="6 registro(s) encontrado(s)" styleClass="page-subtitle" />
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
-                <Button text="+ Novo adolescente" styleClass="btn-novo" onAction="#abrirTelaCadastro" />
+                <Button fx:id="btnNovoAdolescente" text="+ Novo adolescente" styleClass="btn-novo" onAction="#abrirTelaCadastro" />
             </HBox>
 
             <!-- Barra de Filtros e Pesquisa -->

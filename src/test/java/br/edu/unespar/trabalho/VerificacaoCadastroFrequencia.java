@@ -252,7 +252,45 @@ public class VerificacaoCadastroFrequencia {
             VerificacaoContas.entrar("agenda_teste", "senha fictícia");
             verifica(!new AdolescenteDAO().listarResumoDTO().isEmpty(),"técnico consulta listagem operacional");
             verifica(new AdolescenteDAO().buscarPorCpf(CPF).getBairro()==null,"projeção técnica omite dados sociais");
-            var operacional=new AdolescenteDAO().buscarPorCpf(CPF);
+            var adolescentes = new AdolescenteDAO();
+            var novo = adolescente(CPF+10);
+            novo.setNomeCompleto("Novo cadastro técnico");
+            novo.setObservacoes("Informação protegida");
+            novo.setPiaEnviado(true);
+            novo.setStatus(StatusAdolescente.INATIVO);
+            adolescentes.salvarDadosOperacionais(novo,new EducacaoTrabalho(),false);
+            verifica(adolescentes.buscarPorCpf(novo.getCpf()).getStatus()==StatusAdolescente.ATIVO,
+                    "Equipe Técnica cadastra adolescente com situação inicial ativa");
+            var responsaveis = new ResponsavelDAO();
+            var contato = new Responsavel();
+            contato.setCpf(99999999910L); contato.setNomeCompleto("Contato de teste");
+            contato.setDataNascimento(LocalDate.of(1980,1,1)); contato.setParentesco("Tia");
+            responsaveis.inserir(contato,novo.getCpf());
+            contato.setContato("43999991234"); responsaveis.atualizar(contato,novo.getCpf());
+            verifica(responsaveis.listarResponsaveis(novo.getCpf()).getFirst().getContato().equals("43999991234"),
+                    "Equipe Técnica cadastra e edita contato exclusivo");
+            responsaveis.inserir(contato,CPF);
+            contato.setContato("43999990001"); contato.setParentesco("Avó");
+            responsaveis.atualizar(contato,novo.getCpf());
+            verifica(responsaveis.listarResponsaveis(CPF).stream().filter(r->r.getCpf()==contato.getCpf()).findFirst()
+                    .orElseThrow().getContato().equals("43999991234")
+                    && responsaveis.listarResponsaveis(novo.getCpf()).getFirst().getParentesco().equals("Avó"),
+                    "edição de vínculo compartilhado preserva dados pessoais e permite mudar parentesco");
+            rejeita(IllegalArgumentException.class,()->responsaveis.buscarPessoa(77777777770L),"CPF de conta da equipe não pode ser reutilizado");
+            contato.setCpf(77777777770L);
+            rejeita(IllegalArgumentException.class,()->responsaveis.inserir(contato,novo.getCpf()),"DAO impede vínculo indevido por CPF");
+            rejeita(SecurityException.class,()->responsaveis.desvincular(novo.getCpf(),99999999910L),"técnico não desvincula responsável");
+            rejeita(SecurityException.class,()->new ComposicaoFamiliarDAO().excluir(1,novo.getCpf()),"técnico não exclui composição");
+            rejeita(SecurityException.class,()->adolescentes.excluir(novo.getCpf()),"técnico não inativa pelo DAO de exclusão");
+            var freq = new FrequenciaDAO();
+            var protegida=freq.listar(CPF,LocalDate.of(2025,1,7),LocalDate.of(2025,1,7)).getFirst();
+            verifica(protegida.getIdMedida()!=null && protegida.getObservacoes()==null,"técnico consulta medida sem justificativa protegida");
+            freq.atualizar(protegida);
+            rejeita(SecurityException.class,()->freq.excluir(protegida),"técnico corrige mas não exclui frequência");
+            var relatorio = freq.listarParaRelatorioOperacional(CPF,JANEIRO);
+            verifica(!relatorio.isEmpty() && relatorio.stream().allMatch(f -> f.getObservacoes()==null),"relatório técnico omite notas e justificativas");
+            var operacional=adolescentes.buscarPorCpf(CPF);
+            var situacaoOriginal=operacional.getStatus();
             verifica(operacional.getObservacoes()==null, "projeção técnica omite observações gerais do cadastro");
             var visivel = agenda.listar(evento.getData(),evento.getData()).getFirst();
             verifica(visivel.getObservacoes().isEmpty(), "projeção da agenda omite observações reservadas");
@@ -267,8 +305,15 @@ public class VerificacaoCadastroFrequencia {
                     "edição operacional também exige telefone");
             operacional.setContato("43999990000");
             operacional.setPiaEnviado(!piaOriginal);
+            operacional.setStatus(StatusAdolescente.INATIVO);
             new AdolescenteDAO().salvarDadosOperacionais(operacional,new EducacaoTrabalhoDAO().buscarPorCpf(CPF));
             VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
+            verifica(adolescentes.buscarPorCpf(CPF).getStatus()==situacaoOriginal,
+                    "salvamento técnico ignora alteração de situação");
+            verifica(new SituacaoSocialDAO().buscarPorCpf(novo.getCpf())==null && new SaudeDAO().buscarPorCpf(novo.getCpf())==null
+                    && !new PIADAO().consultarEnvio(novo.getCpf()), "cadastro técnico não grava fichas protegidas");
+            verifica(freq.listar(CPF,LocalDate.of(2025,1,7),LocalDate.of(2025,1,7)).getFirst().getObservacoes().equals("Atestado fictício"),
+                    "correção técnica preserva o motivo protegido");
             verifica(agenda.listar(evento.getData(),evento.getData()).getFirst().getObservacoes().equals(evento.getObservacoes()),
                     "edição técnica de compromisso preserva observação reservada");
             verifica(Objects.equals(notas,new AdolescenteDAO().buscarPorCpf(CPF).getObservacoes()),
@@ -295,6 +340,12 @@ public class VerificacaoCadastroFrequencia {
             Frequencia f=frequencia(1,null,LocalDate.now(),StatusPresenca.PRESENTE,2);
             rejeita(SecurityException.class,()->new FrequenciaDAO().registrar(f),"educador não registra horas");
             rejeita(SecurityException.class,()->new FrequenciaDAO().excluir(f),"educador não exclui frequência");
+            rejeita(SecurityException.class,()->freq.atualizar(protegida),"educador não corrige frequência");
+            rejeita(SecurityException.class,()->freq.listarParaRelatorioOperacional(CPF,JANEIRO),"educador não gera relatório");
+            var faltaEducador = frequencia(1,null,LocalDate.of(2025,1,7),StatusPresenca.FALTA_JUSTIFICADA,0);
+            faltaEducador.setCpfAdolescente(novo.getCpf()); faltaEducador.setObservacoes("Motivo informado");
+            verifica(freq.registrar(faltaEducador) && freq.listar(novo.getCpf(),faltaEducador.getDataPresenca(),faltaEducador.getDataPresenca())
+                    .getFirst().getObservacoes()==null, "educador registra falta justificada e a consulta omite o texto");
         } finally { VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA); }
     }
 
@@ -507,7 +558,9 @@ public class VerificacaoCadastroFrequencia {
                     }
                     if (controller instanceof FrequenciaController mensal) {
                         TableView<?> tabela = (TableView<?>) root.lookup("#tabela");
-                        verifica(tabela.getItems().size()==3,"planilha JavaFX carrega as linhas do banco na abertura");
+                        verifica(tabela.getItems().size()==4 && tabela.getItems().stream().anyMatch(
+                                item -> item instanceof FrequenciaMensalDTO linha && linha.getAdolescente().getCpf()==CPF+10),
+                                "planilha carrega as linhas do banco, incluindo o cadastro técnico");
                         DatePicker competencia = (DatePicker) root.lookup("#dpCompetencia");
                         competencia.getEditor().setText(competencia.getConverter().toString(LocalDate.of(2024,2,1)));
                         mensal.atualizar();
@@ -669,11 +722,76 @@ public class VerificacaoCadastroFrequencia {
                                 "botão JavaFX exclui a frequência após confirmação");
                     }
                 }
+                verificarInterfacePermissoesOperacionais();
                 VerificacaoImpressao.executar();
                 fim.complete(null);
             } catch(Throwable t) { fim.completeExceptionally(t); }
         });
-        try { fim.get(120,TimeUnit.SECONDS); } finally { Platform.exit(); }
+        try { fim.get(180,TimeUnit.SECONDS); } finally { Platform.exit(); }
+    }
+
+    private static void verificarInterfacePermissoesOperacionais() throws Exception {
+        Stage janela = new Stage();
+        try {
+            VerificacaoContas.entrar("agenda_teste", "senha fictícia");
+            Parent lista = FXMLLoader.load(VerificacaoCadastroFrequencia.class.getResource("/View/AdolescentesView.fxml"));
+            janela.setScene(new Scene(lista,1280,850));
+            ((Button)lista.lookup("#btnNovoAdolescente")).fire();
+            Parent cadastro = janela.getScene().getRoot();
+            cadastro.applyCss(); cadastro.layout();
+            verifica(cadastro!=lista && cadastro.lookup("#cmbStatus").isDisabled()
+                    && cadastro.lookup("#txtEndereco").isDisabled(),"novo cadastro técnico abre com situação e endereço social protegidos");
+            ((TextField)cadastro.lookup("#txtCpf")).setText("12345678950");
+            ((TextField)cadastro.lookup("#txtNome")).setText("Cadastro técnico pela interface");
+            ((TextField)cadastro.lookup("#txtContato")).setText("43999995555");
+            ((DatePicker)cadastro.lookup("#dpNascimento")).setValue(LocalDate.of(2009,1,15));
+            fecharProximoDialogo(ButtonType.OK);
+            ((Button)cadastro.lookupAll(".button").stream()
+                    .filter(n -> n instanceof Button b && "Salvar cadastro".equalsIgnoreCase(b.getText()))
+                    .findFirst().orElseThrow()).fire();
+            verifica(new AdolescenteDAO().buscarPorCpf(12345678950L)!=null,"cadastro técnico pela interface persiste sem ficha social");
+
+            FXMLLoader detalhes = new FXMLLoader(VerificacaoCadastroFrequencia.class.getResource("/View/DetalhesAdolescenteView.fxml"));
+            Parent perfil = detalhes.load(); janela.getScene().setRoot(perfil);
+            perfil.applyCss(); perfil.layout();
+            ((DetalhesAdolescenteController)detalhes.getController()).carregarDados(new AdolescenteDAO().listarResumoDTO().stream()
+                    .filter(a -> a.getCpf().replaceAll("[^0-9]","").equals(Long.toString(CPF))).findFirst().orElseThrow());
+            @SuppressWarnings("unchecked")
+            ComboBox<MedidaSocioeducativa> medidas=(ComboBox<MedidaSocioeducativa>)perfil.lookup("#cmbMedidaPerfil");
+            medidas.setValue(medidas.getItems().stream().filter(m -> m.getDataFim()!=null).findFirst().orElseThrow());
+            verifica(!perfil.lookup("#btnEditarMedida").isVisible() && !perfil.lookup("#btnDefinirReferencia").isVisible(),
+                    "perfil técnico exibe medida encerrada sem oferecer edição nem definição de referência");
+            verifica(perfil.lookupAll(".button").stream().noneMatch(n -> n instanceof Button b && "Desvincular".equals(b.getText())),
+                    "perfil técnico não oferece desvinculação");
+
+            Parent planilha = FXMLLoader.load(VerificacaoCadastroFrequencia.class.getResource("/View/FrequenciaView.fxml"));
+            janela.getScene().setRoot(planilha);
+            planilha.applyCss(); planilha.layout();
+            var tabela = (TableView<?>)planilha.lookup("#tabela");
+            tabela.getSelectionModel().selectFirst();
+            var relatorio=(Button)planilha.lookup("#btnRelatorioOperacional");
+            verifica(relatorio.isVisible() && !relatorio.isDisabled(),"planilha técnica oferece relatório operacional para a seleção");
+            fecharProximoDialogo(ButtonType.CLOSE, painel -> {
+                var texto=(TextArea)painel.getContent();
+                verifica(!texto.isEditable() && texto.getText().contains("uso interno"),"relatório operacional abre prévia interna");
+            });
+            relatorio.fire();
+
+            VerificacaoContas.entrar("educador-teste", VerificacaoContas.SENHA);
+            Parent frequencia = FXMLLoader.load(VerificacaoCadastroFrequencia.class.getResource("/View/FrequenciaView.fxml"));
+            verifica(!frequencia.lookup("#btnRelatorioOperacional").isVisible()
+                    && ((Button)frequencia.lookup("#btnRegistrar")).getText().equals("Registrar frequência"),
+                    "planilha do Educador oferece registro sem correção ou relatório");
+            FXMLLoader editor = new FXMLLoader(VerificacaoCadastroFrequencia.class.getResource("/View/RegistroFrequenciaView.fxml"));
+            Parent formulario = editor.load();
+            ((RegistroFrequenciaController)editor.getController()).carregar(CPF,LocalDate.now(),()->{});
+            verifica(!formulario.lookup("#btnExcluirLancamento").isVisible() && !formulario.lookup("#btnNovaAtividade").isVisible()
+                    && !formulario.lookup("#txtHoras").isVisible() && !formulario.lookup("#cmbMedida").isVisible(),
+                    "editor do Educador omite ações e campos vedados");
+        } finally {
+            janela.close();
+            VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
+        }
     }
 
     private static void verificarLoginELogout() throws Exception {

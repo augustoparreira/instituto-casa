@@ -29,11 +29,13 @@ Operações compostas exigem todas as permissões envolvidas. Frequência com ho
 exige adicionalmente HORAS_PSC_REGISTRAR; edição e exclusão têm permissões próprias.
 
 Operações disponíveis (ver enum para compilação): PAINEL_CONSULTAR; ADOLESCENTE_CONSULTAR,
-CADASTRAR, EDITAR, EXCLUIR (com prefixo ADOLESCENTE_); FAMILIA_CONSULTAR/ALTERAR;
+CADASTRAR, EDITAR, EXCLUIR (com prefixo ADOLESCENTE_); ADOLESCENTE_SITUACAO_ALTERAR;
+FAMILIA_CONSULTAR/ALTERAR/REMOVER; FAMILIA_PESSOA_COMPARTILHADA_ALTERAR;
 SOCIAL_CONSULTAR/ALTERAR; SAUDE_CONSULTAR/ALTERAR; EDUCACAO_CONSULTAR/ALTERAR;
 MEDIDA_CONSULTAR/CADASTRAR/EDITAR/ENCERRAR; FREQUENCIA_CONSULTAR/REGISTRAR/EDITAR/EXCLUIR;
-HORAS_PSC_REGISTRAR; ATIVIDADE_GERENCIAR; AGENDA_CONSULTAR/CADASTRAR/EDITAR/EXCLUIR;
-PIA_CONSULTAR/ALTERAR; DOCUMENTO_CONSULTAR/ALTERAR; RELATORIO_CONSULTAR/ALTERAR/EXCLUIR/EXPORTAR;
+HORAS_PSC_CONSULTAR/REGISTRAR; FREQUENCIA_JUSTIFICATIVA_CONSULTAR/ALTERAR;
+ATIVIDADE_GERENCIAR; AGENDA_CONSULTAR/CADASTRAR/EDITAR/EXCLUIR;
+PIA_CONSULTAR/ALTERAR; DOCUMENTO_CONSULTAR/ALTERAR; RELATORIO_OPERACIONAL_GERAR; RELATORIO_CONSULTAR/ALTERAR/EXCLUIR/EXPORTAR;
 EQUIPE_CONSULTAR; USUARIO_GERENCIAR; REFERENCIA_DEFINIR; SIGILOSO_CONSULTAR/ALTERAR;
 SENHA_PROPRIA_ALTERAR.
 
@@ -41,3 +43,16 @@ Não implementar outra matriz, `pode` ou `exigir` nos módulos. Não alterar ló
 para integrar este contrato. Expiração e revalidação da conta serão adicionadas mantendo as assinaturas.
 
 `VerificacaoAutorizacao` verifica a recusa sem sessão com `-ea`. O cenário integrado com PostgreSQL verifica a matriz e o contexto sigiloso após login real dos três perfis.
+
+
+Na política provisória, a Equipe Técnica cria o cadastro operacional sem gravar fichas
+sociais ou de saúde, edita medidas abertas e corrige frequência sem ler ou sobrescrever
+justificativas protegidas. Justificativas novas podem ser registradas quando não há
+texto reservado no lançamento. Remoções familiares, alterações manuais de situação
+e mudanças nos dados pessoais de responsáveis compartilhados ficam com o Administrador.
+
+A geração operacional na planilha usa a competência, a identificação do adolescente
+e os lançamentos com medida e horas autorizadas. A prévia interna omite justificativas
+e independe dos rascunhos do relatório completo. A ONG ainda precisa validar o acesso
+técnico a campos protegidos, a autorização para confirmar o envio do PIA e o alcance
+da frequência do Educador.

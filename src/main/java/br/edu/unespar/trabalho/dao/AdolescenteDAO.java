@@ -106,7 +106,7 @@ public class AdolescenteDAO {
         exigir(ADOLESCENTE_EDITAR);
 
         String sqlPessoa = "UPDATE Pessoa SET nome_completo = ?, data_nascimento = ?, contato = ?, email = ? WHERE cpf = ?";
-        String sqlAdolescente = "UPDATE Adolescente SET naturalidade = ?, genero = ?, cor_raca = ?, status = ? WHERE cpf_adolescente = ?";
+        String sqlAdolescente = "UPDATE Adolescente SET naturalidade = ?, genero = ?, cor_raca = ? WHERE cpf_adolescente = ?";
 
         Connection conn = null;
         try {
@@ -126,9 +126,8 @@ public class AdolescenteDAO {
                 stmtAdolescente.setString(1, adolescente.getNaturalidade());
                 stmtAdolescente.setString(2, adolescente.getGenero());
                 stmtAdolescente.setString(3, adolescente.getCorRaca());
-                stmtAdolescente.setString(4, adolescente.getStatus() != null ? adolescente.getStatus().getCodigo() : null);
-                stmtAdolescente.setLong(5, adolescente.getCpf());
-                stmtAdolescente.executeUpdate();
+                stmtAdolescente.setLong(4, adolescente.getCpf());
+                if (stmtAdolescente.executeUpdate() != 1) throw new SQLException("Adolescente não encontrado.");
             }
 
             conn.commit();
@@ -145,6 +144,7 @@ public class AdolescenteDAO {
 
     public boolean excluir(long cpf) {
         exigir(ADOLESCENTE_EXCLUIR);
+        exigir(ADOLESCENTE_SITUACAO_ALTERAR);
 
         String sql = "UPDATE Adolescente SET status = 'INATIVO' WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -246,9 +246,14 @@ public class AdolescenteDAO {
     }
 
     public boolean salvarDadosOperacionais(Adolescente a, EducacaoTrabalho estudo) {
-        exigir(ADOLESCENTE_EDITAR); exigir(EDUCACAO_ALTERAR);
+        return salvarDadosOperacionais(a, estudo, true);
+    }
+
+    public boolean salvarDadosOperacionais(Adolescente a, EducacaoTrabalho estudo, boolean edicao) {
+        exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR);
+        exigir(EDUCACAO_ALTERAR);
         if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80
-                || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))
+                || a.getCpf()<=0 || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))
             throw new IllegalArgumentException("Confira nome e nascimento.");
         if(a.getContato()==null || a.getContato().isBlank())
             throw new IllegalArgumentException("Telefone é obrigatório.");
@@ -256,21 +261,37 @@ public class AdolescenteDAO {
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {
-                if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,status=?,imm=?,vale_transporte=?,medida_protetiva=? WHERE cpf_adolescente=?",
-                        a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva(),a.getCpf())!=1)
-                    throw new IllegalArgumentException("Cadastro não encontrado.");
-                executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
-                        a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf());
+                if (edicao) {
+                    if (executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,imm=?,vale_transporte=?,medida_protetiva=? WHERE cpf_adolescente=?",
+                            a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva(),a.getCpf()) != 1)
+                        throw new IllegalArgumentException("Cadastro não encontrado.");
+                    executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
+                            a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf());
+                } else {
+                    executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
+                            a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail());
+                    executarCadastro(c,"INSERT INTO Adolescente(cpf_adolescente,naturalidade,genero,cor_raca,status,imm,vale_transporte,medida_protetiva) VALUES(?,?,?,?,?,?,?,?)",
+                            a.getCpf(),a.getNaturalidade(),a.getGenero(),a.getCorRaca(),StatusAdolescente.ATIVO.getCodigo(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva());
+                }
                 executarCadastro(c,"INSERT INTO EducacaoTrabalho(id_educacaoTrabalho,estuda,escola,ano_serie,trabalha,local_trabalho,funcao,vinculo_empregaticio,cpf_adolescente) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(cpf_adolescente) DO UPDATE SET estuda=excluded.estuda,escola=excluded.escola,ano_serie=excluded.ano_serie,trabalha=excluded.trabalha,local_trabalho=excluded.local_trabalho,funcao=excluded.funcao,vinculo_empregaticio=excluded.vinculo_empregaticio",
                         IdUtil.proximoId(c,"EducacaoTrabalho"),estudo.isEstuda(),estudo.getEscola(),estudo.getSerie(),estudo.isTrabalha(),estudo.getLocalTrabalho(),estudo.getFuncao(),estudo.getVinculoEmpregaticio(),a.getCpf());
                 c.commit(); return true;
             } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
-        } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar os dados operacionais.",e); }
+        } catch(SQLException e) {
+            if ("23505".equals(e.getSQLState())) throw new IllegalArgumentException("O CPF já está cadastrado.",e);
+            throw new IllegalStateException("Não foi possível salvar os dados operacionais.",e);
+        }
     }
 
     /** Dados pessoais, sociais, saúde e escolaridade são salvos juntos ou revertidos juntos. */
     public boolean salvarCadastro(Adolescente a, SituacaoSocial social, Saude saude, EducacaoTrabalho estudo, boolean edicao) {
+        return salvarCadastro(a,social,saude,estudo,edicao,true);
+    }
+
+    public boolean salvarCadastro(Adolescente a, SituacaoSocial social, Saude saude,
+                                  EducacaoTrabalho estudo, boolean edicao, boolean alterarSituacao) {
         exigir(SIGILOSO_ALTERAR);
+        if (!edicao || alterarSituacao) exigir(ADOLESCENTE_SITUACAO_ALTERAR);
         exigir(edicao ? ADOLESCENTE_EDITAR : ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR); exigir(EDUCACAO_ALTERAR); exigir(PIA_ALTERAR);
 
         if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80)
@@ -291,9 +312,11 @@ public class AdolescenteDAO {
                     if(executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
                             a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf())!=1)
                         throw new SQLException("Cadastro não encontrado.");
-                    if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,status=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
-                            a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getStatus().getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf())!=1)
+                    if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
+                            a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf())!=1)
                         throw new IllegalArgumentException("O cadastro do adolescente não existe mais. Recarregue a lista antes de editar.");
+                    if (alterarSituacao)
+                        executarCadastro(c,"UPDATE Adolescente SET status=? WHERE cpf_adolescente=?",a.getStatus().getCodigo(),a.getCpf());
                     executarCadastro(c,"UPDATE PIA SET documento_enviado=? WHERE cpf_adolescente=?",a.isPiaEnviado(),a.getCpf());
                 } else {
                     executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",

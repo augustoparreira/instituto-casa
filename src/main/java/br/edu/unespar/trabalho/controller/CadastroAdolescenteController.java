@@ -51,6 +51,7 @@ public class CadastroAdolescenteController {
     private boolean edicao;
     private Saude saudeAtual;
 
+    private StatusAdolescente situacaoOriginal;
     private AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
 
     @FXML
@@ -63,6 +64,7 @@ public class CadastroAdolescenteController {
         cmbGenero.setItems(FXCollections.observableArrayList("Masculino", "Feminino", "Outro", "Não informado"));
         cmbCorRaca.setItems(FXCollections.observableArrayList("Branca", "Preta", "Parda", "Amarela", "Indígena"));
 
+        cmbStatus.setDisable(!pode(ADOLESCENTE_SITUACAO_ALTERAR));
         cmbStatus.setItems(FXCollections.observableArrayList(StatusAdolescente.values()));
         cmbStatus.setValue(StatusAdolescente.ATIVO);
         cmbMedidaProtetiva.setItems(FXCollections.observableArrayList("Não", "Sim"));
@@ -168,7 +170,8 @@ public class CadastroAdolescenteController {
         txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(a.getNomeCompleto());
         dpNascimento.setValue(a.getDataNascimento()); txtContato.setText(a.getContato()); txtEmail.setText(a.getEmail());
         txtNaturalidade.setText(a.getNaturalidade()); cmbGenero.setValue(a.getGenero()); cmbCorRaca.setValue(a.getCorRaca());
-        cmbStatus.setValue(a.getStatus()); txtObservacoes.setText(a.getObservacoes());
+        situacaoOriginal=a.getStatus();
+        cmbStatus.setValue(situacaoOriginal); txtObservacoes.setText(a.getObservacoes());
         chkImm.setSelected(a.isImm()); chkValeTransporte.setSelected(a.isValeTransporte());
         chkPiaEnviado.setSelected(a.isPiaEnviado());
         cmbMedidaProtetiva.setValue(a.isMedidaProtetiva() ? "Sim" : "Não");
@@ -252,11 +255,8 @@ public class CadastroAdolescenteController {
             et.setFuncao(et.isTrabalha()?texto(txtFuncao,120,"Função"):null);
             et.setVinculoEmpregaticio(et.isTrabalha()?texto(txtVinculo,80,"Vínculo empregatício"):null);
 
-            if(completo) adolescenteDAO.salvarCadastro(a,ss,saudeAtual,et,edicao);
-            else {
-                if(!edicao) throw new IllegalArgumentException("A inclusão completa exige os dados sociais obrigatórios. Solicite o cadastro ao Administrador.");
-                adolescenteDAO.salvarDadosOperacionais(a,et);
-            }
+            if(completo) adolescenteDAO.salvarCadastro(a,ss,saudeAtual,et,edicao,!edicao || a.getStatus()!=situacaoOriginal);
+            else adolescenteDAO.salvarDadosOperacionais(a, et, edicao);
             mostrarAlerta(Alert.AlertType.INFORMATION,"Cadastro salvo","Dados salvos com sucesso.");
             abrirPerfil(event,a.getCpf());
 

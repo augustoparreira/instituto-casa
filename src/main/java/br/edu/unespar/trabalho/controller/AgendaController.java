@@ -122,7 +122,9 @@ public class AgendaController {
             if(!e.getObservacoes().isBlank()) adicionarDescricao(card,e.getObservacoes());
             Button editar=new Button("Editar"); editar.setOnAction(a->abrirFormulario(e));
             Button excluir=new Button("Excluir"); excluir.setOnAction(a->excluir(e));
-            card.getChildren().add(new HBox(6,editar,excluir));
+            HBox acoes = new HBox(6, editar);
+            if (pode(AGENDA_EXCLUIR)) acoes.getChildren().add(excluir);
+            card.getChildren().add(acoes);
             if(e.getStatus()==EventoAgenda.Status.AGENDADO) {
                 Button concluir=new Button("Concluir"), cancelar=new Button("Cancelar");
                 concluir.setDisable(e.getData().atTime(e.getHoraFim()).isAfter(LocalDateTime.now()));

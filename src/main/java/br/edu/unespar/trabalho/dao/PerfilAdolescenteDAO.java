@@ -130,7 +130,7 @@ public class PerfilAdolescenteDAO {
         exigir(FREQUENCIA_CONSULTAR);
 
         List<FrequenciaLinhaDTO> lista = new ArrayList<>();
-        String horasPermitidas = pode(MEDIDA_CONSULTAR) ? "f.horas_cumpridas" : "NULL::integer AS horas_cumpridas";
+        String horasPermitidas = pode(HORAS_PSC_CONSULTAR) ? "f.horas_cumpridas" : "NULL::integer AS horas_cumpridas";
         String sql = "SELECT f.data_presenca, f.status_presenca, " + horasPermitidas + ", a.nome_atividade " +
                 "FROM Frequencia f INNER JOIN Atividade a ON a.id_atividade = f.id_atividade " +
                 "WHERE f.cpf_adolescente = ? ORDER BY f.data_presenca DESC, a.nome_atividade";

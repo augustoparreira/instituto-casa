@@ -22,7 +22,9 @@ public class FrequenciaDAO {
     private boolean salvar(Frequencia f,boolean edicao) {
         if (f.getHorasContabilizadas() > 0) exigir(HORAS_PSC_REGISTRAR);
         if (f.getIdMedida() != null) exigir(MEDIDA_CONSULTAR);
-        f.validar();
+        boolean podeAlterarJustificativa = pode(FREQUENCIA_JUSTIFICATIVA_ALTERAR);
+        String observacoes = f.getObservacoes() == null ? "" : f.getObservacoes().trim();
+        f.validar(edicao && !podeAlterarJustificativa);
         if(f.getHorasContabilizadas()>0 && f.getIdMedida()==null)
             throw new IllegalArgumentException("Selecione a PSC para contabilizar horas. Para acompanhamento apenas de LA, informe zero horas.");
         try(Connection c=ConnectionFactory.getConnection()) {
@@ -31,6 +33,21 @@ public class FrequenciaDAO {
                 try(PreparedStatement s=c.prepareStatement("SELECT cpf_adolescente FROM Adolescente WHERE cpf_adolescente=? FOR UPDATE")) {
                     s.setLong(1,f.getCpfAdolescente());
                     try(ResultSet r=s.executeQuery()) { if(!r.next()) throw new IllegalArgumentException("Adolescente não encontrado."); }
+                }
+                if (edicao && !podeAlterarJustificativa) {
+                    try (PreparedStatement s=c.prepareStatement(
+                            "SELECT status_presenca, btrim(observacoes)<>'' AS tem_nota FROM Frequencia "
+                                    + "WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=? FOR UPDATE")) {
+                        s.setLong(1,f.getCpfAdolescente());
+                        s.setInt(2,f.getIdAtividade());
+                        s.setObject(3,f.getDataPresenca());
+                        try (ResultSet r=s.executeQuery()) {
+                            if (!r.next()) throw new IllegalArgumentException("O lançamento não existe mais. Atualize a tela.");
+                            boolean temNota=r.getBoolean("tem_nota");
+                            if (temNota && !observacoes.isEmpty()) exigir(FREQUENCIA_JUSTIFICATIVA_ALTERAR);
+                            f.validar(temNota && StatusPresenca.fromCodigo(r.getString("status_presenca"))==StatusPresenca.FALTA_JUSTIFICADA);
+                        }
+                    }
                 }
                 if(f.getIdMedida()!=null) {
                     try(PreparedStatement s=c.prepareStatement("SELECT tipo_medida FROM MedidaSocioeducativa WHERE id_medida=? AND cpf_adolescente=? AND upper(tipo_medida) IN ('LA','PSC') AND data_inicio<=? AND (data_fim IS NULL OR data_fim>=?)")) {
@@ -48,11 +65,11 @@ public class FrequenciaDAO {
                 }
                 YearMonth mesDoLancamento=YearMonth.from(f.getDataPresenca());
                 int faltasAntes=contarDatasComFaltaInjustificada(c,f.getCpfAdolescente(),mesDoLancamento);
-                String sql=edicao ? "UPDATE Frequencia SET status_presenca=?,horas_cumpridas=?,id_medida=?,observacoes=? WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=?"
+                String sql=edicao ? "UPDATE Frequencia SET status_presenca=?,horas_cumpridas=?,id_medida=?,observacoes=COALESCE(?,observacoes) WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=?"
                         : "INSERT INTO Frequencia(status_presenca,horas_cumpridas,id_medida,observacoes,cpf_adolescente,id_atividade,data_presenca) VALUES(?,?,?,?,?,?,?)";
                 try(PreparedStatement s=c.prepareStatement(sql)) {
                     s.setString(1,f.getStatusPresenca().getCodigo()); s.setInt(2,f.getHorasContabilizadas()); s.setObject(3,f.getIdMedida());
-                    s.setString(4,f.getObservacoes()==null?"":f.getObservacoes().trim()); s.setLong(5,f.getCpfAdolescente());
+                    s.setString(4,edicao && !podeAlterarJustificativa && observacoes.isEmpty() ? null : observacoes); s.setLong(5,f.getCpfAdolescente());
                     s.setInt(6,f.getIdAtividade()); s.setObject(7,f.getDataPresenca());
                     if(s.executeUpdate()!=1) throw new IllegalArgumentException("O lançamento não existe mais. Atualize a tela.");
                 }
@@ -129,13 +146,26 @@ public class FrequenciaDAO {
 
     public List<Frequencia> listar(long cpf,LocalDate inicio,LocalDate fim) {
         exigir(FREQUENCIA_CONSULTAR);
+        return listar(cpf,inicio,fim,pode(FREQUENCIA_JUSTIFICATIVA_CONSULTAR));
+    }
 
+    public List<Frequencia> listarParaRelatorioOperacional(long cpf,YearMonth competencia) {
+        exigir(RELATORIO_OPERACIONAL_GERAR);
+        exigir(FREQUENCIA_CONSULTAR);
+        if (cpf <= 0) throw new IllegalArgumentException("Selecione um adolescente.");
+        return listar(cpf,competencia.atDay(1),competencia.atEndOfMonth(),false);
+    }
+
+    private List<Frequencia> listar(long cpf,LocalDate inicio,LocalDate fim,boolean incluirJustificativas) {
         List<Frequencia> lista=new ArrayList<>();
-        boolean dadosCompletos = pode(MEDIDA_CONSULTAR);
-        String campos = dadosCompletos ? "f.*,m.tipo_medida" : "f.cpf_adolescente,f.id_atividade,f.data_presenca,"
-                + "f.status_presenca,0 AS horas_cumpridas,NULL::integer AS id_medida,NULL::text AS observacoes,NULL::text AS tipo_medida";
-        String sql="SELECT "+campos+",a.nome_atividade FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
-                + (dadosCompletos ? "LEFT JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida " : "")
+        boolean medidas = pode(MEDIDA_CONSULTAR);
+        String horas = pode(HORAS_PSC_CONSULTAR) ? "f.horas_cumpridas" : "0";
+        String notas = incluirJustificativas ? "f.observacoes" : "NULL::text";
+        String vinculo = medidas ? "f.id_medida,m.tipo_medida" : "NULL::integer AS id_medida,NULL::text AS tipo_medida";
+        String sql="SELECT f.cpf_adolescente,f.id_atividade,f.data_presenca,f.status_presenca,"
+                + horas+" AS horas_cumpridas,"+notas+" AS observacoes,"+vinculo+",a.nome_atividade "
+                + "FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
+                + (medidas ? "LEFT JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida " : "")
                 + "WHERE (?=0 OR f.cpf_adolescente=?) AND f.data_presenca BETWEEN ? AND ? ORDER BY f.data_presenca DESC,a.nome_atividade";
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
             s.setLong(1,cpf); s.setLong(2,cpf); s.setObject(3,inicio); s.setObject(4,fim);

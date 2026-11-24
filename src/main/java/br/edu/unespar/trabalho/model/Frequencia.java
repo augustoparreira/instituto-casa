@@ -25,7 +25,9 @@ public class Frequencia {
         return nomeAtividade + " · " + statusPresenca + " · " + medida + (tipoMedida==TipoMedida.LA?"":" · "+getHorasContabilizadas()+"h");
     }
 
-    public void validar() {
+    public void validar() { validar(false); }
+
+    public void validar(boolean justificativaPreservada) {
         if (cpfAdolescente <= 0 || idAtividade <= 0 || dataPresenca == null || statusPresenca == null)
             throw new IllegalArgumentException("Informe adolescente, atividade, data e situação.");
         if (dataPresenca.isAfter(LocalDate.now())) throw new IllegalArgumentException("Não registre frequência futura.");
@@ -33,7 +35,7 @@ public class Frequencia {
             throw new IllegalArgumentException("Informe horas inteiras entre 0 e 24.");
         if (!isPresente() && horasCumpridas != null && horasCumpridas != 0)
             throw new IllegalArgumentException("Faltas não contabilizam horas.");
-        if (statusPresenca == StatusPresenca.FALTA_JUSTIFICADA && (observacoes == null || observacoes.isBlank()))
+        if (statusPresenca == StatusPresenca.FALTA_JUSTIFICADA && !justificativaPreservada && (observacoes == null || observacoes.isBlank()))
             throw new IllegalArgumentException("Descreva o motivo da falta justificada.");
     }
 

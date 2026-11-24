@@ -140,7 +140,7 @@
                     <!-- ABA: Medida Socioeducativa -->
                     <VBox fx:id="paneMedida" spacing="20.0" visible="false" managed="false">
 
-                        <HBox spacing="12"><ComboBox fx:id="cmbMedidaPerfil" promptText="Medidas e histórico" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Nova medida" onAction="#novaMedida" styleClass="btn-novo"/><Button text="Editar / encerrar" onAction="#editarMedida" styleClass="btn-outline"/></HBox>
+                        <HBox spacing="12"><ComboBox fx:id="cmbMedidaPerfil" promptText="Medidas e histórico" maxWidth="Infinity" HBox.hgrow="ALWAYS"/><Button text="Nova medida" onAction="#novaMedida" styleClass="btn-novo"/><Button fx:id="btnEditarMedida" text="Editar / encerrar" onAction="#editarMedida" styleClass="btn-outline"/></HBox>
                         <!-- Medida selecionada -->
                         <VBox fx:id="boxMedidaCadastrada" styleClass="content-box" spacing="20.0" visible="false" managed="false">
                             <Label text="Medida socioeducativa" styleClass="box-title" />
@@ -216,7 +216,7 @@
                             <Label fx:id="lblTecnicoAtual" text="Sem técnico vinculado" styleClass="form-value" />
                             <HBox spacing="15.0" alignment="CENTER_LEFT">
                                 <ComboBox fx:id="cmbTecnico" promptText="Selecione um membro da equipe" styleClass="search-field" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
-                                <Button text="Definir como referência" styleClass="btn-novo" onAction="#definirTecnico" />
+                                <Button fx:id="btnDefinirReferencia" text="Definir como referência" styleClass="btn-novo" onAction="#definirTecnico" />
                             </HBox>
                         </VBox>
                     </VBox>

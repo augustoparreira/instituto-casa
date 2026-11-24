@@ -3,6 +3,8 @@ package br.edu.unespar.trabalho.controller;
 import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.FrequenciaMensalDAO;
+import br.edu.unespar.trabalho.dao.FrequenciaDAO;
+import br.edu.unespar.trabalho.util.ApresentacaoAcesso;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -24,6 +26,7 @@ public class FrequenciaController {
     @FXML private DatePicker dpCompetencia;
     @FXML private TextField txtPesquisa;
     @FXML private Label lblResumo;
+    @FXML private Button btnRegistrar, btnRelatorioOperacional;
     @FXML private CheckBox chkInativos;
     private List<FrequenciaMensalDTO> linhas=List.of();
     private YearMonth mes=YearMonth.now();
@@ -33,6 +36,9 @@ public class FrequenciaController {
 
 
         exigir(FREQUENCIA_CONSULTAR);
+        ApresentacaoAcesso.aplicar(btnRelatorioOperacional, RELATORIO_OPERACIONAL_GERAR);
+        btnRelatorioOperacional.disableProperty().bind(tabela.getSelectionModel().selectedItemProperty().isNull());
+        if (!pode(FREQUENCIA_EDITAR)) btnRegistrar.setText("Registrar frequência");
         dpCompetencia.setValue(mes.atDay(1));
         tabela.setPlaceholder(new Label("Nenhum adolescente encontrado."));
         txtPesquisa.textProperty().addListener((o,a,b)->filtrar());
@@ -79,11 +85,15 @@ public class FrequenciaController {
 
     private void filtrar() {
         String termo=txtPesquisa.getText().trim().toLowerCase();
+        boolean cpfCompleto=pode(ADOLESCENTE_CONSULTAR);
+        txtPesquisa.setPromptText(cpfCompleto ? "Nome ou CPF" : "Nome ou final do CPF");
         var resultado=linhas.stream().filter(l->chkInativos.isSelected() || l.getAdolescente().getStatus()!=StatusAdolescente.INATIVO
                         || java.util.stream.IntStream.rangeClosed(1,mes.lengthOfMonth()).anyMatch(d->!l.getDia(d).isEmpty()))
                 .filter(l->l.getAdolescente().getNomeCompleto().toLowerCase().contains(termo)
-                        || l.getAdolescente().getCpfFormatado().contains(termo)
-                        || (termo.matches("[0-9]+") && String.format("%011d",l.getAdolescente().getCpf()).contains(termo))).toList();
+                        || (cpfCompleto && l.getAdolescente().getCpfFormatado().contains(termo))
+                        || (termo.matches("[0-9]+") && (cpfCompleto
+                        ? String.format("%011d",l.getAdolescente().getCpf()).contains(termo)
+                        : String.format("%011d",l.getAdolescente().getCpf()).substring(7).endsWith(termo)))).toList();
         tabela.setItems(FXCollections.observableArrayList(resultado));
         long pendentes=resultado.stream().mapToLong(FrequenciaMensalDTO::getSemVinculo).sum();
         lblResumo.setText(resultado.size()+" adolescentes · "+mes.format(DateTimeFormatter.ofPattern("MM/yyyy"))
@@ -92,6 +102,8 @@ public class FrequenciaController {
 
     private void montarColunas() {
         tabela.getColumns().clear();
+        boolean detalhada=pode(MEDIDA_CONSULTAR) && pode(HORAS_PSC_CONSULTAR);
+        boolean podeCorrigir=pode(FREQUENCIA_EDITAR);
         coluna("Adolescente",230,l->l.getAdolescente().getNomeCompleto());
         coluna("Situação mensal",110,FrequenciaMensalDTO::getSituacao);
         for(int d=1;d<=mes.lengthOfMonth();d++) {
@@ -108,17 +120,19 @@ public class FrequenciaController {
                     if(!vazio) {
                         setStyle("-fx-alignment:center; -fx-background-color:"+(item.contains("A")?"#f9dfdf":item.contains("J")?"#fff1cf":item.contains("P")?"#e2f1e8":"#fafaf7")+";");
                         var linha=getTableRow()==null?null:getTableRow().getItem();
-                        String detalhes=linha==null?"":linha.getRegistrosDia(dia).stream().map(f -> f + (f.getObservacoes()==null || f.getObservacoes().isBlank() ? "" : " · "+f.getObservacoes())).collect(java.util.stream.Collectors.joining("\n"));
-                        setTooltip(new Tooltip(mes.atDay(dia)+"\n"+detalhes+"\nDuplo clique para registrar ou corrigir."));
+                        String detalhes=linha==null?"":linha.getRegistrosDia(dia).stream().map(f -> (detalhada ? f.toString() : f.getNomeAtividade()+" · "+f.getStatusPresenca()) + (f.getObservacoes()==null || f.getObservacoes().isBlank() ? "" : " · "+f.getObservacoes())).collect(java.util.stream.Collectors.joining("\n"));
+                        setTooltip(new Tooltip(mes.atDay(dia)+"\n"+detalhes+(podeCorrigir?"\nDuplo clique para registrar ou corrigir.":"\nDuplo clique para registrar.")));
                     }
                 }
             });
         }
         if (!pode(MEDIDA_CONSULTAR)) return;
         coluna("MSE",95,FrequenciaMensalDTO::getMse); coluna("Meses LA",95,FrequenciaMensalDTO::getMeses);
-        coluna("Horas PSC",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPrevistas()));
-        coluna("Cumpridas",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasCumpridas()));
-        coluna("Pendentes",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPendentes()));
+        if (pode(HORAS_PSC_CONSULTAR)) {
+            coluna("Horas PSC",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPrevistas()));
+            coluna("Cumpridas",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasCumpridas()));
+            coluna("Pendentes",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPendentes()));
+        }
         if(pode(ADOLESCENTE_CONSULTAR)) coluna("IMM",70,l->l.getAdolescente().isImm()?"Sim":"Não");
         if(pode(ADOLESCENTE_CONSULTAR)) coluna("Vale-transporte",110,l->l.getAdolescente().isValeTransporte()?"Sim":"Não");
         if(pode(PIA_CONSULTAR)) coluna("PIA enviado",95,l->l.isPiaEnviado()?"Sim":"Não");
@@ -128,6 +142,33 @@ public class FrequenciaController {
         TableColumn<FrequenciaMensalDTO,String> c=new TableColumn<>(titulo); c.setPrefWidth(largura);
         c.setReorderable(false); // a planilha simula um calendário: a ordem das colunas não pode mudar
         c.setCellValueFactory(d->new ReadOnlyStringWrapper(valor.apply(d.getValue()))); tabela.getColumns().add(c); return c;
+    }
+
+    @FXML public void gerarRelatorioOperacional() {
+        exigir(RELATORIO_OPERACIONAL_GERAR);
+        var linha = tabela.getSelectionModel().getSelectedItem();
+        if (linha==null) return;
+        var adolescente = linha.getAdolescente();
+        var registros = new FrequenciaDAO().listarParaRelatorioOperacional(adolescente.getCpf(),mes);
+        StringBuilder relatorio = new StringBuilder("Frequência mensal — uso interno\n")
+                .append(adolescente.getNomeCompleto()).append(" · ")
+                .append(mes.format(DateTimeFormatter.ofPattern("MM/yyyy"))).append("\n\n");
+        if (registros.isEmpty()) relatorio.append("Nenhum lançamento nesta competência.");
+        for (Frequencia registro : registros) {
+            relatorio.append(registro.getDataPresenca().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                    .append(" · ").append(registro).append("\n");
+        }
+        TextArea texto = new TextArea(relatorio.toString());
+        texto.setId("txtRelatorioOperacional");
+        texto.setEditable(false);
+        texto.setWrapText(true);
+        Dialog<ButtonType> dialogo = new Dialog<>();
+        dialogo.setTitle("Relatório operacional de frequência");
+        if (tabela.getScene()!=null) dialogo.initOwner(tabela.getScene().getWindow());
+        dialogo.getDialogPane().setContent(texto);
+        dialogo.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialogo.setResizable(true);
+        dialogo.showAndWait();
     }
 
     @FXML public void registrar() {

@@ -37,10 +37,21 @@ public class ResponsavelDAO {
                         }
                     }
                 }
-                String pessoa=edicao ? "UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?"
-                        : "INSERT INTO Pessoa(nome_completo,data_nascimento,contato,email,cpf) VALUES(?,?,?,?,?) ON CONFLICT(cpf) DO NOTHING";
-                try(PreparedStatement s=c.prepareStatement(pessoa)) {
-                    s.setString(1,r.getNomeCompleto()); s.setObject(2,r.getDataNascimento()); s.setString(3,r.getContato()); s.setString(4,r.getEmail()); s.setLong(5,r.getCpf()); s.executeUpdate();
+                if (edicao) {
+                    if (pode(FAMILIA_PESSOA_COMPARTILHADA_ALTERAR) || podeEditarDadosPessoais(c,r.getCpf())) {
+                        try (PreparedStatement s=c.prepareStatement("UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?")) {
+                            preencherPessoa(s,r);
+                            s.executeUpdate();
+                        }
+                    }
+                } else {
+                    int inseridas;
+                    try (PreparedStatement s=c.prepareStatement("INSERT INTO Pessoa(nome_completo,data_nascimento,contato,email,cpf) VALUES(?,?,?,?,?) ON CONFLICT(cpf) DO NOTHING")) {
+                        preencherPessoa(s,r);
+                        inseridas=s.executeUpdate();
+                    }
+                    if (inseridas==0 && !bloquearResponsavelReutilizavel(c,r.getCpf()))
+                        throw new IllegalArgumentException("CPF já utilizado em outro tipo de cadastro.");
                 }
                 try(PreparedStatement s=c.prepareStatement("INSERT INTO Responsavel(cpf_responsavel,parentesco,contato_principal) VALUES(?,?,?) ON CONFLICT(cpf_responsavel) DO NOTHING")) {
                     s.setLong(1,r.getCpf()); s.setString(2,r.getParentesco()); s.setBoolean(3,r.isContatoPrincipal()); s.executeUpdate();
@@ -53,19 +64,61 @@ public class ResponsavelDAO {
             } catch(SQLException|RuntimeException e) { c.rollback(); throw e; }
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar o responsável.",e); }
     }
+    private static final String REUTILIZAVEL = "EXISTS (SELECT 1 FROM Responsavel WHERE cpf_responsavel=p.cpf) "
+            + "AND NOT EXISTS (SELECT 1 FROM Adolescente WHERE cpf_adolescente=p.cpf) "
+            + "AND NOT EXISTS (SELECT 1 FROM EquipeTecnica WHERE cpf_equipe=p.cpf)";
+
+    private void preencherPessoa(PreparedStatement s,Responsavel r) throws SQLException {
+        s.setString(1,r.getNomeCompleto());
+        s.setObject(2,r.getDataNascimento());
+        s.setString(3,r.getContato());
+        s.setString(4,r.getEmail());
+        s.setLong(5,r.getCpf());
+    }
+
+    boolean bloquearResponsavelReutilizavel(Connection c,long cpf) throws SQLException {
+        try (PreparedStatement s=c.prepareStatement("SELECT cpf FROM Pessoa WHERE cpf=? FOR UPDATE")) {
+            s.setLong(1,cpf);
+            try (ResultSet r=s.executeQuery()) { if (!r.next()) return false; }
+        }
+        try (PreparedStatement s=c.prepareStatement("SELECT "+REUTILIZAVEL+" FROM Pessoa p WHERE cpf=?")) {
+            s.setLong(1,cpf);
+            try (ResultSet r=s.executeQuery()) { return r.next() && r.getBoolean(1); }
+        }
+    }
+
+    private boolean podeEditarDadosPessoais(Connection c,long cpf) throws SQLException {
+        if (!bloquearResponsavelReutilizavel(c,cpf)) return false;
+        try (PreparedStatement s=c.prepareStatement("SELECT count(*)=1 FROM Responsabiliza WHERE cpf_responsavel=?")) {
+            s.setLong(1,cpf);
+            try (ResultSet r=s.executeQuery()) { return r.next() && r.getBoolean(1); }
+        }
+    }
+
+    public boolean podeEditarDadosPessoais(long cpf) {
+        exigir(FAMILIA_ALTERAR);
+        if (pode(FAMILIA_PESSOA_COMPARTILHADA_ALTERAR)) return true;
+        try (Connection c=ConnectionFactory.getConnection()) {
+            c.setAutoCommit(false);
+            try { return podeEditarDadosPessoais(c,cpf); }
+            finally { c.rollback(); }
+        } catch (SQLException e) { throw new IllegalStateException("Não foi possível verificar os vínculos do responsável.",e); }
+    }
+
     public Responsavel buscarPessoa(long cpf) {
         exigir(FAMILIA_CONSULTAR);
 
-        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT * FROM Pessoa WHERE cpf=?")) {
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT p.cpf,p.nome_completo,p.data_nascimento,p.contato,p.email,"+REUTILIZAVEL+" AS reutilizavel FROM Pessoa p WHERE cpf=?")) {
             s.setLong(1,cpf); try(ResultSet rs=s.executeQuery()) {
                 if(!rs.next()) return null;
+                if (!rs.getBoolean("reutilizavel")) throw new IllegalArgumentException("CPF já utilizado em outro tipo de cadastro.");
                 Responsavel r=new Responsavel(); r.setCpf(cpf); r.setNomeCompleto(rs.getString("nome_completo")); r.setDataNascimento(rs.getDate("data_nascimento").toLocalDate());
                 r.setContato(rs.getString("contato")); r.setEmail(rs.getString("email")); return r;
             }
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar o CPF.",e); }
     }
     public boolean desvincular(long cpfAdolescente,long cpfResponsavel) {
-        exigir(FAMILIA_ALTERAR);
+        exigir(FAMILIA_REMOVER);
 
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM Responsabiliza WHERE cpf_adolescente=? AND cpf_responsavel=?")) {
             s.setLong(1,cpfAdolescente); s.setLong(2,cpfResponsavel); return s.executeUpdate()==1;

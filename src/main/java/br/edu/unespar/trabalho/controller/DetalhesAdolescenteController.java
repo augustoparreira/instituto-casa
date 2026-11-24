@@ -69,6 +69,7 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -120,6 +121,7 @@ public class DetalhesAdolescenteController {
     @FXML private TextField txtDuracao;
     @FXML private CheckBox chkReincidencia;
     @FXML private TextArea txtHistorico;
+    @FXML private Button btnEditarMedida, btnDefinirReferencia;
 
     @FXML private Label lblTecnicoAtual;
     @FXML private ComboBox<EquipeTecnica> cmbTecnico;
@@ -180,9 +182,11 @@ public class DetalhesAdolescenteController {
     public void initialize() {
         exigir(ADOLESCENTE_CONSULTAR);
         br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnAbaPia,PIA_CONSULTAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnDefinirReferencia, REFERENCIA_DEFINIR);
+        btnEditarMedida.setText(pode(MEDIDA_ENCERRAR) ? "Editar / encerrar" : "Editar medida");
         dpFimMedida.setDisable(!pode(MEDIDA_ENCERRAR));
         txtHistorico.setDisable(!pode(SIGILOSO_ALTERAR));
-        btnEditarSocial.setDisable(!pode(SOCIAL_ALTERAR));
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnEditarSocial, SOCIAL_ALTERAR);
         dpMesFrequencia.setValue(LocalDate.now().withDayOfMonth(1));
         btnCorrigirFrequencia.disableProperty().bind(listaFrequenciaPerfil.getSelectionModel().selectedItemProperty().isNull());
         listaFrequenciaPerfil.setPlaceholder(textoVazio("Nenhum lançamento neste mês. Dias sem lançamento não são faltas."));
@@ -196,7 +200,10 @@ public class DetalhesAdolescenteController {
                         ? " · Horas sem vínculo com PSC: revise." : ""));
             }
         });
-        cmbMedidaPerfil.valueProperty().addListener((o,a,b)->exibirMedidaSelecionada());
+        cmbMedidaPerfil.valueProperty().addListener((o,a,b)-> {
+            exibirMedidaSelecionada();
+            if (b!=null && b.getDataFim()!=null && !pode(MEDIDA_ENCERRAR)) cancelarMedida();
+        });
         cmbMedidaFrequenciaGeral.setButtonCell(new ListCell<>() {
             @Override protected void updateItem(MedidaSocioeducativa medida,boolean vazio) {
                 super.updateItem(medida,vazio);
@@ -321,7 +328,11 @@ public class DetalhesAdolescenteController {
     }
 
     private void exibirMedidaSelecionada() {
-        var m=cmbMedidaPerfil.getValue(); if(m==null) return;
+        var m=cmbMedidaPerfil.getValue();
+        boolean editavel = m!=null && pode(MEDIDA_EDITAR) && (m.getDataFim()==null || pode(MEDIDA_ENCERRAR));
+        btnEditarMedida.setVisible(editavel);
+        btnEditarMedida.setManaged(editavel);
+        if (m==null) return;
         lblMedidaTipo.setText(m.getTipoMedida().getDescricao());
         lblMedidaInicio.setText(m.getDataInicio().format(FORMATO_DATA)+(m.getDataFim()==null?"":" · encerrada em "+m.getDataFim().format(FORMATO_DATA)));
         lblMedidaDuracao.setText(m.isPSC()?medidaDAO.consultarHorasDaMedida(m.getIdMedida(),LocalDate.now())+" de "+m.getDuracaoHoras()+" horas cumpridas":m.getDuracaoMeses()+" meses");
@@ -333,7 +344,8 @@ public class DetalhesAdolescenteController {
         txtDuracao.clear(); txtHistorico.clear(); chkReincidencia.setSelected(false); alternar(boxMedidaForm,true);
     }
     @FXML public void editarMedida() {
-        var m=cmbMedidaPerfil.getValue(); if(m==null) return;
+        var m=cmbMedidaPerfil.getValue();
+        if (m==null || !pode(MEDIDA_EDITAR) || (m.getDataFim()!=null && !pode(MEDIDA_ENCERRAR))) return;
         idMedidaEdicao=m.getIdMedida(); cmbTipoMedida.setValue(m.getTipoMedida());
         dpInicioMedida.setValue(m.getDataInicio()); dpFimMedida.setValue(m.getDataFim());
         txtDuracao.setText(String.valueOf(m.isPSC()?m.getDuracaoHoras():m.getDuracaoMeses()));
@@ -613,7 +625,8 @@ public class DetalhesAdolescenteController {
                     try { responsavelDAO.desvincular(cpfAtual,r.getCpf()); carregarAbaFamilia(); } catch(RuntimeException ex) { erroBanco(ex); }
                 }
             });
-            cartao.getChildren().addAll(editar,remover); boxResponsaveis.getChildren().add(cartao);
+            cartao.getChildren().add(editar);
+            if (pode(FAMILIA_REMOVER)) cartao.getChildren().add(remover); boxResponsaveis.getChildren().add(cartao);
         }
 
         boxComposicao.getChildren().clear();
@@ -633,7 +646,8 @@ public class DetalhesAdolescenteController {
                     try { composicaoDAO.excluir(f.getIdComposicaoFamiliar(),cpfAtual); carregarAbaFamilia(); } catch(RuntimeException ex) { erroBanco(ex); }
                 }
             });
-            cartao.getChildren().addAll(editar,remover); boxComposicao.getChildren().add(cartao);
+            cartao.getChildren().add(editar);
+            if (pode(FAMILIA_REMOVER)) cartao.getChildren().add(remover); boxComposicao.getChildren().add(cartao);
         }
 
         SituacaoSocial social = pode(SOCIAL_CONSULTAR)?situacaoSocialDAO.buscarPorCpf(cpfAtual):null;
@@ -720,18 +734,27 @@ public class DetalhesAdolescenteController {
         aviso.setWrapText(true); linhaFormulario(grade,7,"",aviso);
         if(existente!=null) {
             txtNome.setText(existente.getNomeCompleto()); txtCpf.setText(String.format("%011d",existente.getCpf())); txtCpf.setDisable(true);
-            dpNascimento.setValue(existente.getDataNascimento()); txtContato.setText(existente.getContato()); txtEmail.setText(existente.getEmail());
+            dpNascimento.setValue(existente.getDataNascimento()); txtContato.setText(Objects.toString(existente.getContato(),"")); txtEmail.setText(Objects.toString(existente.getEmail(),""));
             txtParentesco.setText(existente.getParentesco()); chkPrincipal.setSelected(existente.isContatoPrincipal());
+            if (!responsavelDAO.podeEditarDadosPessoais(existente.getCpf())) {
+                for (Node campo : List.of(txtNome,dpNascimento,txtContato,txtEmail)) campo.setDisable(true);
+                aviso.setText("Edite o parentesco e o contato principal deste vínculo. Dados pessoais compartilhados são administrados separadamente.");
+            }
         } else txtCpf.focusedProperty().addListener((o,a,focused)-> {
             String numero=Formatadores.soDigitos(txtCpf.getText());
             if(!focused && numero.length()==11) {
                 try {
                     Responsavel r=responsavelDAO.buscarPessoa(Long.parseLong(numero));
+                    boolean estavaReutilizando=txtNome.isDisabled();
                     boolean reutilizado=r!=null;
+                    erro.setText("");
                     txtNome.setDisable(reutilizado); dpNascimento.setDisable(reutilizado); txtContato.setDisable(reutilizado); txtEmail.setDisable(reutilizado);
                     if(r!=null) {
-                        txtNome.setText(r.getNomeCompleto()); dpNascimento.setValue(r.getDataNascimento()); txtContato.setText(r.getContato()); txtEmail.setText(r.getEmail());
-                        aviso.setText("CPF já cadastrado: os dados pessoais serão reutilizados. Para alterá-los, salve o vínculo e use Editar.");
+                        txtNome.setText(r.getNomeCompleto()); dpNascimento.setValue(r.getDataNascimento()); txtContato.setText(Objects.toString(r.getContato(),"")); txtEmail.setText(Objects.toString(r.getEmail(),""));
+                        aviso.setText("CPF já cadastrado: os dados pessoais serão reutilizados sem alteração.");
+                    } else if (estavaReutilizando) {
+                        txtNome.clear(); dpNascimento.setValue(null); txtContato.clear(); txtEmail.clear();
+                        aviso.setText("Informe os dados do novo responsável.");
                     }
                 } catch(RuntimeException e) { erro.setText(e.getMessage()); }
             }

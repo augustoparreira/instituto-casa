@@ -23,6 +23,8 @@ public class RegistroFrequenciaController {
     @FXML private ComboBox<MedidaSocioeducativa> cmbMedida;
     @FXML private ComboBox<StatusPresenca> cmbStatus;
     @FXML private TextField txtHoras;
+    @FXML private Button btnNovaAtividade, btnSemMedida, btnExcluirLancamento;
+    @FXML private Label lblHoras;
     @FXML private TextArea txtObservacoes;
     private long cpf;
     private Frequencia selecionada;
@@ -34,6 +36,20 @@ public class RegistroFrequenciaController {
 
 
         exigir(FREQUENCIA_CONSULTAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnNovaAtividade, ATIVIDADE_GERENCIAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnExcluirLancamento, FREQUENCIA_EXCLUIR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnSemMedida, MEDIDA_CONSULTAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(cmbMedida, MEDIDA_CONSULTAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(lblHoras, HORAS_PSC_REGISTRAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(txtHoras, HORAS_PSC_REGISTRAR);
+        if (!pode(FREQUENCIA_EDITAR)) {
+            listaRegistros.setCellFactory(lista -> new ListCell<>() {
+                @Override protected void updateItem(Frequencia item, boolean vazio) {
+                    super.updateItem(item, vazio);
+                    setText(vazio || item==null ? null : item.getNomeAtividade()+" · "+item.getStatusPresenca());
+                }
+            });
+        }
         cmbStatus.setItems(FXCollections.observableArrayList(StatusPresenca.values()));
         cmbAtividade.setConverter(new StringConverter<>() {
             public String toString(Atividade a) { return a==null?"":a.getNomeAtividade(); }
@@ -66,7 +82,10 @@ public class RegistroFrequenciaController {
         this.cpf=cpf; this.aoSalvar=retorno;
         Adolescente a=new AdolescenteDAO().listarParaFrequencia().stream().filter(p -> p.getCpf()==cpf).findFirst().orElse(null);
         if(a==null) throw new IllegalArgumentException("Adolescente não encontrado.");
-        lblAdolescente.setText(a.getNomeCompleto()+" · "+a.getCpfFormatado());
+        String identificador = a.getCpfFormatado();
+        if (!pode(ADOLESCENTE_CONSULTAR))
+            identificador = "final do CPF " + String.format("%011d",a.getCpf()).substring(7);
+        lblAdolescente.setText(a.getNomeCompleto()+" · "+identificador);
         cmbAtividade.setItems(FXCollections.observableArrayList(new AtividadeDAO().listar()));
         dpData.setValue(data);
     }
@@ -87,7 +106,7 @@ public class RegistroFrequenciaController {
         cmbAtividade.setValue(null); cmbMedida.setValue(cmbMedida.getItems().size()==1?cmbMedida.getItems().getFirst():null);
         cmbStatus.setValue(StatusPresenca.PRESENTE); txtHoras.setText("0"); txtObservacoes.clear();
         atualizarHoras(false);
-        lblMensagem.setText("Novo lançamento. Para corrigir um existente, selecione-o na lista.");
+        lblMensagem.setText(pode(FREQUENCIA_EDITAR) ? "Novo lançamento. Para corrigir um existente, selecione-o na lista." : "Novo lançamento.");
     }
 
     private void preencher(Frequencia f) {
@@ -96,7 +115,10 @@ public class RegistroFrequenciaController {
         cmbMedida.setValue(cmbMedida.getItems().stream().filter(m->f.getIdMedida()!=null && m.getIdMedida()==f.getIdMedida()).findFirst().orElse(null));
         cmbStatus.setValue(f.getStatusPresenca()); txtHoras.setText(Integer.toString(f.getHorasContabilizadas()));
         atualizarHoras(false);
-        txtObservacoes.setText(f.getObservacoes()); lblMensagem.setText("Editando o lançamento selecionado. Para trocar atividade ou data, exclua-o e registre novamente.");
+        txtObservacoes.setText(f.getObservacoes()==null ? "" : f.getObservacoes());
+        lblMensagem.setText(pode(FREQUENCIA_EXCLUIR)
+                ? "Para trocar atividade ou data, exclua o lançamento e registre novamente."
+                : "A data e a atividade deste lançamento ficam fixas.");
     }
 
     @FXML public void semMedida() { cmbMedida.setValue(null); atualizarHoras(false); }
@@ -189,7 +211,7 @@ public class RegistroFrequenciaController {
                         .filter(f -> f.getIdAtividade() == frequencia.getIdAtividade())
                         .findFirst().ifPresent(f -> controller.listaRegistros.getSelectionModel().select(f));
             }
-            Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle("Registrar / corrigir frequência");
+            Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle(pode(FREQUENCIA_EDITAR) ? "Registrar / corrigir frequência" : "Registrar frequência");
             dialogo.getDialogPane().setContent(root); dialogo.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
             dialogo.setResizable(true); dialogo.showAndWait();
         } catch(Exception e) { e.printStackTrace(); new Alert(Alert.AlertType.ERROR,"Não foi possível abrir a frequência: "+e.getMessage()).showAndWait(); }

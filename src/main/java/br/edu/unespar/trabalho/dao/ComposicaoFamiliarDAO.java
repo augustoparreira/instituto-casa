@@ -43,7 +43,7 @@ public class ComposicaoFamiliarDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar o familiar.",e); }
     }
     public boolean excluir(int id,long cpf) {
-        exigir(FAMILIA_ALTERAR);
+        exigir(FAMILIA_REMOVER);
 
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM ComposicaoFamiliar WHERE id_composicaoFamiliar=? AND cpf_adolescente=?")) {
             s.setInt(1,id); s.setLong(2,cpf); return s.executeUpdate()==1;

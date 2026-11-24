@@ -49,11 +49,13 @@ public class AdolescentesController {
     private String filtroTipoAtual = "Todos";
     private String filtroStatusAtual = "Todos";
 
+    @FXML private Button btnNovoAdolescente;
     private AdolescenteDAO adolescenteDAO;
 
     @FXML
     public void initialize() {
         exigir(ADOLESCENTE_CONSULTAR);
+        br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnNovoAdolescente, ADOLESCENTE_CADASTRAR);
         adolescenteDAO = new AdolescenteDAO();
 
         listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());
@@ -194,7 +196,7 @@ public class AdolescentesController {
     @FXML public void irParaEquipeTecnica(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
     @FXML
     public void abrirTelaCadastro(ActionEvent event) {
-        try { exigir(ADOLESCENTE_CADASTRAR); exigir(SOCIAL_ALTERAR); exigir(SAUDE_ALTERAR); }
+        try { exigir(ADOLESCENTE_CADASTRAR); }
         catch(br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
             new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,negado.getMessage()).showAndWait();
             return;

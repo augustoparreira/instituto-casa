@@ -1,5 +1,16 @@
 # Preparação da entrega
 
+## Integração final de 24/11/2026
+
+O commit `0fdb8b2` reúne `feature/administrador` (`1ad2b95`) e `feature/preparacao-entrega` (`1d06963`). A configuração das contas está em [ADMINISTRACAO.md](../ADMINISTRACAO.md) e a matriz está no [contrato de autorização](../CONTRATO_AUTORIZACAO.md).
+
+- A suíte principal passou em 178 verificações no JDK 21, com contas fictícias autenticadas no PostgreSQL isolado. Inclui login e logout dos três perfis, vigência e bloqueio de reabertura de medida pela Equipe Técnica, edição de frequência e preservação de informações reservadas.
+- O cenário de preparação passou em 18 verificações de formulários e propagação de alterações. A prévia e a paginação A4 foram exercitadas, inclusive com texto distribuído em sete páginas na suíte principal.
+- A migração de segurança e a conversão de senhas legadas foram verificadas, incluindo reexecução, login após a conversão e preservação do vínculo com o técnico de referência. O utilitário de conversão também foi executado em terminal com uma conta fictícia.
+- O PDF produzido pelo driver do Windows ainda requer a conferência manual abaixo. A ONG ainda precisa definir o alcance do Educador, o acesso técnico a campos sigilosos, a inclusão completa com campos sociais obrigatórios e o tratamento de descumprimento marcado manualmente.
+
+## Histórico da preparação anterior à integração
+
 A branch feature/preparacao-entrega parte de 8e09fe9 e inclui a correção posterior de consultas familiares, originalmente publicada em 2609f14.
 
 Foram aprovadas 18 verificações dirigidas. A compilação utilizou --release 21 com o JDK 25 instalado neste computador.

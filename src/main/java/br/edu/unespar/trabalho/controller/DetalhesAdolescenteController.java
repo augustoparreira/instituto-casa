@@ -169,7 +169,11 @@ public class DetalhesAdolescenteController {
     /** Limite de 1.000 caracteres por campo textual do PIA, conforme o DDL ajustado. */
     private static final int LIMITE_TEXTO_PIA = 1000;
 
-    @FXML private Label lblDadosComplementares;
+    @FXML private Label lblInfoIdade, lblInfoAniversario, lblInfoNaturalidade, lblInfoCorRaca;
+    @FXML private Label lblInfoTelefone, lblInfoEmail, lblInfoEstuda, lblInfoEscola, lblInfoSerie;
+    @FXML private Label lblInfoTrabalha, lblInfoLocalTrabalho, lblInfoFuncao, lblInfoVinculo;
+    @FXML private Label lblInfoUbs, lblInfoUsoSpa, lblInfoSubstancias, lblInfoImm;
+    @FXML private Label lblInfoValeTransporte, lblInfoObservacoes;
     @FXML private ComboBox<MedidaSocioeducativa> cmbMedidaPerfil;
     @FXML private DatePicker dpFimMedida, dpMesFrequencia;
     private Integer idMedidaEdicao;
@@ -284,15 +288,34 @@ public class DetalhesAdolescenteController {
             piaEnviadoAtual = cadastro.isPiaEnviado();
             var estudo=new EducacaoTrabalhoDAO().buscarPorCpf(cpfAtual);
             var saude=pode(SAUDE_CONSULTAR)?saudeDAO.buscarPorCpf(cpfAtual):null;
-            lblDadosComplementares.setText("Idade: "+cadastro.getIdade()+" anos · aniversário: "+cadastro.getDataNascimento().getMonthValue()
-                    +"\nNaturalidade: "+Formatadores.textoOuTraco(cadastro.getNaturalidade())+" · Cor/raça: "+Formatadores.textoOuTraco(cadastro.getCorRaca())
-                    +"\nTelefone: "+Formatadores.textoOuTraco(cadastro.getContato())+" · E-mail: "+Formatadores.textoOuTraco(cadastro.getEmail())
-                    +"\nEstuda: "+(estudo!=null && estudo.isEstuda()?"Sim · "+Formatadores.textoOuTraco(estudo.getEscola())+" · "+Formatadores.textoOuTraco(estudo.getSerie()):"Não")
-                    +"\nTrabalha: "+(estudo!=null && estudo.isTrabalha()?"Sim · "+Formatadores.textoOuTraco(estudo.getLocalTrabalho())+" · "+Formatadores.textoOuTraco(estudo.getFuncao())+" · "+Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"Não")
-                    +"\nUBS: "+(saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()))
-                    +" · Uso de SPA: "+(!pode(SAUDE_CONSULTAR)?"Acesso restrito":saude!=null && saude.isUsoSpa()?"Sim · "+Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"Não")
-                    +"\nIMM: "+(cadastro.isImm()?"Sim":"Não")+" · Vale-transporte: "+(cadastro.isValeTransporte()?"Sim":"Não")
-                    +"\nObservações: "+Formatadores.textoOuTraco(cadastro.getObservacoes()));
+            lblInfoNome.setText(Formatadores.textoOuTraco(cadastro.getNomeCompleto()));
+            lblInfoCpf.setText(cadastro.getCpfFormatado());
+            lblInfoNascimento.setText(Formatadores.dataCurta(cadastro.getDataNascimento()));
+            lblInfoGenero.setText(Formatadores.textoOuTraco(cadastro.getGenero()));
+            lblInfoBairro.setText(Formatadores.textoOuTraco(cadastro.getBairro()));
+            lblInfoStatus.setText(cadastro.getStatus().getDescricao());
+            lblInfoIdade.setText(cadastro.getIdade()+" anos");
+            lblInfoAniversario.setText(Formatadores.dataCurta(cadastro.getDataNascimento()));
+            lblInfoNaturalidade.setText(Formatadores.textoOuTraco(cadastro.getNaturalidade()));
+            lblInfoCorRaca.setText(Formatadores.textoOuTraco(cadastro.getCorRaca()));
+            lblInfoTelefone.setText(Formatadores.textoOuTraco(cadastro.getContato()));
+            lblInfoEmail.setText(Formatadores.textoOuTraco(cadastro.getEmail()));
+            lblInfoEstuda.setText(estudo!=null && estudo.isEstuda()?"Sim":"Não");
+            lblInfoEscola.setText(estudo!=null && estudo.isEstuda()?Formatadores.textoOuTraco(estudo.getEscola()):"—");
+            lblInfoSerie.setText(estudo!=null && estudo.isEstuda()?Formatadores.textoOuTraco(estudo.getSerie()):"—");
+            lblInfoTrabalha.setText(estudo!=null && estudo.isTrabalha()?"Sim":"Não");
+            lblInfoLocalTrabalho.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getLocalTrabalho()):"—");
+            lblInfoFuncao.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getFuncao()):"—");
+            lblInfoVinculo.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"—");
+            boolean acessoSaude=pode(SAUDE_CONSULTAR);
+            lblInfoUbs.setText(!acessoSaude?"Acesso restrito":saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()));
+            lblInfoUsoSpa.setText(!acessoSaude?"Acesso restrito":saude!=null && saude.isUsoSpa()?"Sim":"Não");
+            lblInfoSubstancias.setText(!acessoSaude?"Acesso restrito":saude!=null && saude.isUsoSpa()
+                    ?Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"—");
+            lblInfoImm.setText(cadastro.isImm()?"Sim":"Não");
+            lblInfoValeTransporte.setText(cadastro.isValeTransporte()?"Sim":"Não");
+            lblInfoObservacoes.setText(pode(SIGILOSO_CONSULTAR)
+                    ?Formatadores.textoOuTraco(cadastro.getObservacoes()):"Acesso restrito");
             carregarAbaMedida();
             carregarAbaFrequencia();
             if(pode(PIA_CONSULTAR)) carregarAbaPia();
@@ -709,7 +732,7 @@ public class DetalhesAdolescenteController {
 
         TextField txtNome = new TextField();
         TextField txtCpf = new TextField();
-        txtCpf.setPromptText("Somente números");
+        txtCpf.setPromptText("000.000.000-00");
         DatePicker dpNascimento = new DatePicker();
         dpNascimento.setMaxWidth(Double.MAX_VALUE);
         aplicarMascaraData(dpNascimento);
@@ -750,7 +773,9 @@ public class DetalhesAdolescenteController {
                     erro.setText("");
                     txtNome.setDisable(reutilizado); dpNascimento.setDisable(reutilizado); txtContato.setDisable(reutilizado); txtEmail.setDisable(reutilizado);
                     if(r!=null) {
-                        txtNome.setText(r.getNomeCompleto()); dpNascimento.setValue(r.getDataNascimento()); txtContato.setText(Objects.toString(r.getContato(),"")); txtEmail.setText(Objects.toString(r.getEmail(),""));
+                        txtNome.setText(r.getNomeCompleto()); dpNascimento.setValue(r.getDataNascimento());
+                        br.edu.unespar.trabalho.util.MascarasFormulario.carregarTelefoneExistente(txtContato,r.getContato());
+                        txtEmail.setText(Objects.toString(r.getEmail(),""));
                         aviso.setText("CPF já cadastrado: os dados pessoais serão reutilizados sem alteração.");
                     } else if (estavaReutilizando) {
                         txtNome.clear(); dpNascimento.setValue(null); txtContato.clear(); txtEmail.clear();
@@ -760,6 +785,8 @@ public class DetalhesAdolescenteController {
             }
         });
 
+        br.edu.unespar.trabalho.util.MascarasFormulario.cpf(txtCpf);
+        br.edu.unespar.trabalho.util.MascarasFormulario.telefone(txtContato);
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
             try { dpNascimento.commitValue(); }
             catch(java.time.DateTimeException invalida) { return "Informe uma data existente no formato DD/MM/AAAA."; }
@@ -772,7 +799,9 @@ public class DetalhesAdolescenteController {
                 return "Informe uma data de nascimento válida.";
             String parentesco = txtParentesco.getText().trim();
             if (parentesco.isEmpty() || parentesco.length() > 80) return "Parentesco: de 1 a 80 caracteres.";
-            if (txtContato.getText().trim().length() > 30) return "Contato: no máximo 30 caracteres.";
+            if (!txtContato.isDisabled() && !txtContato.getText().isBlank()
+                    && !br.edu.unespar.trabalho.util.MascarasFormulario.telefoneValido(txtContato.getText()))
+                return "Contato: informe DDD e 10 ou 11 dígitos.";
             if (txtEmail.getText().trim().length() > 90) return "E-mail: no máximo 90 caracteres.";
             return null;
         });

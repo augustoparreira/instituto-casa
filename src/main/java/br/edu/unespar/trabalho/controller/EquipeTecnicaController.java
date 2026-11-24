@@ -11,6 +11,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.geometry.Insets;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 import static br.edu.unespar.trabalho.model.Operacao.*;
 
@@ -72,12 +73,21 @@ public class EquipeTecnicaController {
         Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle(existente==null?"Cadastrar profissional e conta":"Editar profissional e conta");
         dialogo.initOwner(listMembros.getScene().getWindow());
         GridPane grade=new GridPane(); grade.setHgap(14); grade.setVgap(10); grade.setPadding(new Insets(20));
-        TextField cpf=new TextField(),nome=new TextField(),contato=new TextField(),email=new TextField(),login=new TextField(),funcao=new TextField();
+        TextField cpf=new TextField(),nome=new TextField(),contato=new TextField(),email=new TextField(),login=new TextField();
+        List<String> cargos = new ArrayList<>(List.of("Assistente Social", "Psicólogo", "Pedagogo", "Educador"));
+        for (EquipeTecnica membro : membros)
+            if (membro.getCargoFuncao()!=null && !membro.getCargoFuncao().isBlank() && !cargos.contains(membro.getCargoFuncao()))
+                cargos.add(membro.getCargoFuncao());
+        ComboBox<String> funcao=new ComboBox<>(FXCollections.observableArrayList(cargos));
+        funcao.setEditable(true);
+        funcao.getEditor().setPromptText("Selecione ou digite um cargo");
+        funcao.getEditor().setStyle("-fx-text-fill: #2b2b2b; -fx-background-color: white;");
         DatePicker nascimento=new DatePicker(); ComboBox<NivelAcesso> perfil=new ComboBox<>(FXCollections.observableArrayList(NivelAcesso.values()));
+        configurarSeletorPerfil(perfil);
         CheckBox ativo=new CheckBox("Conta ativa"); ativo.setSelected(true);
         PasswordField senha=new PasswordField(),confirmar=new PasswordField();
         Label erro=new Label(); erro.setWrapText(true); erro.setMaxWidth(480); erro.setStyle("-fx-text-fill: #a02020;");
-        String[] rotulos={"CPF (11 dígitos)","Nome completo","Nascimento","Telefone (até 15 caracteres)","E-mail","Cargo / função","Login","Perfil"};
+        String[] rotulos={"CPF","Nome completo","Nascimento","Telefone com DDD","E-mail","Cargo / função","Login","Perfil"};
         javafx.scene.Node[] campos={cpf,nome,nascimento,contato,email,funcao,login,perfil};
         for(int i=0;i<campos.length;i++) grade.addRow(i,new Label(rotulos[i]),campos[i]);
         grade.add(ativo,1,8);
@@ -85,19 +95,27 @@ public class EquipeTecnicaController {
         else {
             cpf.setText(String.format("%011d",existente.getCpf())); cpf.setDisable(true); nome.setText(existente.getNomeCompleto());
             nascimento.setValue(existente.getDataNascimento()); contato.setText(existente.getContato()); email.setText(existente.getEmail());
-            funcao.setText(existente.getCargoFuncao()); login.setText(existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
+            funcao.setValue(existente.getCargoFuncao()); login.setText(existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
         }
+        MascarasFormulario.cpf(cpf);
+        MascarasFormulario.telefone(contato);
         grade.add(erro,0,11,2,1); dialogo.getDialogPane().setContent(grade);
         ButtonType salvar=new ButtonType("Salvar",ButtonBar.ButtonData.OK_DONE);
         dialogo.getDialogPane().getButtonTypes().addAll(salvar,ButtonType.CANCEL);
         dialogo.getDialogPane().lookupButton(salvar).addEventFilter(ActionEvent.ACTION,event -> {
             try {
                 AutorizacaoService.exigir(USUARIO_GERENCIAR);
-                if(!cpf.getText().matches("[0-9]{11}")) throw new IllegalArgumentException("Informe os 11 dígitos do CPF.");
+                String cpfDigitos = Formatadores.soDigitos(cpf.getText());
+                if(cpfDigitos.length()!=11) throw new IllegalArgumentException("Informe os 11 dígitos do CPF.");
+                if(!contato.getText().isBlank() && !MascarasFormulario.telefoneValido(contato.getText()))
+                    throw new IllegalArgumentException("Telefone: informe DDD e 10 ou 11 dígitos.");
+                String cargoSelecionado = funcao.getEditor().getText().trim();
+                if(cargoSelecionado.isEmpty() || cargoSelecionado.length()>60)
+                    throw new IllegalArgumentException("Informe o cargo ou função (até 60 caracteres).");
                 nascimento.commitValue();
-                EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpf.getText())); m.setNomeCompleto(nome.getText());
+                EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpfDigitos)); m.setNomeCompleto(nome.getText());
                 m.setDataNascimento(nascimento.getValue()); m.setContato(contato.getText()); m.setEmail(email.getText());
-                m.setCargoFuncao(funcao.getText()); m.setLogin(login.getText()); m.setNivelAcesso(perfil.getValue()); m.setAtivo(ativo.isSelected());
+                m.setCargoFuncao(cargoSelecionado); m.setLogin(login.getText()); m.setNivelAcesso(perfil.getValue()); m.setAtivo(ativo.isSelected());
                 if(existente==null) {
                     if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");
                     m.setSenha(senha.getText());
@@ -108,6 +126,31 @@ public class EquipeTecnicaController {
             } catch(RuntimeException ex) { erro.setText(ex.getMessage()); event.consume(); }
         });
         dialogo.showAndWait(); senha.clear(); confirmar.clear();
+    }
+
+    private void configurarSeletorPerfil(ComboBox<NivelAcesso> perfil) {
+        ListCell<NivelAcesso> valorSelecionado = new ListCell<>() {
+            @Override protected void updateItem(NivelAcesso item, boolean vazio) {
+                super.updateItem(item, vazio);
+                setText(vazio || item == null ? null : item.getDescricao());
+            }
+        };
+        valorSelecionado.setStyle("-fx-text-fill: #2b2b2b; -fx-background-color: white;");
+        perfil.setButtonCell(valorSelecionado);
+        perfil.setCellFactory(lista -> {
+            ListCell<NivelAcesso> opcao = new ListCell<>() {
+                @Override protected void updateItem(NivelAcesso item, boolean vazio) {
+                    super.updateItem(item, vazio);
+                    setText(vazio || item == null ? null : item.getDescricao());
+                }
+            };
+            opcao.selectedProperty().addListener((observavel, anterior, selecionado) ->
+                    opcao.setStyle(selecionado
+                            ? "-fx-text-fill: white; -fx-background-color: #19523e;"
+                            : "-fx-text-fill: #2b2b2b; -fx-background-color: white;"));
+            opcao.setStyle("-fx-text-fill: #2b2b2b; -fx-background-color: white;");
+            return opcao;
+        });
     }
 
     private void alterarAtivo(EquipeTecnica m) {

@@ -11,6 +11,7 @@ import java.util.Locale;
 import br.edu.unespar.trabalho.model.Adolescente;
 import br.edu.unespar.trabalho.model.StatusAdolescente;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
+import br.edu.unespar.trabalho.util.MascarasFormulario;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -83,8 +84,8 @@ public class CadastroAdolescenteController {
         txtVinculo.disableProperty().bind(chkTrabalha.selectedProperty().not());
         txtSpa.disableProperty().bind(chkSpa.selectedProperty().not());
         dpNascimento.valueProperty().addListener((o,a,b) -> atualizarIdade());
-        aplicarMascaraCPF(txtCpf);
-        aplicarMascaraTelefone(txtContato);
+        MascarasFormulario.cpf(txtCpf);
+        MascarasFormulario.telefone(txtContato);
         aplicarMascaraData(dpNascimento);
     }
 
@@ -96,48 +97,6 @@ public class CadastroAdolescenteController {
     private void exibir(Node componente, boolean visivel) {
         componente.setVisible(visivel);
         componente.setManaged(visivel);
-    }
-
-    private void aplicarMascaraCPF(TextField textField) {
-        textField.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null) return;
-            String limpo = newValue.replaceAll("[^0-9]", "");
-            if (limpo.length() > 11) limpo = limpo.substring(0, 11);
-
-            StringBuilder formatado = new StringBuilder();
-            for (int i = 0; i < limpo.length(); i++) {
-                if (i == 3 || i == 6) formatado.append(".");
-                if (i == 9) formatado.append("-");
-                formatado.append(limpo.charAt(i));
-            }
-
-            if (!newValue.equals(formatado.toString())) {
-                textField.setText(formatado.toString());
-                textField.positionCaret(formatado.length());
-            }
-        });
-    }
-
-    private void aplicarMascaraTelefone(TextField textField) {
-        textField.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null) return;
-            String limpo = newValue.replaceAll("[^0-9]", "");
-            if (limpo.length() > 11) limpo = limpo.substring(0, 11);
-
-            StringBuilder formatado = new StringBuilder();
-            for (int i = 0; i < limpo.length(); i++) {
-                if (i == 0) formatado.append("(");
-                if (i == 2) formatado.append(") ");
-                if (limpo.length() == 11 && i == 7) formatado.append("-");
-                if (limpo.length() < 11 && i == 6) formatado.append("-");
-                formatado.append(limpo.charAt(i));
-            }
-
-            if (!newValue.equals(formatado.toString())) {
-                textField.setText(formatado.toString());
-                textField.positionCaret(formatado.length());
-            }
-        });
     }
 
     private void aplicarMascaraData(DatePicker datePicker) {
@@ -185,7 +144,7 @@ public class CadastroAdolescenteController {
         edicao=true; lblTitulo.setText("Editar cadastro"); txtCpf.setDisable(true);
         lblCpf.setText("CPF");
         txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(a.getNomeCompleto());
-        dpNascimento.setValue(a.getDataNascimento()); txtContato.setText(a.getContato()); txtEmail.setText(a.getEmail());
+        dpNascimento.setValue(a.getDataNascimento()); MascarasFormulario.carregarTelefoneExistente(txtContato,a.getContato()); txtEmail.setText(a.getEmail());
         txtNaturalidade.setText(a.getNaturalidade()); cmbGenero.setValue(a.getGenero()); cmbCorRaca.setValue(a.getCorRaca());
         situacaoOriginal=a.getStatus();
         cmbStatus.setValue(situacaoOriginal);
@@ -237,7 +196,8 @@ public class CadastroAdolescenteController {
             a.setNomeCompleto(texto(txtNome,80,"Nome"));
             a.setDataNascimento(dpNascimento.getValue());
             a.setContato(texto(txtContato,30,"Telefone"));
-            if (a.getContato().isBlank()) throw new IllegalArgumentException("Informe o telefone/contato.");
+            if (!MascarasFormulario.telefoneValido(a.getContato()))
+                throw new IllegalArgumentException("Informe um telefone com DDD e 10 ou 11 dígitos.");
             a.setEmail(email);
             a.setNaturalidade(texto(txtNaturalidade,120,"Naturalidade"));
             a.setGenero(cmbGenero.getValue()==null ? "Não informado" : cmbGenero.getValue());

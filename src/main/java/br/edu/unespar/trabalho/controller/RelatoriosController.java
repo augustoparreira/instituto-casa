@@ -43,7 +43,6 @@ public class RelatoriosController {
     private static final String ENDERECO="Rua Antônio Ostrenski, 100 - Apucarana - Paraná";
     private static final String CONTATO="Fone: (43) 3033 2023";
     private static final String EMAIL="casaapucarana@gmail.com";
-    private static final String TITULO="RELATÓRIO DE ACOMPANHAMENTO DE MEDIDA SOCIOEDUCATIVA";
     private static final String FREQUENCIA="1. REGISTRO DE FREQUÊNCIA";
     private static final String DESCUMPRIMENTO="2. DESCUMPRIMENTO DA MEDIDA E CONTATO COM A FAMÍLIA E ACORDO FIRMADO";
 
@@ -212,12 +211,20 @@ public class RelatoriosController {
         exigir(RELATORIO_EXPORTAR);
 
         try(FileWriter arquivo=new FileWriter(destino.toFile(),StandardCharsets.UTF_8)) {
-            for(String linha:new String[]{INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,"",TITULO,
-                    r.getCompetencia().format(DateTimeFormatter.ofPattern("MM/yyyy")),"","Identificação:"})
+            for(String linha:new String[]{"C.A.S.A. · PASTORAL DO MENOR",INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,"",
+                    "RELATÓRIO DE ACOMPANHAMENTO DE","MEDIDA SOCIOEDUCATIVA",
+                    r.getCompetencia().atDay(1).format(DateTimeFormatter.ofPattern("MMMM / yyyy",Locale.forLanguageTag("pt-BR"))),
+                    "","Identificação:"})
                 arquivo.write(linha+System.lineSeparator());
             for(Campo campo:Campo.values()) arquivo.write(campo.getRotulo()+": "+r.getCampo(campo)+System.lineSeparator());
-            arquivo.write(System.lineSeparator()+FREQUENCIA+System.lineSeparator()+r.getRegistroFrequencia()+System.lineSeparator());
-            arquivo.write(System.lineSeparator()+DESCUMPRIMENTO+System.lineSeparator()+r.getDescumprimento()+System.lineSeparator());
+            arquivo.write(System.lineSeparator()+FREQUENCIA+System.lineSeparator()
+                    +"────────────────────────────────────────────────────"+System.lineSeparator()
+                    +r.getRegistroFrequencia()+System.lineSeparator()
+                    +"────────────────────────────────────────────────────"+System.lineSeparator());
+            arquivo.write(System.lineSeparator()+DESCUMPRIMENTO+System.lineSeparator()
+                    +"────────────────────────────────────────────────────"+System.lineSeparator()
+                    +r.getDescumprimento()+System.lineSeparator()
+                    +"────────────────────────────────────────────────────"+System.lineSeparator());
             arquivo.write(System.lineSeparator()+"Apucarana, "+r.getDataEmissao().format(DATA)+System.lineSeparator());
         }
     }
@@ -226,18 +233,8 @@ public class RelatoriosController {
         try {
             RelatorioAcompanhamento r=lerFormulario();
             validarExportacao(r);
-            br.edu.unespar.trabalho.util.ImpressaoRelatorio.imprimir(gridIdentificacao.getScene().getWindow(),conteudoRelatorio(r));
+            br.edu.unespar.trabalho.util.ImpressaoRelatorio.imprimirModelo(gridIdentificacao.getScene().getWindow(),r);
         } catch(RuntimeException e) { erro(e); }
-    }
-
-    private List<String> conteudoRelatorio(RelatorioAcompanhamento r) {
-        List<String> blocos=new java.util.ArrayList<>();
-        blocos.addAll(List.of(INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,TITULO,
-                r.getCompetencia().format(DateTimeFormatter.ofPattern("MM/yyyy")),"Identificação"));
-        for(Campo campo:Campo.values()) blocos.add(campo.getRotulo()+": "+r.getCampo(campo));
-        blocos.addAll(List.of(FREQUENCIA,r.getRegistroFrequencia(),DESCUMPRIMENTO,r.getDescumprimento(),
-                "Apucarana, "+r.getDataEmissao().format(DATA)));
-        return blocos;
     }
 
     private void validarExportacao(RelatorioAcompanhamento r) {
@@ -258,7 +255,7 @@ public class RelatoriosController {
             // A4 em pontos com as mesmas margens de 36 pontos usadas na impressão.
             double largura=javafx.print.Paper.A4.getWidth()-72;
             double altura=javafx.print.Paper.A4.getHeight()-72;
-            for(VBox folha:br.edu.unespar.trabalho.util.ImpressaoRelatorio.prepararPaginas(conteudoRelatorio(r),largura,altura)) {
+            for(VBox folha:br.edu.unespar.trabalho.util.ModeloRelatorio.prepararPaginas(r,largura,altura)) {
                 VBox papel=new VBox(folha);
                 papel.setStyle("-fx-background-color: white; -fx-padding: 36;");
                 papel.setMinSize(largura+72,altura+72);

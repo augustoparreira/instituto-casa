@@ -2,12 +2,17 @@ package br.edu.unespar.trabalho.service;
 
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.Sessao;
+import javafx.application.Platform;
 import java.util.EnumSet;
 import static br.edu.unespar.trabalho.model.Operacao.*;
 
 /** Política provisória central. Permissões indefinidas permanecem negadas. */
 public final class AutorizacaoService {
     private AutorizacaoService() { }
+
+    private static final long INTERVALO_INTERFACE_NANOS = 250_000_000L;
+    private static EquipeTecnicaDTO usuarioValidadoNaInterface;
+    private static long instanteValidacao;
 
     private static final EnumSet<Operacao> TECNICA = EnumSet.of(
             PAINEL_CONSULTAR, ADOLESCENTE_CONSULTAR, ADOLESCENTE_CADASTRAR, ADOLESCENTE_EDITAR,
@@ -24,7 +29,11 @@ public final class AutorizacaoService {
 
     public static boolean pode(Operacao operacao, ContextoAcesso contexto) {
         EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-        if (operacao == null || usuario == null || usuario.getPerfil() == null || !Sessao.validarContaAtual()) return false;
+        if (operacao == null || usuario == null || usuario.getPerfil() == null || !sessaoValida(usuario)) return false;
+        return permitido(usuario, operacao, contexto);
+    }
+
+    private static boolean permitido(EquipeTecnicaDTO usuario, Operacao operacao, ContextoAcesso contexto) {
         if (usuario.getPerfil() == NivelAcesso.ADMINISTRADOR) return true;
         // Vínculo ou autoria não são concessões de sigilo enquanto a ONG não definir a política.
         if (contexto != null && contexto.sigiloso()) return false;
@@ -38,6 +47,22 @@ public final class AutorizacaoService {
     public static void exigir(Operacao operacao) { exigir(operacao, null); }
 
     public static void exigir(Operacao operacao, ContextoAcesso contexto) {
-        if (!pode(operacao, contexto)) throw new AcessoNegadoException();
+        EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
+        if (operacao == null || usuario == null || usuario.getPerfil() == null
+                || !Sessao.validarContaAtual() || !permitido(usuario, operacao, contexto))
+            throw new AcessoNegadoException();
+    }
+
+    private static boolean sessaoValida(EquipeTecnicaDTO usuario) {
+        boolean interfaceJavaFx = Platform.isFxApplicationThread();
+        long agora = System.nanoTime();
+        if (interfaceJavaFx && usuario == usuarioValidadoNaInterface
+                && agora - instanteValidacao < INTERVALO_INTERFACE_NANOS) return true;
+        boolean valida = Sessao.validarContaAtual();
+        if (interfaceJavaFx && valida) {
+            usuarioValidadoNaInterface = usuario;
+            instanteValidacao = agora;
+        }
+        return valida;
     }
 }

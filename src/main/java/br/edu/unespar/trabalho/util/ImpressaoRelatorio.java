@@ -1,7 +1,9 @@
 package br.edu.unespar.trabalho.util;
 
+import br.edu.unespar.trabalho.model.RelatorioAcompanhamento;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import javafx.geometry.Insets;
 import javafx.print.*;
 import javafx.scene.control.Alert;
@@ -78,6 +80,14 @@ public final class ImpressaoRelatorio {
     }
 
     public static void imprimir(Window owner,List<String> blocos) {
+        imprimirPaginas(owner, layout -> prepararPaginas(blocos,layout.getPrintableWidth(),layout.getPrintableHeight()));
+    }
+
+    public static void imprimirModelo(Window owner,RelatorioAcompanhamento relatorio) {
+        imprimirPaginas(owner, layout -> ModeloRelatorio.prepararPaginas(relatorio,layout.getPrintableWidth(),layout.getPrintableHeight()));
+    }
+
+    private static void imprimirPaginas(Window owner,Function<PageLayout,List<VBox>> preparar) {
         var usuario = Sessao.getUsuarioLogado();
         br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.RELATORIO_EXPORTAR);
         PrinterJob job=PrinterJob.createPrinterJob();
@@ -95,7 +105,7 @@ public final class ImpressaoRelatorio {
         job.getJobSettings().setPageLayout(layout);
         job.getJobSettings().setJobName("Relatório mensal de acompanhamento");
         try {
-            List<VBox> paginas=prepararPaginas(blocos,layout.getPrintableWidth(),layout.getPrintableHeight());
+            List<VBox> paginas=preparar.apply(layout);
             for(int i=0;i<paginas.size();i++) {
                 if(!job.printPage(layout,paginas.get(i))) {
                     job.cancelJob();

@@ -101,7 +101,6 @@
                     <!-- ABA: Dados Pessoais -->
                     <VBox fx:id="paneDados" styleClass="content-box" spacing="20.0">
                         <HBox spacing="15"><Label text="Informações pessoais" styleClass="box-title"/><Region HBox.hgrow="ALWAYS"/><Button text="Editar cadastro completo" onAction="#editarCadastro" styleClass="btn-outline"/></HBox>
-<Label fx:id="lblDadosComplementares" wrapText="true" styleClass="form-value"/>
 
                         <HBox spacing="50.0">
                             <VBox spacing="4.0" HBox.hgrow="ALWAYS">
@@ -120,8 +119,30 @@
                                 <Label fx:id="lblInfoNascimento" text="-" styleClass="form-value" />
                             </VBox>
                             <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label text="IDADE" styleClass="form-label-mini" />
+                                <Label fx:id="lblInfoIdade" text="-" styleClass="form-value" />
+                            </VBox>
+                        </HBox>
+
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label text="ANIVERSÁRIO" styleClass="form-label-mini" />
+                                <Label fx:id="lblInfoAniversario" text="-" styleClass="form-value" />
+                            </VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
                                 <Label text="GÊNERO" styleClass="form-label-mini" />
                                 <Label fx:id="lblInfoGenero" text="-" styleClass="form-value" />
+                            </VBox>
+                        </HBox>
+
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label text="NATURALIDADE" styleClass="form-label-mini" />
+                                <Label fx:id="lblInfoNaturalidade" text="-" styleClass="form-value" wrapText="true" />
+                            </VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label text="COR / RAÇA" styleClass="form-label-mini" />
+                                <Label fx:id="lblInfoCorRaca" text="-" styleClass="form-value" />
                             </VBox>
                         </HBox>
 
@@ -135,6 +156,44 @@
                                 <Label fx:id="lblInfoStatus" text="-" styleClass="form-value" />
                             </VBox>
                         </HBox>
+
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label text="TELEFONE" styleClass="form-label-mini" />
+                                <Label fx:id="lblInfoTelefone" text="-" styleClass="form-value" />
+                            </VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                <Label text="E-MAIL" styleClass="form-label-mini" />
+                                <Label fx:id="lblInfoEmail" text="-" styleClass="form-value" wrapText="true" />
+                            </VBox>
+                        </HBox>
+
+                        <Label text="Educação e trabalho" styleClass="box-title" />
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="ESTUDA" styleClass="form-label-mini" /><Label fx:id="lblInfoEstuda" text="-" styleClass="form-value" /></VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="ESCOLA" styleClass="form-label-mini" /><Label fx:id="lblInfoEscola" text="-" styleClass="form-value" wrapText="true" /></VBox>
+                        </HBox>
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="ANO / SÉRIE" styleClass="form-label-mini" /><Label fx:id="lblInfoSerie" text="-" styleClass="form-value" /></VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="TRABALHA" styleClass="form-label-mini" /><Label fx:id="lblInfoTrabalha" text="-" styleClass="form-value" /></VBox>
+                        </HBox>
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="LOCAL DE TRABALHO" styleClass="form-label-mini" /><Label fx:id="lblInfoLocalTrabalho" text="-" styleClass="form-value" wrapText="true" /></VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="FUNÇÃO" styleClass="form-label-mini" /><Label fx:id="lblInfoFuncao" text="-" styleClass="form-value" wrapText="true" /></VBox>
+                        </HBox>
+                        <VBox spacing="4.0"><Label text="VÍNCULO EMPREGATÍCIO" styleClass="form-label-mini" /><Label fx:id="lblInfoVinculo" text="-" styleClass="form-value" wrapText="true" /></VBox>
+
+                        <Label text="Saúde e informações adicionais" styleClass="box-title" />
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="UBS DE REFERÊNCIA" styleClass="form-label-mini" /><Label fx:id="lblInfoUbs" text="-" styleClass="form-value" wrapText="true" /></VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="USO DE SPA" styleClass="form-label-mini" /><Label fx:id="lblInfoUsoSpa" text="-" styleClass="form-value" /></VBox>
+                        </HBox>
+                        <VBox spacing="4.0"><Label text="SUBSTÂNCIAS UTILIZADAS" styleClass="form-label-mini" /><Label fx:id="lblInfoSubstancias" text="-" styleClass="form-value" wrapText="true" /></VBox>
+                        <HBox spacing="50.0">
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="IMM" styleClass="form-label-mini" /><Label fx:id="lblInfoImm" text="-" styleClass="form-value" /></VBox>
+                            <VBox spacing="4.0" HBox.hgrow="ALWAYS"><Label text="VALE-TRANSPORTE" styleClass="form-label-mini" /><Label fx:id="lblInfoValeTransporte" text="-" styleClass="form-value" /></VBox>
+                        </HBox>
+                        <VBox spacing="4.0"><Label text="OBSERVAÇÕES" styleClass="form-label-mini" /><Label fx:id="lblInfoObservacoes" text="-" styleClass="form-value" wrapText="true" /></VBox>
                     </VBox>
 
                     <!-- ABA: Medida Socioeducativa -->

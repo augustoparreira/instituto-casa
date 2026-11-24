@@ -77,7 +77,7 @@
                     </VBox>
                     <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                         <Label fx:id="lblCpf" text="CPF *" styleClass="form-label-mini" />
-                        <TextField fx:id="txtCpf" promptText="Somente números" styleClass="search-field" />
+                        <TextField fx:id="txtCpf" promptText="000.000.000-00" styleClass="search-field" />
                     </VBox>
                 </HBox>
 

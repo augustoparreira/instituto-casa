@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.model.EventoAgenda;
@@ -50,6 +53,7 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
+        AutorizacaoService.exigir(PAINEL_CONSULTAR);
         if (lblDataAtualizacao != null) {
             lblDataAtualizacao.setText("Atualizado em " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")));
         }

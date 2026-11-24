@@ -56,10 +56,10 @@
             <HBox alignment="CENTER_LEFT">
                 <VBox spacing="4.0">
                     <Label text="Equipe técnica" styleClass="page-title" />
-                    <Label fx:id="lblTotalRegistros" text="5 membro(s) cadastrado(s)" styleClass="page-subtitle" />
+                    <Label fx:id="lblTotalRegistros" text="Carregando profissionais..." styleClass="page-subtitle" />
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
-                <Button text="+ Novo membro" styleClass="btn-novo" />
+                <Button text="+ Novo membro" styleClass="btn-novo" onAction="#novoMembro" />
             </HBox>
 
             <HBox spacing="15.0" alignment="CENTER_LEFT">

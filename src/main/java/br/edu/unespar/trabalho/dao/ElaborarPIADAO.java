@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.ElaborarPIA;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -14,6 +17,7 @@ public class ElaborarPIADAO {
 
     // Tabela associativa pura (cpf_equipe, id_pia). A data de elaboração fica na tabela PIA.
     public boolean registrarAutoria(ElaborarPIA elaboracao) {
+        AutorizacaoService.exigir(PIA_ALTERAR);
         String sql = "INSERT INTO ElaborarPIA (cpf_equipe, id_pia) VALUES (?, ?)";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

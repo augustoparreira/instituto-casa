@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.Saude;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -11,6 +14,7 @@ import java.sql.*;
 public class SaudeDAO {
 
     public boolean inserir(Saude saude) {
+        AutorizacaoService.exigir(SAUDE_ALTERAR);
         String sql = "INSERT INTO Saude (id_fichaSaude, ubs_referencia, uso_spa, observacoes, substancias_utilizadas, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -39,6 +43,7 @@ public class SaudeDAO {
     }
 
     public Saude buscarPorCpf(long cpfAdolescente) {
+        AutorizacaoService.exigir(SAUDE_CONSULTAR);
         String sql = "SELECT * FROM Saude WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -62,6 +67,7 @@ public class SaudeDAO {
     }
 
     public boolean atualizar(Saude saude) {
+        AutorizacaoService.exigir(SAUDE_ALTERAR);
         String sql = "UPDATE Saude SET ubs_referencia = ?, uso_spa = ?, observacoes = ?, substancias_utilizadas = ? WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

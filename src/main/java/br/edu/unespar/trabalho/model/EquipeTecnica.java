@@ -2,9 +2,16 @@ package br.edu.unespar.trabalho.model;
 
 public class EquipeTecnica extends Pessoa {
     private String login;
-    private String senha;          // guardar SEMPRE o hash (ex.: BCrypt), nunca a senha em texto
+    private String senha;
     private String cargoFuncao;
     private NivelAcesso nivelAcesso;
+    private boolean ativo = true;
+    private long versaoSessao;
+
+    public boolean isAtivo() { return ativo; }
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    public long getVersaoSessao() { return versaoSessao; }
+    public void setVersaoSessao(long versao) { this.versaoSessao = versao; }
 
     public String getLogin() { return login; }
     public void setLogin(String login) { this.login = login; }

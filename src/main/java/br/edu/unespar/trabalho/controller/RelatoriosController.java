@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
@@ -46,8 +49,9 @@ public class RelatoriosController {
     private static final String DESCUMPRIMENTO="2. DESCUMPRIMENTO DA MEDIDA E CONTATO COM A FAMÍLIA E ACORDO FIRMADO";
 
     @FXML public void initialize() {
+        AutorizacaoService.exigir(RELATORIO_CONSULTAR);
         var usuario=Sessao.getUsuarioLogado();
-        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getLogin());
+        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getNomeCompleto());
         lblCargoUsuario.setText(usuario==null?"":usuario.getCargoFuncao());
         dpCompetencia.setValue(LocalDate.now().withDayOfMonth(1)); dpEmissao.setValue(LocalDate.now());
         cmbAdolescente.setConverter(new StringConverter<>() {
@@ -163,6 +167,7 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     @FXML public void exportarTexto() {
+        AutorizacaoService.exigir(RELATORIO_EXPORTAR);
         try {
             RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r);
             FileChooser escolha=new FileChooser(); escolha.setTitle("Salvar relatório de acompanhamento");
@@ -173,9 +178,11 @@ public class RelatoriosController {
         } catch(Exception e) { lblMensagem.setText(e.getMessage()); }
     }
     public void exportarPara(Path destino) throws java.io.IOException {
+        AutorizacaoService.exigir(RELATORIO_EXPORTAR);
         RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r); salvarTexto(r,destino);
     }
     private void salvarTexto(RelatorioAcompanhamento r,Path destino) throws java.io.IOException {
+        AutorizacaoService.exigir(RELATORIO_EXPORTAR);
         try(FileWriter arquivo=new FileWriter(destino.toFile(),StandardCharsets.UTF_8)) {
             for(String linha:new String[]{INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,"",TITULO,
                     r.getCompetencia().format(DateTimeFormatter.ofPattern("MM/yyyy")),"","Identificação:"})
@@ -191,6 +198,7 @@ public class RelatoriosController {
             throw new IllegalArgumentException("Para exportar o relatório, informe o número do processo e revise as duas seções do relatório. Se não houve descumprimento, registre isso explicitamente.");
     }
     @FXML public void visualizarRelatorio() {
+        AutorizacaoService.exigir(RELATORIO_CONSULTAR);
         try {
             RelatorioAcompanhamento r=lerFormulario(); VBox pagina=new VBox(12); pagina.setStyle("-fx-background-color: white; -fx-padding: 35; -fx-text-fill: black;");
             for(String texto:new String[]{INSTITUICAO,CNPJ,ENDERECO,CONTATO,EMAIL,TITULO,r.getCompetencia().toString(),"Identificação:"}) {

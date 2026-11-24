@@ -6,6 +6,7 @@ public class EquipeTecnicaDTO {
     private final String nomeCompleto;
     private final String cargoFuncao;
     private final NivelAcesso perfil;
+    private final long versaoSessao;
 
     public EquipeTecnicaDTO(Long cpfEquipe, String login, String cargoFuncao, String nivelAcesso) {
         this(cpfEquipe, login, login, cargoFuncao, converterPerfil(nivelAcesso));
@@ -13,11 +14,17 @@ public class EquipeTecnicaDTO {
 
     public EquipeTecnicaDTO(Long cpfEquipe, String login, String nomeCompleto,
                            String cargoFuncao, NivelAcesso perfil) {
+        this(cpfEquipe, login, nomeCompleto, cargoFuncao, perfil, 0);
+    }
+
+    public EquipeTecnicaDTO(Long cpfEquipe, String login, String nomeCompleto,
+                           String cargoFuncao, NivelAcesso perfil, long versaoSessao) {
         this.cpfEquipe = cpfEquipe;
         this.login = login;
         this.nomeCompleto = nomeCompleto;
         this.cargoFuncao = cargoFuncao;
         this.perfil = perfil;
+        this.versaoSessao = versaoSessao;
     }
 
     private static NivelAcesso converterPerfil(String valor) {
@@ -33,4 +40,5 @@ public class EquipeTecnicaDTO {
     public String getNivelAcesso() { return perfil == null ? "Desconhecido" : perfil.getDescricao(); }
     public String getNomeCompleto() { return nomeCompleto; }
     public NivelAcesso getPerfil() { return perfil; }
+    public long getVersaoSessao() { return versaoSessao; }
 }

@@ -23,7 +23,7 @@ public class AuthServiceImpl implements AuthService {
                     usuario.getLogin(),
                     usuario.getNomeCompleto(),
                     usuario.getCargoFuncao(),
-                    usuario.getNivelAcesso()
+                    usuario.getNivelAcesso(), usuario.getVersaoSessao()
             );
         }
 

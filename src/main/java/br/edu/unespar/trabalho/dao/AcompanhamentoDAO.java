@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.Acompanhamento;
 import br.edu.unespar.trabalho.model.Adolescente;
 import br.edu.unespar.trabalho.model.StatusAdolescente;
@@ -18,6 +21,7 @@ import java.util.List;
 public class AcompanhamentoDAO {
 
     public boolean vincular(Acompanhamento acompanhamento) {
+        AutorizacaoService.exigir(REFERENCIA_DEFINIR);
         String sql = "INSERT INTO Acompanhamento (cpf_adolescente, cpf_equipe, tecnico_referencia) VALUES (?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -37,6 +41,7 @@ public class AcompanhamentoDAO {
     }
 
     public List<Adolescente> listarPorTecnico(long cpfEquipe) {
+        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
         List<Adolescente> lista = new ArrayList<>();
 
         String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +

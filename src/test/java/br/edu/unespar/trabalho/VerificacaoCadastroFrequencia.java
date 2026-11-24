@@ -96,6 +96,7 @@ public class VerificacaoCadastroFrequencia {
                     ddl.execute("INSERT INTO Pessoa(cpf,nome_completo,data_nascimento) VALUES(77777777770,'Técnico de agenda','1980-01-01')");
                     ddl.execute("INSERT INTO EquipeTecnica(cpf_equipe,login,senha,cargo_funcao,nivel_acesso) VALUES(77777777770,'agenda_teste','senha fictícia','Técnico','EQUIPE_TECNICA')");
                 }
+                VerificacaoContas.executar();
                 verifica(new FrequenciaDAO().listar(10000000001L,LocalDate.of(2024,1,1),LocalDate.of(2024,1,31)).getFirst().getIdMedida()==1,"ajuste SQL reexecutável preserva e vincula frequência legada inequívoca");
 
                 AdolescenteDAO adao=new AdolescenteDAO();
@@ -204,6 +205,7 @@ public class VerificacaoCadastroFrequencia {
                     testarInterface();
                 }
             } finally {
+                br.edu.unespar.trabalho.util.Sessao.limparSessao();
                 if(urlAnterior==null) System.clearProperty("casa.db.url"); else System.setProperty("casa.db.url",urlAnterior);
                 // Exclusivamente o schema aleatório criado por esta execução. Nunca public.
                 if(!schema.matches("casa_teste_[a-f0-9]{32}")) throw new IllegalStateException("Schema de teste inválido.");
@@ -245,7 +247,8 @@ public class VerificacaoCadastroFrequencia {
             Platform.setImplicitExit(false);
             try {
                 Files.createDirectories(Path.of("target/verificacao"));
-                for(String nome:List.of("Dashboard","CadastroAdolescenteView","AdolescentesView","DetalhesAdolescenteView","FrequenciaView","RegistroFrequenciaView","AgendaView","RelatoriosView")) {
+                verificarLoginELogout();
+                for(String nome:List.of("Dashboard","CadastroAdolescenteView","AdolescentesView","DetalhesAdolescenteView","FrequenciaView","RegistroFrequenciaView","AgendaView","RelatoriosView","EquipeTecnicaView")) {
                     FXMLLoader loader=new FXMLLoader(VerificacaoCadastroFrequencia.class.getResource("/View/"+nome+".fxml"));
                     Parent root=loader.load(); Object controller=loader.getController();
                     if(controller instanceof CadastroAdolescenteController cadastro) cadastro.carregarParaEdicao(CPF);
@@ -256,6 +259,14 @@ public class VerificacaoCadastroFrequencia {
                     Scene scene=new Scene(root,controller instanceof RegistroFrequenciaController?720:1280,
                             controller instanceof RegistroFrequenciaController?650:850);
                     root.applyCss(); root.layout();
+                    if (controller instanceof EquipeTecnicaController) {
+                        ListView<?> lista = (ListView<?>) root.lookup("#listMembros");
+                        verifica(lista.getItems().stream().anyMatch(item -> item instanceof EquipeTecnica e
+                                && "admin-teste".equals(e.getLogin())), "tela da equipe lista conta real do PostgreSQL");
+                        ((TextField)root.lookup("#txtPesquisa")).setText("educador-teste");
+                        ((EquipeTecnicaController)controller).filtrarMembros();
+                        verifica(lista.getItems().size()==1,"tela da equipe filtra profissional por login");
+                    }
                     if(controller instanceof DashboardController) {
                         verifica(((javafx.scene.layout.VBox)root.lookup("#vboxAgenda")).lookupAll(".label").stream()
                                 .anyMatch(n->n instanceof Label l && l.getText().equals("Agenda real da semana")),"painel mostra compromisso real da semana");
@@ -492,7 +503,35 @@ public class VerificacaoCadastroFrequencia {
                 fim.complete(null);
             } catch(Throwable t) { fim.completeExceptionally(t); }
         });
-        try { fim.get(45,TimeUnit.SECONDS); } finally { Platform.exit(); }
+        try { fim.get(120,TimeUnit.SECONDS); } finally { Platform.exit(); }
+    }
+
+    private static void verificarLoginELogout() throws Exception {
+        var anterior = br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado();
+        Stage janela = new Stage();
+        try {
+            var url = VerificacaoCadastroFrequencia.class.getResource("/View/Login.fxml");
+            Parent login = FXMLLoader.load(url);
+            janela.setScene(new Scene(login));
+            ((TextField)login.lookup("#txtLogin")).setText("admin-teste");
+            ((PasswordField)login.lookup("#txtSenha")).setText(VerificacaoContas.SENHA);
+            ((Button)login.lookup("#btnEntrar")).fire();
+            Parent painel = janela.getScene().getRoot();
+            verifica(painel!=login && br.edu.unespar.trabalho.util.Sessao.validarContaAtual(),
+                    "login JavaFX autentica e abre o painel");
+            Button equipe = (Button)painel.lookupAll(".button").stream()
+                    .filter(no -> no instanceof Button b && "Equipe Técnica".equals(b.getText()))
+                    .findFirst().orElseThrow();
+            verifica(equipe.isVisible() && equipe.isManaged(),"menu da equipe disponível para Administrador");
+            ((Button)painel.lookupAll(".logout-button").stream()
+                    .filter(no -> no instanceof Button b && "Sair do sistema".equals(b.getText()))
+                    .findFirst().orElseThrow()).fire();
+            verifica(br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado()==null
+                    && janela.getScene().getRoot().lookup("#btnEntrar")!=null,"logout JavaFX limpa a sessão e retorna ao login");
+        } finally {
+            janela.close();
+            br.edu.unespar.trabalho.util.Sessao.setUsuarioLogado(anterior);
+        }
     }
 
     private static void fecharProximoDialogo(ButtonType resposta) {

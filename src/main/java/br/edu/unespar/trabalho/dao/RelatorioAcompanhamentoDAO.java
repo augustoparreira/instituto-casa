@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
@@ -13,6 +16,7 @@ import java.util.stream.Collectors;
  */
 public class RelatorioAcompanhamentoDAO {
     public boolean salvar(RelatorioAcompanhamento r) {
+        AutorizacaoService.exigir(RELATORIO_ALTERAR);
         r.validar();
         String colunas=Arrays.stream(Campo.values()).map(Campo::getColuna).collect(Collectors.joining(","));
         String atribuicoes=Arrays.stream(Campo.values()).map(c->c.getColuna()+"=?").collect(Collectors.joining(","));
@@ -31,6 +35,7 @@ public class RelatorioAcompanhamentoDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar o relatório. Confira a configuração do banco.",e); }
     }
     public List<RelatorioAcompanhamento> listar() {
+        AutorizacaoService.exigir(RELATORIO_CONSULTAR);
         List<RelatorioAcompanhamento> lista=new ArrayList<>();
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT * FROM RelatorioAcompanhamento ORDER BY competencia DESC,id_relatorio DESC"); ResultSet rs=s.executeQuery()) {
             while(rs.next()) {
@@ -44,6 +49,7 @@ public class RelatorioAcompanhamentoDAO {
         return lista;
     }
     public boolean excluir(int id) {
+        AutorizacaoService.exigir(RELATORIO_EXCLUIR);
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM RelatorioAcompanhamento WHERE id_relatorio=?")) {
             s.setInt(1,id); return s.executeUpdate()==1;
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível excluir o relatório.",e); }

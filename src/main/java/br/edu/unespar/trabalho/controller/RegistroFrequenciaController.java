@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import javafx.collections.FXCollections;
@@ -28,6 +31,7 @@ public class RegistroFrequenciaController {
     private final FrequenciaDAO dao = new FrequenciaDAO();
 
     @FXML public void initialize() {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
         cmbStatus.setItems(FXCollections.observableArrayList(StatusPresenca.values()));
         cmbAtividade.setConverter(new StringConverter<>() {
             public String toString(Atividade a) { return a==null?"":a.getNomeAtividade(); }
@@ -43,20 +47,21 @@ public class RegistroFrequenciaController {
             atualizarHoras(selecionada==null);
         });
         dpData.valueProperty().addListener((o,a,b)-> { if(cpf!=0 && b!=null) carregarDia(); });
-        listaRegistros.getSelectionModel().selectedItemProperty().addListener((o,a,b)-> { if(b!=null) preencher(b); });
+        listaRegistros.getSelectionModel().selectedItemProperty().addListener((o,a,b)-> { if(b!=null && AutorizacaoService.pode(FREQUENCIA_EDITAR)) preencher(b); });
     }
 
     private void atualizarHoras(boolean sugerir) {
         boolean contabiliza=cmbStatus.getValue()==StatusPresenca.PRESENTE
                 && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC();
-        txtHoras.setDisable(!contabiliza);
+        txtHoras.setDisable(!contabiliza || !AutorizacaoService.pode(HORAS_PSC_REGISTRAR));
         if(!contabiliza) txtHoras.setText("0");
         else if(sugerir) txtHoras.setText(cmbAtividade.getValue()==null?"0":Integer.toString(cmbAtividade.getValue().getCargaHoraria()));
     }
 
     public void carregar(long cpf,LocalDate data,Runnable retorno) {
         this.cpf=cpf; this.aoSalvar=retorno;
-        Adolescente a=new AdolescenteDAO().buscarPorCpf(cpf);
+        Adolescente a=new FrequenciaMensalDAO().listarParticipantes().stream()
+                .filter(pessoa -> pessoa.getCpf()==cpf).findFirst().orElse(null);
         if(a==null) throw new IllegalArgumentException("Adolescente não encontrado.");
         lblAdolescente.setText(a.getNomeCompleto()+" · "+a.getCpfFormatado());
         cmbAtividade.setItems(FXCollections.observableArrayList(new AtividadeDAO().listar()));
@@ -66,7 +71,8 @@ public class RegistroFrequenciaController {
     private void carregarDia() {
         try {
             selecionada=null;
-            cmbMedida.setItems(FXCollections.observableArrayList(new MedidaSocioeducativaDAO().listarPorAdolescente(cpf)
+            cmbMedida.setDisable(!AutorizacaoService.pode(MEDIDA_CONSULTAR));
+            cmbMedida.setItems(FXCollections.observableArrayList(cmbMedida.isDisabled() ? java.util.List.of() : new MedidaSocioeducativaDAO().listarPorAdolescente(cpf)
                     .stream().filter(m->m.vigenteEm(dpData.getValue())).toList()));
             listaRegistros.setItems(FXCollections.observableArrayList(dao.listar(cpf,dpData.getValue(),dpData.getValue())));
             novo();

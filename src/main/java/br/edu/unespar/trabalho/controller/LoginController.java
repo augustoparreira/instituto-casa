@@ -44,20 +44,27 @@ public class LoginController {
 
                 Sessao.setUsuarioLogado(usuarioLogado);
 
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/View/Dashboard.fxml"));
+                String destino = usuarioLogado.getPerfil() == br.edu.unespar.trabalho.model.NivelAcesso.EDUCADOR
+                        ? "/View/FrequenciaView.fxml" : "/View/Dashboard.fxml";
+                NavegacaoUtil.exigirTela(destino);
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(destino));
                 Parent root = loader.load();
 
-                DashboardController dashboardController = loader.getController();
-                dashboardController.inicializarDados(usuarioLogado.getLogin(), usuarioLogado.getCargoFuncao());
+                if (loader.getController() instanceof DashboardController dashboardController)
+                    dashboardController.inicializarDados(usuarioLogado.getNomeCompleto(), usuarioLogado.getCargoFuncao());
                 Stage stage = (Stage) btnEntrar.getScene().getWindow();
-                NavegacaoUtil.trocarRaiz(stage, root, "Instituto C.A.S.A. - Painel de Controle");
+                NavegacaoUtil.trocarRaiz(stage, root, destino.endsWith("Dashboard.fxml")
+                        ? "Instituto C.A.S.A. - Painel de Controle" : "Instituto C.A.S.A. - Frequência");
+                br.edu.unespar.trabalho.util.SegurancaInterface.marcarAutenticado(true);
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Acesso Negado", "Usuário ou senha incorretos.");
             }
 
         } catch (Exception e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Erro de Conexão", "Não foi possível conectar ao banco de dados.");
-            e.printStackTrace();
+            Sessao.limparSessao();
+            mostrarAlerta(Alert.AlertType.ERROR, "Falha ao entrar", "Não foi possível iniciar o acesso. Confira a conexão, a migração de segurança e a configuração da conta.");
+        } finally {
+            txtSenha.clear();
         }
     }
 

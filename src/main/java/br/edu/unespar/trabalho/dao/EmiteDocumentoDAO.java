@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.EmiteDocumento;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -13,6 +16,7 @@ import java.sql.SQLException;
 public class EmiteDocumentoDAO {
 
     public boolean inserir(EmiteDocumento emite) {
+        AutorizacaoService.exigir(DOCUMENTO_ALTERAR);
         String sql = "INSERT INTO EmiteDocumento (id_documento, cpf_equipe) VALUES (?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();

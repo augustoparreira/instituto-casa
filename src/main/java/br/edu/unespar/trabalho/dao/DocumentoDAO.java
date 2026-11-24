@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.Documento;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -18,6 +21,7 @@ import java.util.List;
 public class DocumentoDAO {
 
     public boolean inserir(Documento doc) {
+        AutorizacaoService.exigir(DOCUMENTO_ALTERAR);
         String sql = "INSERT INTO Documento (id_documento, tipo, data_geracao, status_envio, cpf_adolescente) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -45,6 +49,7 @@ public class DocumentoDAO {
     }
 
     public boolean atualizarStatus(int idDocumento, String novoStatus) {
+        AutorizacaoService.exigir(DOCUMENTO_ALTERAR);
         String sql = "UPDATE Documento SET status_envio = ? WHERE id_documento = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -61,6 +66,7 @@ public class DocumentoDAO {
     }
 
     public List<Documento> listarPorAdolescente(long cpfAdolescente) {
+        AutorizacaoService.exigir(DOCUMENTO_CONSULTAR);
         List<Documento> lista = new ArrayList<>();
         String sql = "SELECT id_documento, tipo, data_geracao, status_envio, cpf_adolescente " +
                 "FROM Documento WHERE cpf_adolescente = ? ORDER BY data_geracao DESC";

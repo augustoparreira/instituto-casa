@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -36,11 +39,12 @@ public class AgendaController {
     private static final Locale PORTUGUES=Locale.forLanguageTag("pt-BR");
 
     @FXML public void initialize() {
+        AutorizacaoService.exigir(AGENDA_CONSULTAR);
         popularComboBoxAnos();
         chkCancelados.selectedProperty().addListener((o,a,b)-> { atualizarCalendario(); atualizarPainelLateral(); });
         lblIrParaHojeTexto.setText("Ir para hoje — "+LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         var usuario=Sessao.getUsuarioLogado();
-        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getLogin());
+        lblNomeUsuario.setText(usuario==null?"Usuário":usuario.getNomeCompleto());
         lblCargoUsuario.setText(usuario==null?"":usuario.getCargoFuncao());
         atualizarAgenda();
     }
@@ -170,7 +174,7 @@ public class AgendaController {
                     super.updateItem(a,vazio); setText(adolescente.getConverter().toString(a));
                 }
             });
-            ComboBox<EquipeTecnica> tecnico=new ComboBox<>(FXCollections.observableArrayList(new EquipeTecnicaDAO().listar())); tecnico.setId("cmbEventoTecnico");
+            ComboBox<EquipeTecnica> tecnico=new ComboBox<>(FXCollections.observableArrayList(new EquipeTecnicaDAO().listarParaAgenda())); tecnico.setId("cmbEventoTecnico");
             tecnico.setConverter(new StringConverter<>() {
                 public String toString(EquipeTecnica t) { return t==null?"Sem técnico":t.getNomeCompleto(); }
                 public EquipeTecnica fromString(String s) { return null; }

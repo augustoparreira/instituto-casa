@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.ComposicaoFamiliar;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
@@ -16,8 +19,10 @@ import java.util.List;
  */
 public class ComposicaoFamiliarDAO {
 
-    public boolean inserir(ComposicaoFamiliar f) { return salvar(f,false); }
-    public boolean atualizar(ComposicaoFamiliar f) { return salvar(f,true); }
+    public boolean inserir(ComposicaoFamiliar f) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR); return salvar(f,false); }
+    public boolean atualizar(ComposicaoFamiliar f) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR); return salvar(f,true); }
     private boolean salvar(ComposicaoFamiliar f,boolean edicao) {
         if(f.getNome()==null || f.getNome().isBlank()) throw new IllegalArgumentException("Informe o nome do familiar.");
         if(f.getRenda()!=null && (!Double.isFinite(f.getRenda()) || f.getRenda()<0)) throw new IllegalArgumentException("Renda inválida.");
@@ -37,12 +42,14 @@ public class ComposicaoFamiliarDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar o familiar.",e); }
     }
     public boolean excluir(int id,long cpf) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR);
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM ComposicaoFamiliar WHERE id_composicaoFamiliar=? AND cpf_adolescente=?")) {
             s.setInt(1,id); s.setLong(2,cpf); return s.executeUpdate()==1;
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível excluir o familiar.",e); }
     }
 
     public List<ComposicaoFamiliar> listarPorAdolescente(long cpfAdolescente) {
+        AutorizacaoService.exigir(FAMILIA_CONSULTAR);
         List<ComposicaoFamiliar> lista = new ArrayList<>();
         String sql = "SELECT id_composicaoFamiliar, nome, parentesco, idade, renda, escolaridade, profissao, cpf_adolescente " +
                 "FROM ComposicaoFamiliar WHERE cpf_adolescente = ?";

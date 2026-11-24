@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -51,6 +54,7 @@ public class AdolescentesController {
 
     @FXML
     public void initialize() {
+        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
         adolescenteDAO = new AdolescenteDAO();
 
         listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());

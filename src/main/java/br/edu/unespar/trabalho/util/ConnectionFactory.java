@@ -4,25 +4,22 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+/** Conexão JDBC configurada externamente, sem credenciais no código-fonte. */
 public class ConnectionFactory {
-
-    /*
-     * CONFIGURAÇÃO LOCAL DO POSTGRESQL
-     * Professor: antes de executar o sistema, ajuste a URL, o usuário e a senha
-     * abaixo para o PostgreSQL da sua máquina e prepare a base com os scripts SQL
-     * do projeto. Essas credenciais são usadas na conexão JDBC em execução;
-     * a compilação não exige uma conexão com o banco de dados.
-     */
-    private static final String URL = "jdbc:postgresql://localhost:5432/db_instituto_casa";
-    private static final String USER = "postgres";
-    private static final String PASS = "admin123";
-
+    /* Configure casa.db.url/user/password na JVM ou CASA_DB_URL/USER/PASSWORD no ambiente.
+       Não versione credenciais. A compilação não precisa de conexão com o PostgreSQL. */
     public static Connection getConnection() {
-        try {
-            return DriverManager.getConnection(System.getProperty("casa.db.url", URL),
-                    System.getProperty("casa.db.user", USER), System.getProperty("casa.db.password", PASS));
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao conectar no banco db_instituto_casa", e);
-        }
+        String url = configuracao("casa.db.url", "CASA_DB_URL");
+        String usuario = configuracao("casa.db.user", "CASA_DB_USER");
+        String senha = configuracao("casa.db.password", "CASA_DB_PASSWORD");
+        if (url == null || url.isBlank() || usuario == null || usuario.isBlank() || senha == null)
+            throw new IllegalStateException("Configure a conexão PostgreSQL no ambiente de execução.");
+        try { return DriverManager.getConnection(url, usuario, senha); }
+        catch (SQLException e) { throw new IllegalStateException("Não foi possível conectar ao PostgreSQL. Confira a configuração e o serviço."); }
+    }
+
+    private static String configuracao(String propriedade, String ambiente) {
+        String valor = System.getProperty(propriedade);
+        return valor != null ? valor : System.getenv(ambiente);
     }
 }

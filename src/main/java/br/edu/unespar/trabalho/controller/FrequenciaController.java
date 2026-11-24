@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.FrequenciaMensalDAO;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -27,6 +30,7 @@ public class FrequenciaController {
     private YearMonth mes=YearMonth.now();
 
     @FXML public void initialize() {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
         dpCompetencia.setValue(mes.atDay(1));
         tabela.setPlaceholder(new Label("Nenhum adolescente encontrado."));
         txtPesquisa.textProperty().addListener((o,a,b)->filtrar());
@@ -106,6 +110,7 @@ public class FrequenciaController {
                 }
             });
         }
+        if (!AutorizacaoService.pode(MEDIDA_CONSULTAR)) return;
         coluna("MSE",95,FrequenciaMensalDTO::getMse); coluna("Meses LA",95,FrequenciaMensalDTO::getMeses);
         coluna("Horas PSC",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasPrevistas()));
         coluna("Cumpridas",90,l->l.getHorasPrevistas()==0?"—":Integer.toString(l.getHorasCumpridas()));

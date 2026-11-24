@@ -19,6 +19,7 @@ public class Main extends Application {
             // Configura a janela para iniciar maximizada em tela cheia
             primaryStage.setMaximized(true);
             primaryStage.show();
+            br.edu.unespar.trabalho.util.SegurancaInterface.iniciarMonitor(primaryStage);
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.Responsabiliza;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -13,6 +16,7 @@ import java.sql.SQLException;
 public class ResponsabilizaDAO {
 
     public boolean inserir(Responsabiliza vinculo) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR);
         String sql = "INSERT INTO Responsabiliza (cpf_responsavel, cpf_adolescente) VALUES (?, ?)";
 
         try (Connection conn = ConnectionFactory.getConnection();

@@ -10,7 +10,7 @@ public class VerificacaoAutorizacao {
         Sessao.limparSessao();
         for (Operacao op : Operacao.values()) assert !AutorizacaoService.pode(op);
         for (NivelAcesso perfil : NivelAcesso.values()) {
-            Sessao.setUsuarioLogado(new EquipeTecnicaDTO(1L, "teste", "Profissional", "Cargo", perfil));
+            Sessao.iniciar(new EquipeTecnicaDTO(1L, "teste", "Profissional", "Cargo", perfil), () -> true);
             assert AutorizacaoService.pode(Operacao.FREQUENCIA_REGISTRAR);
             assert AutorizacaoService.pode(Operacao.USUARIO_GERENCIAR) == (perfil == NivelAcesso.ADMINISTRADOR);
             for (Operacao op : Operacao.values()) {
@@ -20,7 +20,7 @@ public class VerificacaoAutorizacao {
             }
             assert !AutorizacaoService.pode(null);
         }
-        Sessao.setUsuarioLogado(new EquipeTecnicaDTO(1L, "teste", "Cargo", "invalido"));
+        Sessao.iniciar(new EquipeTecnicaDTO(1L, "teste", "Cargo", "invalido"), () -> true);
         assert !AutorizacaoService.pode(Operacao.FREQUENCIA_REGISTRAR);
         try { AutorizacaoService.exigir(Operacao.USUARIO_GERENCIAR); throw new AssertionError(); }
         catch (AcessoNegadoException esperado) { }

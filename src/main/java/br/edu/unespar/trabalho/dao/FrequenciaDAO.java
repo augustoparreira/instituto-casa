@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import java.sql.*;
@@ -12,10 +15,13 @@ import java.util.List;
  * Persiste frequências e recalcula horas e situação do adolescente em transações JDBC.
  */
 public class FrequenciaDAO {
-    public boolean registrar(Frequencia f) { return salvar(f,false); }
-    public boolean atualizar(Frequencia f) { return salvar(f,true); }
+    public boolean registrar(Frequencia f) {
+        AutorizacaoService.exigir(FREQUENCIA_REGISTRAR); return salvar(f,false); }
+    public boolean atualizar(Frequencia f) {
+        AutorizacaoService.exigir(FREQUENCIA_EDITAR); return salvar(f,true); }
 
     private boolean salvar(Frequencia f,boolean edicao) {
+        if (f.getHorasContabilizadas() > 0) AutorizacaoService.exigir(HORAS_PSC_REGISTRAR);
         f.validar();
         if(f.getHorasContabilizadas()>0 && f.getIdMedida()==null)
             throw new IllegalArgumentException("Selecione a PSC para contabilizar horas. Para acompanhamento apenas de LA, informe zero horas.");
@@ -60,6 +66,7 @@ public class FrequenciaDAO {
     }
 
     public boolean excluir(Frequencia f) {
+        AutorizacaoService.exigir(FREQUENCIA_EXCLUIR);
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {
@@ -120,9 +127,13 @@ public class FrequenciaDAO {
     }
 
     public List<Frequencia> listar(long cpf,LocalDate inicio,LocalDate fim) {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
         List<Frequencia> lista=new ArrayList<>();
-        String sql="SELECT f.*,a.nome_atividade,m.tipo_medida FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
-                + "LEFT JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida "
+        boolean dadosCompletos = AutorizacaoService.pode(MEDIDA_CONSULTAR);
+        String campos = dadosCompletos ? "f.*,m.tipo_medida" : "f.cpf_adolescente,f.id_atividade,f.data_presenca,"
+                + "f.status_presenca,0 AS horas_cumpridas,NULL::integer AS id_medida,NULL::text AS observacoes,NULL::text AS tipo_medida";
+        String sql="SELECT "+campos+",a.nome_atividade FROM Frequencia f JOIN Atividade a ON a.id_atividade=f.id_atividade "
+                + (dadosCompletos ? "LEFT JOIN MedidaSocioeducativa m ON m.id_medida=f.id_medida " : "")
                 + "WHERE (?=0 OR f.cpf_adolescente=?) AND f.data_presenca BETWEEN ? AND ? ORDER BY f.data_presenca DESC,a.nome_atividade";
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
             s.setLong(1,cpf); s.setLong(2,cpf); s.setObject(3,inicio); s.setObject(4,fim);
@@ -137,8 +148,10 @@ public class FrequenciaDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar as frequências.",e); }
     }
 
-    public int consultarFaltas(long cpf) { return consultarFaltas(cpf,YearMonth.now()); }
+    public int consultarFaltas(long cpf) {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR); return consultarFaltas(cpf,YearMonth.now()); }
     public int consultarFaltas(long cpf,YearMonth mes) {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
         return (int)listar(cpf,mes.atDay(1),mes.atEndOfMonth()).stream()
                 .filter(f->f.getStatusPresenca()==StatusPresenca.FALTA_INJUSTIFICADA)
                 .map(Frequencia::getDataPresenca).distinct().count();

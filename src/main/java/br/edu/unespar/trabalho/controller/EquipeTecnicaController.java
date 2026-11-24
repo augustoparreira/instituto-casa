@@ -1,157 +1,142 @@
 package br.edu.unespar.trabalho.controller;
 
-import br.edu.unespar.trabalho.model.MembroEquipeDTO;
-import br.edu.unespar.trabalho.util.NavegacaoUtil;
+import br.edu.unespar.trabalho.dao.EquipeTecnicaDAO;
+import br.edu.unespar.trabalho.model.*;
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import br.edu.unespar.trabalho.util.*;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
-import javafx.scene.shape.Circle;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.geometry.Insets;
+import java.util.List;
+import java.util.Locale;
+import static br.edu.unespar.trabalho.model.Operacao.*;
 
-/**
- * Controla a consulta e os filtros da equipe técnica exibida com dados demonstrativos.
- */
+/** Administração de profissionais e contas, preservando vínculos ao desativar. */
 public class EquipeTecnicaController {
-
     @FXML private TextField txtPesquisa;
     @FXML private Label lblTotalRegistros;
-    @FXML private ListView<MembroEquipeDTO> listMembros;
+    @FXML private ListView<EquipeTecnica> listMembros;
+    @FXML private Button btnCargoTodos,btnCargoAssistente,btnCargoPsicologo,btnCargoPedagogo;
+    private final EquipeTecnicaDAO dao=new EquipeTecnicaDAO();
+    private List<EquipeTecnica> membros=List.of();
+    private String cargo="";
 
-    @FXML private Button btnCargoTodos;
-    @FXML private Button btnCargoAssistente;
-    @FXML private Button btnCargoPsicologo;
-    @FXML private Button btnCargoPedagogo;
-
-    private ObservableList<MembroEquipeDTO> listaOriginal;
-    private FilteredList<MembroEquipeDTO> listaFiltrada;
-
-    private String filtroCargoAtual = "Todos";
-
-    @FXML
-    public void initialize() {
-
-        listaOriginal = FXCollections.observableArrayList(
-                new MembroEquipeDTO("Ana Paula Costa", "Assistente Social", "ana.costa", "3 adolescente(s)", "Administrador", "AP"),
-                new MembroEquipeDTO("Bruno Ferreira", "Psicólogo", "bruno.ferreira", "2 adolescente(s)", "Equipe Técnica", "BF"),
-                new MembroEquipeDTO("Carla Mendes", "Pedagoga", "carla.mendes", "2 adolescente(s)", "Equipe Técnica", "CM"),
-                new MembroEquipeDTO("Diego Nascimento", "Educador Social", "diego.nascimento", "0 adolescente(s)", "Educador", "DN"),
-                new MembroEquipeDTO("Elisa Takahashi", "Coord. Pedagógica", "elisa.takahashi", "0 adolescente(s)", "Administrador", "ET")
-        );
-
-        listaFiltrada = new FilteredList<>(listaOriginal, p -> true);
-
-        listMembros.setItems(listaFiltrada);
-        listMembros.setCellFactory(param -> new ListCell<>() {
-            @Override
-            protected void updateItem(MembroEquipeDTO item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    HBox box = new HBox(15);
-                    box.setStyle("-fx-alignment: center-left; -fx-padding: 12px 16px; -fx-background-color: white; " +
-                            "-fx-background-radius: 8px; -fx-border-color: #e5e5e0; -fx-border-radius: 8px; -fx-cursor: hand;");
-
-                    HBox avatarBox = new HBox();
-                    avatarBox.setStyle("-fx-alignment: center;");
-                    Circle avatar = new Circle(18);
-                    avatar.setStyle("-fx-fill: #d1dcd5;");
-
-                    Label lblIniciais = new Label(item.getIniciais());
-                    lblIniciais.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: #19523e;");
-
-                    VBox info = new VBox(2);
-                    Label lblNome = new Label(item.getNome());
-                    lblNome.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #2b2b2b;");
-                    Label lblCargo = new Label(item.getCargo());
-                    lblCargo.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
-                    Label lblDetalhe = new Label(item.getLogin() + "  " + item.getAdolescentesAtendidos());
-                    lblDetalhe.setStyle("-fx-text-fill: #888888; -fx-font-size: 11px;");
-
-                    info.getChildren().addAll(lblNome, lblCargo, lblDetalhe);
-
-                    Region spacer = new Region();
-                    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-                    Label badgeAcesso = new Label(item.getNivelAcesso());
-                    String estiloBadge = switch (item.getNivelAcesso()) {
-                        case "Administrador" -> "-fx-background-color: #ececec; -fx-text-fill: #555555;";
-                        case "Educador" -> "-fx-background-color: #f3e8f8; -fx-text-fill: #8a30b5;";
-                        default -> "-fx-background-color: #e8f3ee; -fx-text-fill: #19523e;";
-                    };
-                    badgeAcesso.setStyle(estiloBadge + " -fx-font-weight: bold; -fx-font-size: 10px; -fx-padding: 3px 8px; -fx-background-radius: 10px;");
-
-                    box.getChildren().addAll(avatar, info, spacer, badgeAcesso);
-                    setGraphic(box);
-                }
+    @FXML public void initialize() {
+        AutorizacaoService.exigir(USUARIO_GERENCIAR);
+        listMembros.setPlaceholder(new Label("Nenhum profissional cadastrado."));
+        listMembros.setCellFactory(lista -> new ListCell<>() {
+            @Override protected void updateItem(EquipeTecnica m,boolean vazio) {
+                super.updateItem(m,vazio); setText(null); setGraphic(null);
+                if(vazio || m==null) return;
+                VBox dados=new VBox(4,new Label(m.getNomeCompleto()),new Label(m.getCargoFuncao()+" · "+m.getLogin()),
+                        new Label(m.getNivelAcesso()+" · "+(m.isAtivo()?"Conta ativa":"Conta desativada")));
+                Region espaco=new Region(); HBox.setHgrow(espaco,Priority.ALWAYS);
+                Button editar=new Button("Editar"),senha=new Button("Redefinir senha"),ativo=new Button(m.isAtivo()?"Desativar":"Reativar");
+                editar.setOnAction(e -> abrirFormulario(m)); senha.setOnAction(e -> redefinirSenha(m));
+                ativo.setOnAction(e -> alterarAtivo(m));
+                HBox linha=new HBox(12,dados,espaco,editar,senha,ativo); linha.setPadding(new Insets(12)); setGraphic(linha);
             }
         });
-
-        atualizarContador();
+        atualizar();
     }
 
-    @FXML
-    public void filtrarMembros() {
-        String termo = txtPesquisa.getText().toLowerCase();
-
-        listaFiltrada.setPredicate(membro -> {
-            boolean combinaTexto = termo.isEmpty() ||
-                    membro.getNome().toLowerCase().contains(termo) ||
-                    membro.getCargo().toLowerCase().contains(termo) ||
-                    membro.getLogin().toLowerCase().contains(termo);
-
-            boolean combinaCargo = filtroCargoAtual.equals("Todos") ||
-                    membro.getCargo().toLowerCase().contains(filtroCargoAtual.toLowerCase());
-
-            return combinaTexto && combinaCargo;
-        });
-
-        atualizarContador();
+    private void atualizar() {
+        membros=dao.listar(); filtrarMembros();
     }
 
-    private void atualizarContador() {
-        if (lblTotalRegistros != null) {
-            lblTotalRegistros.setText(listaFiltrada.size() + " membro(s) cadastrado(s)");
+    @FXML public void filtrarMembros() {
+        AutorizacaoService.exigir(EQUIPE_CONSULTAR);
+        String termo=txtPesquisa.getText()==null?"":txtPesquisa.getText().trim().toLowerCase(Locale.ROOT);
+        var resultado=membros.stream().filter(m -> (m.getNomeCompleto()+" "+m.getCargoFuncao()+" "+m.getLogin())
+                .toLowerCase(Locale.ROOT).contains(termo) && m.getCargoFuncao().toLowerCase(Locale.ROOT).contains(cargo)).toList();
+        listMembros.setItems(FXCollections.observableArrayList(resultado)); lblTotalRegistros.setText(resultado.size()+" profissional(is)");
+    }
+    private void filtrarCargo(String valor,Button ativo) {
+        cargo=valor;
+        for(Button b:List.of(btnCargoTodos,btnCargoAssistente,btnCargoPsicologo,btnCargoPedagogo)) {
+            b.getStyleClass().removeAll("filter-btn","filter-btn-active"); b.getStyleClass().add(b==ativo?"filter-btn-active":"filter-btn");
         }
+        filtrarMembros();
+    }
+    @FXML public void filtrarCargoTodos(ActionEvent e) { filtrarCargo("",btnCargoTodos); }
+    @FXML public void filtrarCargoAssistente(ActionEvent e) { filtrarCargo("assistente",btnCargoAssistente); }
+    @FXML public void filtrarCargoPsicologo(ActionEvent e) { filtrarCargo("psic",btnCargoPsicologo); }
+    @FXML public void filtrarCargoPedagogo(ActionEvent e) { filtrarCargo("pedagog",btnCargoPedagogo); }
+    @FXML public void novoMembro() { abrirFormulario(null); }
+
+    private void abrirFormulario(EquipeTecnica existente) {
+        AutorizacaoService.exigir(USUARIO_GERENCIAR);
+        Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle(existente==null?"Cadastrar profissional e conta":"Editar profissional e conta");
+        dialogo.initOwner(listMembros.getScene().getWindow());
+        GridPane grade=new GridPane(); grade.setHgap(14); grade.setVgap(10); grade.setPadding(new Insets(20));
+        TextField cpf=new TextField(),nome=new TextField(),contato=new TextField(),email=new TextField(),login=new TextField(),funcao=new TextField();
+        DatePicker nascimento=new DatePicker(); ComboBox<NivelAcesso> perfil=new ComboBox<>(FXCollections.observableArrayList(NivelAcesso.values()));
+        CheckBox ativo=new CheckBox("Conta ativa"); ativo.setSelected(true);
+        PasswordField senha=new PasswordField(),confirmar=new PasswordField();
+        Label erro=new Label(); erro.setWrapText(true); erro.setMaxWidth(480); erro.setStyle("-fx-text-fill: #a02020;");
+        String[] rotulos={"CPF (11 dígitos)","Nome completo","Nascimento","Telefone (até 15 caracteres)","E-mail","Cargo / função","Login","Perfil"};
+        javafx.scene.Node[] campos={cpf,nome,nascimento,contato,email,funcao,login,perfil};
+        for(int i=0;i<campos.length;i++) grade.addRow(i,new Label(rotulos[i]),campos[i]);
+        grade.add(ativo,1,8);
+        if(existente==null) { grade.addRow(9,new Label("Senha (12 a 128 caracteres)"),senha); grade.addRow(10,new Label("Confirme a senha"),confirmar); }
+        else {
+            cpf.setText(String.format("%011d",existente.getCpf())); cpf.setDisable(true); nome.setText(existente.getNomeCompleto());
+            nascimento.setValue(existente.getDataNascimento()); contato.setText(existente.getContato()); email.setText(existente.getEmail());
+            funcao.setText(existente.getCargoFuncao()); login.setText(existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
+        }
+        grade.add(erro,0,11,2,1); dialogo.getDialogPane().setContent(grade);
+        ButtonType salvar=new ButtonType("Salvar",ButtonBar.ButtonData.OK_DONE);
+        dialogo.getDialogPane().getButtonTypes().addAll(salvar,ButtonType.CANCEL);
+        dialogo.getDialogPane().lookupButton(salvar).addEventFilter(ActionEvent.ACTION,event -> {
+            try {
+                AutorizacaoService.exigir(USUARIO_GERENCIAR);
+                if(!cpf.getText().matches("[0-9]{11}")) throw new IllegalArgumentException("Informe os 11 dígitos do CPF.");
+                nascimento.commitValue();
+                EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpf.getText())); m.setNomeCompleto(nome.getText());
+                m.setDataNascimento(nascimento.getValue()); m.setContato(contato.getText()); m.setEmail(email.getText());
+                m.setCargoFuncao(funcao.getText()); m.setLogin(login.getText()); m.setNivelAcesso(perfil.getValue()); m.setAtivo(ativo.isSelected());
+                if(existente==null) {
+                    if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");
+                    m.setSenha(senha.getText());
+                }
+                try { if(existente==null) dao.inserir(m); else dao.atualizar(m); }
+                finally { m.setSenha(null); }
+                if(Sessao.validarContaAtual()) atualizar();
+            } catch(RuntimeException ex) { erro.setText(ex.getMessage()); event.consume(); }
+        });
+        dialogo.showAndWait(); senha.clear(); confirmar.clear();
     }
 
-    @FXML public void filtrarCargoTodos(ActionEvent e) { filtroCargoAtual = "Todos"; atualizarEstiloBotoesCargo(btnCargoTodos); filtrarMembros(); }
-    @FXML public void filtrarCargoAssistente(ActionEvent e) { filtroCargoAtual = "Assistente"; atualizarEstiloBotoesCargo(btnCargoAssistente); filtrarMembros(); }
-    @FXML public void filtrarCargoPsicologo(ActionEvent e) { filtroCargoAtual = "Psicólogo"; atualizarEstiloBotoesCargo(btnCargoPsicologo); filtrarMembros(); }
-    @FXML public void filtrarCargoPedagogo(ActionEvent e) { filtroCargoAtual = "Pedagog"; atualizarEstiloBotoesCargo(btnCargoPedagogo); filtrarMembros(); }
-
-    private void atualizarEstiloBotoesCargo(Button ativo) {
-        if (btnCargoTodos != null) alternarEstilo(btnCargoTodos, false);
-        if (btnCargoAssistente != null) alternarEstilo(btnCargoAssistente, false);
-        if (btnCargoPsicologo != null) alternarEstilo(btnCargoPsicologo, false);
-        if (btnCargoPedagogo != null) alternarEstilo(btnCargoPedagogo, false);
-
-        if (ativo != null) alternarEstilo(ativo, true);
+    private void alterarAtivo(EquipeTecnica m) {
+        AutorizacaoService.exigir(USUARIO_GERENCIAR);
+        if(new Alert(Alert.AlertType.CONFIRMATION,(m.isAtivo()?"Desativar":"Reativar")+" esta conta? Os vínculos serão preservados.",ButtonType.YES,ButtonType.NO)
+                .showAndWait().orElse(ButtonType.NO)!=ButtonType.YES) return;
+        try { dao.definirAtivo(m.getCpf(),!m.isAtivo()); if(Sessao.validarContaAtual()) atualizar(); }
+        catch(RuntimeException ex) { new Alert(Alert.AlertType.WARNING,ex.getMessage()).showAndWait(); }
     }
 
-    private void alternarEstilo(Button btn, boolean isAtivo) {
-        btn.getStyleClass().remove("filter-btn-active");
-        btn.getStyleClass().remove("filter-btn");
-        btn.getStyleClass().add(isAtivo ? "filter-btn-active" : "filter-btn");
+    private void redefinirSenha(EquipeTecnica m) {
+        AutorizacaoService.exigir(USUARIO_GERENCIAR);
+        Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle("Redefinir senha"); dialogo.initOwner(listMembros.getScene().getWindow());
+        PasswordField senha=new PasswordField(),confirmar=new PasswordField(); Label erro=new Label();
+        dialogo.getDialogPane().setContent(new VBox(10,new Label("Nova senha (12 a 128 caracteres)"),senha,new Label("Confirmação"),confirmar,erro));
+        dialogo.getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);
+        dialogo.getDialogPane().lookupButton(ButtonType.OK).addEventFilter(ActionEvent.ACTION,event -> {
+            try {
+                if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");
+                dao.redefinirSenha(m.getCpf(),senha.getText());
+            } catch(RuntimeException ex) { erro.setText(ex.getMessage()); event.consume(); }
+        });
+        dialogo.showAndWait(); senha.clear(); confirmar.clear();
     }
-
-    @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Dashboard.fxml", "Painel de Controle"); }
-    @FXML public void irParaAdolescentes(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/AdolescentesView.fxml", "Adolescentes"); }
-    @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/AgendaView.fxml", "Agenda institucional"); }
-    @FXML public void irParaRelatorios(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/RelatoriosView.fxml", "Relatórios"); }
-    @FXML public void irParaEquipeTecnica(ActionEvent e) { /* Tela Atual */}
-    @FXML public void fazerLogout(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Login.fxml", "Login"); }
-
-    @FXML public void irParaDashboard(ActionEvent e) { NavegacaoUtil.mudarTela(e, "/View/Dashboard.fxml", "Painel de Controle"); }
+    @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/Dashboard.fxml","Painel"); }
+    @FXML public void irParaDashboard(ActionEvent e) { irParaPainel(e); }
+    @FXML public void irParaAdolescentes(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AdolescentesView.fxml","Adolescentes"); }
+    @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AgendaView.fxml","Agenda"); }
+    @FXML public void irParaRelatorios(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/RelatoriosView.fxml","Relatórios"); }
+    @FXML public void irParaEquipeTecnica(ActionEvent e) { }
+    @FXML public void fazerLogout(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/Login.fxml","Login"); }
 }

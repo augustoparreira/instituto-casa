@@ -24,7 +24,7 @@ public final class AutorizacaoService {
 
     public static boolean pode(Operacao operacao, ContextoAcesso contexto) {
         EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-        if (operacao == null || usuario == null || usuario.getPerfil() == null) return false;
+        if (operacao == null || usuario == null || usuario.getPerfil() == null || !Sessao.validarContaAtual()) return false;
         if (usuario.getPerfil() == NivelAcesso.ADMINISTRADOR) return true;
         // Vínculo ou autoria não são concessões de sigilo enquanto a ONG não definir a política.
         if (contexto != null && contexto.sigiloso()) return false;

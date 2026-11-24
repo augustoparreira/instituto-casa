@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.IdUtil;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
@@ -18,6 +21,7 @@ import java.util.List;
 public class AdolescenteDAO {
 
     public boolean inserir(Adolescente adolescente) {
+        AutorizacaoService.exigir(ADOLESCENTE_CADASTRAR);
         String sqlPessoa = "INSERT INTO Pessoa (cpf, nome_completo, data_nascimento, contato, email) VALUES (?, ?, ?, ?, ?)";
         String sqlAdolescente = "INSERT INTO Adolescente (cpf_adolescente, naturalidade, genero, cor_raca, status) VALUES (?, ?, ?, ?, ?)";
 
@@ -67,6 +71,7 @@ public class AdolescenteDAO {
     }
 
     public List<Adolescente> listar() {
+        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
         List<Adolescente> lista = new ArrayList<>();
         String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +
                 "a.naturalidade, a.genero, a.cor_raca, a.status " +
@@ -97,6 +102,7 @@ public class AdolescenteDAO {
     }
 
     public boolean atualizar(Adolescente adolescente) {
+        AutorizacaoService.exigir(ADOLESCENTE_EDITAR);
         String sqlPessoa = "UPDATE Pessoa SET nome_completo = ?, data_nascimento = ?, contato = ?, email = ? WHERE cpf = ?";
         String sqlAdolescente = "UPDATE Adolescente SET naturalidade = ?, genero = ?, cor_raca = ?, status = ? WHERE cpf_adolescente = ?";
 
@@ -136,6 +142,7 @@ public class AdolescenteDAO {
     }
 
     public boolean excluir(long cpf) {
+        AutorizacaoService.exigir(ADOLESCENTE_EXCLUIR);
         String sql = "UPDATE Adolescente SET status = 'INATIVO' WHERE cpf_adolescente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -148,6 +155,7 @@ public class AdolescenteDAO {
     }
 
     public List<AdolescenteDTO> listarResumoDTO() {
+        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
         List<AdolescenteDTO> lista=new ArrayList<>();
         var linhas=new FrequenciaMensalDAO().listar(java.time.YearMonth.now());
         java.util.Map<Long,String> tecnicos=new java.util.HashMap<>();
@@ -169,6 +177,7 @@ public class AdolescenteDAO {
     }
 
     public List<Adolescente> listarCadastros() {
+        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
         List<Adolescente> lista=new ArrayList<>();
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
                 "SELECT p.*,a.*,ss.bairro FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf ORDER BY p.nome_completo"); ResultSet r=s.executeQuery()) {
@@ -185,6 +194,7 @@ public class AdolescenteDAO {
     }
 
     public Adolescente buscarPorCpf(long cpf) {
+        AutorizacaoService.exigir(SIGILOSO_CONSULTAR);
         String sql = "SELECT p.*, a.*, ss.bairro FROM Pessoa p JOIN Adolescente a ON a.cpf_adolescente=p.cpf "
                 + "LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=p.cpf WHERE p.cpf=?";
         try (Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
@@ -209,6 +219,7 @@ public class AdolescenteDAO {
 
     /** Dados pessoais, sociais, saúde e escolaridade são salvos juntos ou revertidos juntos. */
     public boolean salvarCadastro(Adolescente a, SituacaoSocial social, Saude saude, EducacaoTrabalho estudo, boolean edicao) {
+        AutorizacaoService.exigir(SIGILOSO_ALTERAR);
         if(a.getNomeCompleto()==null || a.getNomeCompleto().isBlank() || a.getNomeCompleto().length()>80)
             throw new IllegalArgumentException("Informe o nome completo (até 80 caracteres).");
         if(a.getCpf()<=0 || a.getDataNascimento()==null || a.getDataNascimento().isAfter(LocalDate.now()))

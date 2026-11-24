@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.FrequenciaLinhaDTO;
 import br.edu.unespar.trabalho.model.MedidaSocioeducativa;
 import br.edu.unespar.trabalho.model.PIA;
@@ -23,7 +26,9 @@ public class PerfilAdolescenteDAO {
 
     /** Medida mais recente do adolescente, ou null se ele ainda não tem medida. */
     public MedidaSocioeducativa buscarMedidaAtual(long cpfAdolescente) {
-        String sql = "SELECT id_medida, reincidencia, tipo_medida, data_inicio, historico_infracional, " +
+        AutorizacaoService.exigir(MEDIDA_CONSULTAR);
+        String historico = AutorizacaoService.pode(SIGILOSO_CONSULTAR) ? "historico_infracional" : "NULL AS historico_infracional";
+        String sql = "SELECT id_medida, reincidencia, tipo_medida, data_inicio, " + historico + ", " +
                 "duracao_meses, duracao_horas FROM MedidaSocioeducativa " +
                 "WHERE cpf_adolescente = ? ORDER BY data_inicio DESC LIMIT 1";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -56,6 +61,7 @@ public class PerfilAdolescenteDAO {
 
     /** CPF do técnico de referência do adolescente, ou null se não houver. */
     public Long buscarCpfTecnicoReferencia(long cpfAdolescente) {
+        AutorizacaoService.exigir(ADOLESCENTE_CONSULTAR);
         String sql = "SELECT cpf_equipe FROM Acompanhamento " +
                 "WHERE cpf_adolescente = ? AND tecnico_referencia = true LIMIT 1";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -76,6 +82,7 @@ public class PerfilAdolescenteDAO {
      * marca o novo (criando o vínculo se ele ainda não existir). Tudo numa transação.
      */
     public boolean definirTecnicoReferencia(long cpfAdolescente, long cpfEquipe) {
+        AutorizacaoService.exigir(REFERENCIA_DEFINIR);
         try (Connection conn = ConnectionFactory.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -119,6 +126,7 @@ public class PerfilAdolescenteDAO {
 
     /** Registros de frequência do adolescente (mais recentes primeiro), já com o nome da atividade. */
     public List<FrequenciaLinhaDTO> listarFrequencia(long cpfAdolescente) {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
         List<FrequenciaLinhaDTO> lista = new ArrayList<>();
         String sql = "SELECT f.data_presenca, f.status_presenca, f.horas_cumpridas, a.nome_atividade " +
                 "FROM Frequencia f INNER JOIN Atividade a ON a.id_atividade = f.id_atividade " +
@@ -150,6 +158,7 @@ public class PerfilAdolescenteDAO {
 
     /** Já existe presença/falta desse adolescente nessa atividade nessa data? (chave primária da tabela) */
     public boolean existeFrequencia(long cpfAdolescente, int idAtividade, LocalDate data) {
+        AutorizacaoService.exigir(FREQUENCIA_CONSULTAR);
         String sql = "SELECT 1 FROM Frequencia WHERE cpf_adolescente = ? AND id_atividade = ? AND data_presenca = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -169,6 +178,7 @@ public class PerfilAdolescenteDAO {
 
     /** Nome do técnico que elaborou o PIA (tabela ElaborarPIA), ou null. */
     public String buscarNomeAutorPia(int idPia) {
+        AutorizacaoService.exigir(PIA_CONSULTAR);
         String sql = "SELECT p.nome_completo FROM ElaborarPIA e " +
                 "INNER JOIN Pessoa p ON p.cpf = e.cpf_equipe WHERE e.id_pia = ? LIMIT 1";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -186,6 +196,7 @@ public class PerfilAdolescenteDAO {
 
     /** Grava o PIA e o vínculo com o técnico que o elaborou na mesma transação. */
     public boolean criarPia(PIA pia, long cpfEquipe) {
+        AutorizacaoService.exigir(PIA_ALTERAR);
         String sqlPia = "INSERT INTO PIA (id_pia, data_elaboracao, diagnostico, vulnerabilidades, " +
                 "potencialidades, estrategias, documento_enviado, cpf_adolescente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConnectionFactory.getConnection()) {

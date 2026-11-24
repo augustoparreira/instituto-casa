@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.dao;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.model.Responsavel;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 
@@ -12,8 +15,10 @@ import java.util.List;
  */
 public class ResponsavelDAO {
 
-    public boolean inserir(Responsavel r,long cpf) { return salvar(r,cpf,false); }
-    public boolean atualizar(Responsavel r,long cpf) { return salvar(r,cpf,true); }
+    public boolean inserir(Responsavel r,long cpf) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR); return salvar(r,cpf,false); }
+    public boolean atualizar(Responsavel r,long cpf) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR); return salvar(r,cpf,true); }
     private boolean salvar(Responsavel r,long cpf,boolean edicao) {
         if(r.getCpf()==cpf || r.getCpf()<=0 || r.getNomeCompleto()==null || r.getNomeCompleto().isBlank() || r.getDataNascimento()==null)
             throw new IllegalArgumentException("Confira os dados do responsável.");
@@ -40,6 +45,7 @@ public class ResponsavelDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível salvar o responsável.",e); }
     }
     public Responsavel buscarPessoa(long cpf) {
+        AutorizacaoService.exigir(FAMILIA_CONSULTAR);
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT * FROM Pessoa WHERE cpf=?")) {
             s.setLong(1,cpf); try(ResultSet rs=s.executeQuery()) {
                 if(!rs.next()) return null;
@@ -49,12 +55,14 @@ public class ResponsavelDAO {
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar o CPF.",e); }
     }
     public boolean desvincular(long cpfAdolescente,long cpfResponsavel) {
+        AutorizacaoService.exigir(FAMILIA_ALTERAR);
         try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("DELETE FROM Responsabiliza WHERE cpf_adolescente=? AND cpf_responsavel=?")) {
             s.setLong(1,cpfAdolescente); s.setLong(2,cpfResponsavel); return s.executeUpdate()==1;
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível remover o vínculo.",e); }
     }
 
     public List<Responsavel> listarResponsaveis(long cpfAdolescente) {
+        AutorizacaoService.exigir(FAMILIA_CONSULTAR);
         List<Responsavel> lista = new ArrayList<>();
 
         String sql = "SELECT p.cpf, p.nome_completo, p.data_nascimento, p.contato, p.email, " +

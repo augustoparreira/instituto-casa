@@ -1,5 +1,8 @@
 package br.edu.unespar.trabalho.controller;
 
+import br.edu.unespar.trabalho.service.AutorizacaoService;
+import static br.edu.unespar.trabalho.model.Operacao.*;
+
 import br.edu.unespar.trabalho.dao.AdolescenteDAO;
 import br.edu.unespar.trabalho.model.FrequenciaMensalDTO;
 import br.edu.unespar.trabalho.dao.ComposicaoFamiliarDAO;
@@ -193,6 +196,7 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void initialize() {
+        AutorizacaoService.exigir(SIGILOSO_CONSULTAR);
         dpMesFrequencia.setValue(LocalDate.now().withDayOfMonth(1));
         btnCorrigirFrequencia.disableProperty().bind(listaFrequenciaPerfil.getSelectionModel().selectedItemProperty().isNull());
         listaFrequenciaPerfil.setPlaceholder(textoVazio("Nenhum lançamento neste mês. Dias sem lançamento não são faltas."));
@@ -720,6 +724,7 @@ public class DetalhesAdolescenteController {
 
     @FXML
     public void exportarTextoPia() {
+        AutorizacaoService.exigir(PIA_CONSULTAR);
         if (piaAtual == null) return;
 
         FileChooser seletor = new FileChooser();
@@ -731,7 +736,7 @@ public class DetalhesAdolescenteController {
 
         try (FileWriter arquivo = new FileWriter(destino, StandardCharsets.UTF_8)) {
             EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
-            String emitidoPor = usuario != null && usuario.getLogin() != null ? " por " + usuario.getLogin() : "";
+            String emitidoPor = usuario != null && usuario.getNomeCompleto() != null ? " por " + usuario.getNomeCompleto() : "";
             arquivo.write("Plano Individual de Atendimento (PIA)" + System.lineSeparator());
             arquivo.write("Instituto C.A.S.A. - emitido em " + Formatadores.dataCurta(LocalDate.now()) + emitidoPor + System.lineSeparator());
             for (String[] campo : new String[][] {

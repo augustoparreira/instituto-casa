@@ -323,8 +323,9 @@ public class RelatoriosController {
         if(!(janela instanceof Stage stage)) return;
         Parent raiz=scene.getRoot();
         stage.setOnCloseRequest(e -> {
+            // Confirmar o descarte é uma ação local. As operações de Relatórios validam a conta separadamente.
             if(stage.getScene()==scene && scene.getRoot()==raiz && alterado
-                    && Sessao.validarContaAtual() && !confirmarSaida()) e.consume();
+                    && Sessao.getUsuarioLogado()!=null && !confirmarSaida()) e.consume();
         });
     }
     private void sairPara(ActionEvent e, String caminho, String titulo) {

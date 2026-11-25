@@ -3,6 +3,8 @@ package br.edu.unespar.trabalho.controller;
 import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.Sessao;
+import br.edu.unespar.trabalho.util.Senhas;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -21,6 +23,12 @@ public class LoginController {
     @FXML private TextField txtLogin;
     @FXML private PasswordField txtSenha;
     @FXML private Button btnEntrar;
+
+    @FXML
+    public void initialize() {
+        ValidacaoFormulario.limitarTexto(txtLogin,100,"Login");
+        ValidacaoFormulario.limitarSenha(txtSenha,Senhas.MAXIMO_AUTENTICACAO);
+    }
 
     @FXML
     public void fazerLogin(ActionEvent event) {

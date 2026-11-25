@@ -70,7 +70,7 @@ public class AdolescenteDAO {
             try (PreparedStatement stmtPessoa = conn.prepareStatement(sqlPessoa)) {
                 stmtPessoa.setString(1, adolescente.getNomeCompleto());
                 stmtPessoa.setDate(2, Date.valueOf(adolescente.getDataNascimento()));
-                stmtPessoa.setString(3, adolescente.getContato());
+                stmtPessoa.setString(3, ContatoPessoaDAO.validar(conn,adolescente.getCpf(),adolescente.getContato(),true,true));
                 stmtPessoa.setString(4, adolescente.getEmail());
                 stmtPessoa.setLong(5, adolescente.getCpf());
                 stmtPessoa.executeUpdate();
@@ -87,6 +87,9 @@ public class AdolescenteDAO {
             conn.commit();
             return true;
 
+        } catch (IllegalArgumentException e) {
+            try { if (conn != null) conn.rollback(); } catch (SQLException rollback) { e.addSuppressed(rollback); }
+            throw e;
         } catch (SQLException e) {
             System.err.println("Erro ao atualizar adolescente: " + e.getMessage());
             try { if (conn != null) conn.rollback(); } catch (SQLException ex) { }
@@ -220,10 +223,10 @@ public class AdolescenteDAO {
                             a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva(),a.getCpf()) != 1)
                         throw new IllegalArgumentException("Cadastro não encontrado.");
                     executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
-                            a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf());
+                            a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),true,true),a.getEmail(),a.getCpf());
                 } else {
                     executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
-                            a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail());
+                            a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),false,true),a.getEmail());
                     executarCadastro(c,"INSERT INTO Adolescente(cpf_adolescente,naturalidade,genero,cor_raca,status,imm,vale_transporte,medida_protetiva) VALUES(?,?,?,?,?,?,?,?)",
                             a.getCpf(),a.getNaturalidade(),a.getGenero(),a.getCorRaca(),StatusAdolescente.ATIVO.getCodigo(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva());
                 }
@@ -265,7 +268,7 @@ public class AdolescenteDAO {
             try {
                 if(edicao) {
                     if(executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
-                            a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail(),a.getCpf())!=1)
+                            a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),true,true),a.getEmail(),a.getCpf())!=1)
                         throw new SQLException("Cadastro não encontrado.");
                     if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
                             a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf())!=1)
@@ -275,7 +278,7 @@ public class AdolescenteDAO {
                     executarCadastro(c,"UPDATE PIA SET documento_enviado=? WHERE cpf_adolescente=?",a.isPiaEnviado(),a.getCpf());
                 } else {
                     executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
-                            a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),a.getContato(),a.getEmail());
+                            a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),false,true),a.getEmail());
                     executarCadastro(c,"INSERT INTO Adolescente(cpf_adolescente,naturalidade,genero,cor_raca,status,observacoes,imm,vale_transporte,pia_enviado,medida_protetiva) VALUES(?,?,?,?,?,?,?,?,?,?)",
                             a.getCpf(),a.getNaturalidade(),a.getGenero(),a.getCorRaca(),StatusAdolescente.ATIVO.getCodigo(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva());
                 }

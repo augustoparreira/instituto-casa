@@ -4,6 +4,7 @@ import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.Responsavel;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ public class ResponsavelDAO {
 
         if(r.getCpf()==cpf || r.getCpf()<=0 || r.getNomeCompleto()==null || r.getNomeCompleto().isBlank() || r.getDataNascimento()==null)
             throw new IllegalArgumentException("Confira os dados do responsável.");
+        ValidacaoFormulario.texto(r.getParentesco(),80,"Parentesco",true);
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {
@@ -40,14 +42,15 @@ public class ResponsavelDAO {
                 if (edicao) {
                     if (pode(FAMILIA_PESSOA_COMPARTILHADA_ALTERAR) || podeEditarDadosPessoais(c,r.getCpf())) {
                         try (PreparedStatement s=c.prepareStatement("UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?")) {
-                            preencherPessoa(s,r);
+                            preencherPessoa(s,r,ContatoPessoaDAO.validar(c,r.getCpf(),r.getContato(),true,false));
                             s.executeUpdate();
                         }
                     }
-                } else {
+                } else if (!bloquearResponsavelReutilizavel(c,r.getCpf())) {
+                    String contato = ContatoPessoaDAO.validar(c,r.getCpf(),r.getContato(),false,false);
                     int inseridas;
                     try (PreparedStatement s=c.prepareStatement("INSERT INTO Pessoa(nome_completo,data_nascimento,contato,email,cpf) VALUES(?,?,?,?,?) ON CONFLICT(cpf) DO NOTHING")) {
-                        preencherPessoa(s,r);
+                        preencherPessoa(s,r,contato);
                         inseridas=s.executeUpdate();
                     }
                     if (inseridas==0 && !bloquearResponsavelReutilizavel(c,r.getCpf()))
@@ -68,10 +71,13 @@ public class ResponsavelDAO {
             + "AND NOT EXISTS (SELECT 1 FROM Adolescente WHERE cpf_adolescente=p.cpf) "
             + "AND NOT EXISTS (SELECT 1 FROM EquipeTecnica WHERE cpf_equipe=p.cpf)";
 
-    private void preencherPessoa(PreparedStatement s,Responsavel r) throws SQLException {
+    private void preencherPessoa(PreparedStatement s,Responsavel r,String contato) throws SQLException {
+        ValidacaoFormulario.texto(r.getNomeCompleto(),80,"Nome",true);
+        ValidacaoFormulario.texto(r.getEmail(),90,"E-mail",false);
+        ValidacaoFormulario.texto(contato,30,"Telefone",false);
         s.setString(1,r.getNomeCompleto());
         s.setObject(2,r.getDataNascimento());
-        s.setString(3,r.getContato());
+        s.setString(3,contato);
         s.setString(4,r.getEmail());
         s.setLong(5,r.getCpf());
     }

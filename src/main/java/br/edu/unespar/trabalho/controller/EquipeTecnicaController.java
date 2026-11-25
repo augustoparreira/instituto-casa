@@ -84,23 +84,32 @@ public class EquipeTecnicaController {
         funcao.getEditor().setPromptText("Selecione ou digite um cargo");
         funcao.getEditor().setStyle("-fx-text-fill: #2b2b2b; -fx-background-color: white;");
         DatePicker nascimento=new DatePicker(); ComboBox<NivelAcesso> perfil=new ComboBox<>(FXCollections.observableArrayList(NivelAcesso.values()));
+        DatasFormulario.configurarDigitacao(nascimento);
         configurarSeletorPerfil(perfil);
         CheckBox ativo=new CheckBox("Conta ativa"); ativo.setSelected(true);
         PasswordField senha=new PasswordField(),confirmar=new PasswordField();
         Label erro=new Label(); erro.setWrapText(true); erro.setMaxWidth(480); erro.setStyle("-fx-text-fill: #a02020;");
-        String[] rotulos={"CPF","Nome completo","Nascimento","Telefone com DDD","E-mail","Cargo / função","Login","Perfil"};
+        String[] rotulos={"CPF *","Nome completo *","Nascimento *","Telefone com DDD","E-mail","Cargo / função *","Login *","Perfil *"};
         javafx.scene.Node[] campos={cpf,nome,nascimento,contato,email,funcao,login,perfil};
+        if (existente!=null) rotulos[0]="CPF";
         for(int i=0;i<campos.length;i++) grade.addRow(i,new Label(rotulos[i]),campos[i]);
         grade.add(ativo,1,8);
         MascarasFormulario.cpf(cpf);
         MascarasFormulario.telefone(contato);
+        ValidacaoFormulario.limitarTexto(nome,80,"Nome");
+        ValidacaoFormulario.limitarTexto(email,90,"E-mail");
+        ValidacaoFormulario.limitarTexto(funcao.getEditor(),60,"Cargo ou função");
+        ValidacaoFormulario.filtrar(login,texto -> texto.matches("[a-zA-Z0-9._-]{0,100}"),
+                "Login: até 100 letras sem acento, números, ponto, hífen ou sublinhado.");
+        ValidacaoFormulario.limitarSenha(senha,Senhas.MAXIMO_NOVA);
+        ValidacaoFormulario.limitarSenha(confirmar,Senhas.MAXIMO_NOVA);
         if(existente==null) { grade.addRow(9,new Label("Senha (12 a 128 caracteres)"),senha); grade.addRow(10,new Label("Confirme a senha"),confirmar); }
         else {
             cpf.setText(String.format("%011d",existente.getCpf()));
             cpf.setDisable(true); nome.setText(existente.getNomeCompleto());
             MascarasFormulario.carregarTelefoneExistente(contato,existente.getContato());
             nascimento.setValue(existente.getDataNascimento()); email.setText(existente.getEmail());
-            funcao.setValue(existente.getCargoFuncao()); login.setText(existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
+            funcao.setValue(existente.getCargoFuncao()); ValidacaoFormulario.carregarExistente(login,existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
         }
         grade.add(erro,0,11,2,1); dialogo.getDialogPane().setContent(grade);
         ButtonType salvar=new ButtonType("Salvar",ButtonBar.ButtonData.OK_DONE);
@@ -109,17 +118,15 @@ public class EquipeTecnicaController {
             try {
                 AutorizacaoService.exigir(USUARIO_GERENCIAR);
                 String cpfDigitos = Formatadores.soDigitos(cpf.getText());
-                if(cpfDigitos.length()!=11) throw new IllegalArgumentException("Informe os 11 dígitos do CPF.");
+                if(existente==null && !MascarasFormulario.cpfValido(cpf.getText())) throw new IllegalArgumentException(MascarasFormulario.CPF_INVALIDO);
                 String telefone = Objects.toString(contato.getText(),"");
                 if (!telefone.isBlank() && !MascarasFormulario.telefoneValidoOuExistente(
                         telefone, existente==null ? null : existente.getContato()))
-                    throw new IllegalArgumentException("Telefone: informe DDD e 10 ou 11 dígitos.");
-                String cargoSelecionado = funcao.getEditor().getText().trim();
-                if(cargoSelecionado.isEmpty() || cargoSelecionado.length()>60)
-                    throw new IllegalArgumentException("Informe o cargo ou função (até 60 caracteres).");
+                    throw new IllegalArgumentException(MascarasFormulario.TELEFONE_INVALIDO);
+                String cargoSelecionado = ValidacaoFormulario.texto(funcao.getEditor().getText(),60,"Cargo ou função",true);
                 nascimento.commitValue();
-                EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpfDigitos)); m.setNomeCompleto(nome.getText());
-                m.setDataNascimento(nascimento.getValue()); m.setContato(telefone); m.setEmail(email.getText());
+                EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpfDigitos)); m.setNomeCompleto(ValidacaoFormulario.texto(nome.getText(),80,"Nome",true));
+                m.setDataNascimento(nascimento.getValue()); m.setContato(telefone); m.setEmail(ValidacaoFormulario.email(email.getText(),existente==null ? null : existente.getEmail()));
                 m.setCargoFuncao(cargoSelecionado); m.setLogin(login.getText()); m.setNivelAcesso(perfil.getValue()); m.setAtivo(ativo.isSelected());
                 if(existente==null) {
                     if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");
@@ -128,6 +135,8 @@ public class EquipeTecnicaController {
                 try { if(existente==null) dao.inserir(m); else dao.atualizar(m); }
                 finally { m.setSenha(null); }
                 if(Sessao.validarContaAtual()) atualizar();
+            } catch(java.time.DateTimeException ex) {
+                erro.setText(DatasFormulario.DATA_INVALIDA); event.consume();
             } catch(RuntimeException ex) { erro.setText(ex.getMessage()); event.consume(); }
         });
         dialogo.showAndWait(); senha.clear(); confirmar.clear();
@@ -170,6 +179,8 @@ public class EquipeTecnicaController {
         AutorizacaoService.exigir(USUARIO_GERENCIAR);
         Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle("Redefinir senha"); dialogo.initOwner(listMembros.getScene().getWindow());
         PasswordField senha=new PasswordField(),confirmar=new PasswordField(); Label erro=new Label();
+        ValidacaoFormulario.limitarSenha(senha,Senhas.MAXIMO_NOVA);
+        ValidacaoFormulario.limitarSenha(confirmar,Senhas.MAXIMO_NOVA);
         dialogo.getDialogPane().setContent(new VBox(10,new Label("Nova senha (12 a 128 caracteres)"),senha,new Label("Confirmação"),confirmar,erro));
         dialogo.getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);
         dialogo.getDialogPane().lookupButton(ButtonType.OK).addEventFilter(ActionEvent.ACTION,event -> {

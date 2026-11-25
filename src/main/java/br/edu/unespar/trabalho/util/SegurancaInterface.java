@@ -97,6 +97,9 @@ public final class SegurancaInterface {
         dialogo.initOwner(principal);
         dialogo.setTitle("Alterar minha senha");
         PasswordField atual = new PasswordField(), nova = new PasswordField(), confirmar = new PasswordField();
+        ValidacaoFormulario.limitarSenha(atual,Senhas.MAXIMO_AUTENTICACAO);
+        ValidacaoFormulario.limitarSenha(nova,Senhas.MAXIMO_NOVA);
+        ValidacaoFormulario.limitarSenha(confirmar,Senhas.MAXIMO_NOVA);
         Label mensagem = new Label();
         dialogo.getDialogPane().setContent(new VBox(8, new Label("Senha atual"), atual,
                 new Label("Nova senha (12 a 128 caracteres)"), nova,

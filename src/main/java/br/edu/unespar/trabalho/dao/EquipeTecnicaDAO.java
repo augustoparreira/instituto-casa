@@ -18,7 +18,8 @@ public class EquipeTecnicaDAO {
     private static final String ORIGEM = " FROM Pessoa p JOIN EquipeTecnica e ON p.cpf=e.cpf_equipe ";
 
     public EquipeTecnica autenticar(String login, String senha) {
-        if (login == null || senha == null) return null;
+        if (login == null || senha == null || ValidacaoFormulario.tamanho(login.strip())>100
+                || senha.length()>Senhas.MAXIMO_AUTENTICACAO) return null;
         try (Connection c = ConnectionFactory.getConnection(); PreparedStatement s = c.prepareStatement(
                 "SELECT " + CAMPOS + ",e.senha,e.senha_formato" + ORIGEM + "WHERE lower(btrim(e.login))=?")) {
             s.setString(1, normalizarLogin(login));
@@ -114,7 +115,7 @@ public class EquipeTecnicaDAO {
                         : "INSERT INTO Pessoa(nome_completo,data_nascimento,contato,email,cpf) VALUES(?,?,?,?,?)";
                 try(PreparedStatement s=c.prepareStatement(pessoa)) {
                     s.setString(1,m.getNomeCompleto().trim()); s.setDate(2,Date.valueOf(m.getDataNascimento()));
-                    s.setString(3,m.getContato()); s.setString(4,m.getEmail()); s.setLong(5,m.getCpf());
+                    s.setString(3,ContatoPessoaDAO.validar(c,m.getCpf(),m.getContato(),edicao,false)); s.setString(4,m.getEmail()); s.setLong(5,m.getCpf());
                     if(s.executeUpdate()!=1) throw new IllegalArgumentException("Profissional não encontrado.");
                 }
                 String equipe=edicao ? "UPDATE EquipeTecnica SET login=?,cargo_funcao=?,nivel_acesso=?,ativo=?,"
@@ -227,15 +228,15 @@ public class EquipeTecnicaDAO {
     private static String normalizarLogin(String login) { return login.trim().toLowerCase(Locale.ROOT); }
     private void validar(EquipeTecnica m) {
         if(m==null || m.getCpf()<=0 || m.getCpf()>99999999999L) throw new IllegalArgumentException("CPF inválido.");
-        if(m.getNomeCompleto()==null || m.getNomeCompleto().isBlank() || m.getNomeCompleto().trim().length()>80)
+        if(m.getNomeCompleto()==null || m.getNomeCompleto().isBlank() || ValidacaoFormulario.tamanho(m.getNomeCompleto().trim())>80)
             throw new IllegalArgumentException("Nome obrigatório, com até 80 caracteres.");
         if(m.getDataNascimento()==null || m.getDataNascimento().isAfter(LocalDate.now())) throw new IllegalArgumentException("Nascimento inválido.");
         if(m.getLogin()==null || !normalizarLogin(m.getLogin()).matches("[a-z0-9._-]{3,100}"))
             throw new IllegalArgumentException("Login: 3 a 100 letras sem acento, números, ponto, hífen ou sublinhado.");
-        if(m.getCargoFuncao()==null || m.getCargoFuncao().isBlank() || m.getCargoFuncao().trim().length()>60 || m.getNivelAcesso()==null)
+        if(m.getCargoFuncao()==null || m.getCargoFuncao().isBlank() || ValidacaoFormulario.tamanho(m.getCargoFuncao().trim())>60 || m.getNivelAcesso()==null)
             throw new IllegalArgumentException("Informe cargo (até 60 caracteres) e perfil.");
-        if((m.getContato()!=null && m.getContato().length()>15) || (m.getEmail()!=null && m.getEmail().length()>90))
-            throw new IllegalArgumentException("Contato deve ter até 15 e e-mail até 90 caracteres.");
+        if(m.getEmail()!=null && ValidacaoFormulario.tamanho(m.getEmail())>90)
+            throw new IllegalArgumentException("E-mail: no máximo 90 caracteres.");
     }
 
     private EquipeTecnica mapear(ResultSet r) throws SQLException {

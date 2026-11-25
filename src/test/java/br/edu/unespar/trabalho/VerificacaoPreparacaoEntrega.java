@@ -65,13 +65,23 @@ public class VerificacaoPreparacaoEntrega {
     private static void executar() throws Exception {
         Stage janela=new Stage();
         try {
+            verificarMascaras();
             FXMLLoader cadastro=carregar("CadastroAdolescenteView");
             Parent raiz=cadastro.getRoot();
             janela.setScene(new Scene(raiz,1280,850));
             raiz.applyCss(); raiz.layout();
             texto(raiz,"txtCpf").setText("12345678909");
             texto(raiz,"txtContato").setText("11987654321");
-            texto(raiz,"txtNome").setText("Adolescente da entrega");
+            var nomeCadastro = texto(raiz,"txtNome");
+            nomeCadastro.setText("Á".repeat(80));
+            nomeCadastro.appendText("x");
+            verificar(nomeCadastro.getText().equals("Á".repeat(80)), "cadastro aplica o limite de 80 ao campo Nome");
+            nomeCadastro.setText("Adolescente da entrega");
+            var nisCadastro = texto(raiz,"txtNis");
+            nisCadastro.setText("12345678901");
+            nisCadastro.appendText("2");
+            verificar(nisCadastro.getText().equals("12345678901"), "cadastro aplica o limite de 11 dígitos ao NIS");
+            nisCadastro.clear();
             texto(raiz,"txtEndereco").setText("Rua de teste");
             texto(raiz,"txtBairro").setText("Bairro de teste");
             DatePicker nascimento=(DatePicker)raiz.lookup("#dpNascimento");
@@ -98,18 +108,23 @@ public class VerificacaoPreparacaoEntrega {
             formulario.salvarAdolescente(new ActionEvent(raiz,raiz)); conferirDialogo();
             verificar(new AdolescenteDAO().buscarPorCpf(CPF)==null,"renda vazia não cria cadastro parcial");
             texto(raiz,"txtRenda").setText("1,25");
+            texto(raiz,"txtContato").setText("+55 (11) 98765-4321");
             dialogo(ButtonType.OK,p -> {});
             formulario.salvarAdolescente(new ActionEvent(raiz,raiz));
             var salvoCadastro = new AdolescenteDAO().buscarPorCpf(CPF);
             verificar(salvoCadastro.getDataNascimento().equals(nascimento.getValue())
                     && salvoCadastro.getStatus()==StatusAdolescente.ATIVO
+                    && salvoCadastro.getContato().equals("+55 (11) 98765-4321")
                     && new SituacaoSocialDAO().buscarPorCpf(CPF).getRendaFamiliar()==1.25,
                     "cadastro completo pela tela persiste data, renda declarada e situação Ativo");
 
             String contatoLegado = "3033-2023";
-            salvoCadastro.setContato(contatoLegado);
-            new AdolescenteDAO().salvarDadosOperacionais(salvoCadastro,
-                    new EducacaoTrabalhoDAO().buscarPorCpf(CPF));
+            try (var conexao = ConnectionFactory.getConnection();
+                 var comando = conexao.prepareStatement("UPDATE Pessoa SET contato=? WHERE cpf=?")) {
+                comando.setString(1,contatoLegado);
+                comando.setLong(2,CPF);
+                comando.executeUpdate();
+            }
             FXMLLoader edicao = carregar("CadastroAdolescenteView");
             Parent raizEdicao = edicao.getRoot();
             janela.setScene(new Scene(raizEdicao,1280,850));
@@ -125,6 +140,14 @@ public class VerificacaoPreparacaoEntrega {
             verificar(revisado.getNomeCompleto().equals("Adolescente da entrega revisado")
                     && revisado.getContato().equals(contatoLegado),
                     "edição de outro campo preserva telefone legado");
+            revisado.setContato("3033-2024");
+            try {
+                new AdolescenteDAO().salvarDadosOperacionais(revisado,new EducacaoTrabalhoDAO().buscarPorCpf(CPF));
+                throw new AssertionError("Telefone novo sem DDD foi salvo.");
+            } catch (IllegalArgumentException esperado) {
+                verificar(new AdolescenteDAO().buscarPorCpf(CPF).getContato().equals(contatoLegado),
+                        "DAO recusa novo contato sem DDD e preserva o legado");
+            }
 
             FXMLLoader perfil=carregar("DetalhesAdolescenteView");
             Parent perfilRaiz=perfil.getRoot();
@@ -133,6 +156,22 @@ public class VerificacaoPreparacaoEntrega {
             DetalhesAdolescenteController controller=perfil.getController();
             controller.carregarDados(new AdolescenteDAO().listarResumoDTO().getFirst());
             SegurancaInterface.aplicar(perfilRaiz);
+            verificar(((Label)perfilRaiz.lookup("#lblInfoNascimento")).getText().equals("29/02/2008")
+                    && ((Label)perfilRaiz.lookup("#lblInfoAniversario")).getText().equals("29/02")
+                    && ((Label)perfilRaiz.lookup("#lblInfoNome")).isWrapText()
+                    && ((Label)perfilRaiz.lookup("#lblInfoBairro")).isWrapText(),
+                    "perfil distingue nascimento de aniversário e permite quebra dos dados longos");
+            Label nomeCabecalho = (Label)perfilRaiz.lookup("#lblNome");
+            Label bairroPerfil = (Label)perfilRaiz.lookup("#lblInfoBairro");
+            nomeCabecalho.setText("Adolescente com nome comprido para conferência do cadastro de apresentação");
+            bairroPerfil.setText("Bairro histórico da comunidade do centro de apoio social");
+            ((Region)perfilRaiz).resize(850,760);
+            perfilRaiz.layout();
+            verificar(nomeCabecalho.getHeight()>nomeCabecalho.prefHeight(1500)
+                    && bairroPerfil.getHeight()>bairroPerfil.prefHeight(1500),
+                    "nome e bairro ocupam mais de uma linha no perfil estreito: "
+                            + nomeCabecalho.getWidth()+"x"+nomeCabecalho.getHeight()+" / "
+                            + bairroPerfil.getWidth()+"x"+bairroPerfil.getHeight());
             verificar(perfilRaiz.lookupAll(".user-name").stream().allMatch(n -> ((Label)n).getText().equals("Profissional de teste")),
                     "identificação operacional utiliza nome da sessão");
 
@@ -141,7 +180,7 @@ public class VerificacaoPreparacaoEntrega {
                     DialogPane pane=painelAberto();
                     GridPane grade=(GridPane)((VBox)pane.getContent()).getChildren().getFirst();
                     ((TextField)campo(grade,0)).setText("Responsável da entrega");
-                    ((TextField)campo(grade,1)).setText("99999999901");
+                    ((TextField)campo(grade,1)).setText("52998224725");
                     DatePicker data=(DatePicker)campo(grade,2);
                     data.setValue(LocalDate.of(1980,1,1));
                     data.getEditor().setText("31/02/1980");
@@ -168,7 +207,7 @@ public class VerificacaoPreparacaoEntrega {
                     GridPane grade=(GridPane)((VBox)p.getContent()).getChildren().getFirst();
                     ((TextField)campo(grade,0)).setText("Familiar da entrega");
                     ((TextField)campo(grade,1)).setText("Irmão");
-                    ((TextField)campo(grade,3)).setText("NaN");
+                    ((TextField)campo(grade,3)).setText("9".repeat(310));
                     botaoSalvar(p).fire();
                     verificar(p.getScene().getWindow().isShowing(),"renda não finita mantém formulário aberto");
                     ((TextField)campo(grade,3)).setText("1234,56"); botaoSalvar(p).fire();
@@ -216,7 +255,38 @@ public class VerificacaoPreparacaoEntrega {
             relatorioRaiz.applyCss(); relatorioRaiz.layout();
             ((ComboBox<?>)relatorioRaiz.lookup("#cmbAdolescente")).getSelectionModel().selectFirst();
             RelatoriosController relatorios=relatorio.getController(); relatorios.gerarNovoRelatorio();
-            ((TextArea)relatorioRaiz.lookup("#txtDescumprimento")).setText("Sem descumprimento no cenário fictício.");
+            var frequenciaRelatorio = (TextArea)relatorioRaiz.lookup("#txtRegistroFrequencia");
+            var descumprimento = (TextArea)relatorioRaiz.lookup("#txtDescumprimento");
+            String textoFrequencia = frequenciaRelatorio.getText();
+            var nomeRelatorio = (TextField)relatorioRaiz.lookup("#campoNOME");
+            var dataRelatorio = (DatePicker)relatorioRaiz.lookup("#dpEmissao");
+            String nomeAnterior = nomeRelatorio.getText();
+            LocalDate dataAnterior = dataRelatorio.getValue();
+            nomeRelatorio.clear();
+            dataRelatorio.setValue(null);
+            frequenciaRelatorio.clear();
+            relatorios.imprimirRelatorio();
+            String mensagem = ((Label)relatorioRaiz.lookup("#lblMensagem")).getText();
+            var pendente = javafx.css.PseudoClass.getPseudoClass("pendente");
+            var processo = (TextField)relatorioRaiz.lookup("#campoPROCESSO");
+            verificar(mensagem.contains("nome do adolescente") && mensagem.contains("data de emissão")
+                    && nomeRelatorio.getPseudoClassStates().contains(pendente)
+                    && dataRelatorio.getPseudoClassStates().contains(pendente)
+                    && mensagem.contains("número do processo") && mensagem.contains("registro de frequência")
+                    && mensagem.contains("seção de descumprimento") && processo.getPseudoClassStates().contains(pendente)
+                    && frequenciaRelatorio.getPseudoClassStates().contains(pendente) && descumprimento.getPseudoClassStates().contains(pendente),
+                    "impressão identifica e destaca todos os campos vazios de emissão");
+            nomeRelatorio.setText(nomeAnterior);
+            dataRelatorio.setValue(dataAnterior);
+            frequenciaRelatorio.setText(textoFrequencia);
+            descumprimento.setText("Sem descumprimento no cenário fictício.");
+            processo.setText("Processo fictício 001");
+            Path temporario = Files.createTempFile("exportacao-casa-",".txt");
+            try {
+                relatorios.exportarPara(temporario);
+                verificar(Files.readString(temporario).contains("Processo fictício 001")
+                        && !processo.getPseudoClassStates().contains(pendente), "exportação funciona após preencher as pendências");
+            } finally { Files.deleteIfExists(temporario); }
             relatorios.salvarAtualizacaoRelatorio();
             var salvo=new RelatorioAcompanhamentoDAO().listar().getFirst();
             verificar(salvo.getCampo(RelatorioAcompanhamento.Campo.HORAS).contains("2h cumpridas no mês"),
@@ -236,6 +306,95 @@ public class VerificacaoPreparacaoEntrega {
             dialogo(ButtonType.CLOSE,p -> verificar(p.getContent() instanceof ScrollPane,"prévia de impressão abre no fluxo integrado"));
             ((RelatoriosController)reaberto.getController()).visualizarRelatorio(); conferirDialogo();
         } finally { janela.close(); }
+    }
+
+
+    private static void verificarMascaras() {
+        TextField cpf = new TextField();
+        MascarasFormulario.cpf(cpf);
+        cpf.replaceText(0,0,"12345678909");
+        verificar(cpf.getText().equals("123.456.789-09") && MascarasFormulario.cpfValido(cpf.getText()),"CPF de 11 dígitos é formatado");
+        cpf.appendText("2");
+        verificar(cpf.getText().equals("123.456.789-09"),"CPF não aceita um décimo segundo dígito digitado");
+        cpf.selectAll(); cpf.replaceSelection("123456789092");
+        verificar(cpf.getText().equals("123.456.789-09")
+                && !MascarasFormulario.cpfValido("123456789092"),"colagem de CPF longo é recusada por inteiro");
+        verificar(!MascarasFormulario.cpfValido("12345678901") && !MascarasFormulario.cpfValido("00000000000"),
+                "CPF com verificador incorreto ou com dígitos repetidos é inválido");
+        cpf.selectAll(); cpf.replaceSelection("52998224725");
+        verificar(cpf.getText().equals("529.982.247-25") && MascarasFormulario.cpfValido(cpf.getText()),
+                "substituição de CPF selecionado aceita outro CPF válido");
+        cpf.selectAll(); cpf.replaceSelection("12345678901");
+        cpf.positionCaret(3); cpf.deleteNextChar();
+        verificar(Formatadores.soDigitos(cpf.getText()).equals("1235678901"),"Delete diante de ponto remove o próximo dígito");
+        cpf.selectAll(); cpf.replaceSelection("12345678901");
+        cpf.positionCaret(4); cpf.deletePreviousChar();
+        verificar(Formatadores.soDigitos(cpf.getText()).equals("1245678901"),"Backspace após ponto remove o dígito anterior");
+
+        TextField telefone = new TextField();
+        MascarasFormulario.telefone(telefone);
+        for (String entrada : List.of("4330332023","43999991234","+554330332023","+55 (43) 99999-1234")) {
+            telefone.selectAll(); telefone.replaceSelection(entrada);
+            verificar(MascarasFormulario.telefoneValido(telefone.getText())
+                    && Formatadores.soDigitos(entrada).equals(Formatadores.soDigitos(telefone.getText()))
+                    && telefone.getText().startsWith("+")==entrada.startsWith("+"),
+                    "telefone preserva todos os dígitos e o prefixo quando informado");
+        }
+        telefone.positionCaret(4);
+        telefone.deletePreviousChar();
+        verificar(telefone.getText().equals("+55 (43) 99999-1234"),
+                "Backspace no espaço logo após +55 mantém o prefixo");
+        telefone.positionCaret(8);
+        telefone.deleteNextChar();
+        verificar(Formatadores.soDigitos(telefone.getText()).equals("554399991234"),
+                "Delete diante do espaço após o DDD remove o próximo dígito, sem alterar o prefixo");
+        String longo = "+55 439999912345678";
+        String telefoneAntes = telefone.getText();
+        telefone.selectAll(); telefone.replaceSelection(longo);
+        verificar(telefone.getText().equals(telefoneAntes) && !MascarasFormulario.telefoneValido(longo),
+                "telefone longo é recusado por inteiro");
+        telefone.selectAll(); telefone.replaceSelection("+144330332023");
+        verificar(telefone.getText().equals(telefoneAntes), "telefone com prefixo diferente de +55 é recusado");
+        telefone.selectAll(); telefone.replaceSelection("554330332023");
+        verificar(telefone.getText().equals(telefoneAntes), "DDD e prefixo internacional não são inferidos pela quantidade de dígitos");
+        telefone.clear();
+        for (char caractere : "+5543999991234".toCharArray()) telefone.appendText(String.valueOf(caractere));
+        verificar(telefone.getText().equals("+55 (43) 99999-1234"),
+                "telefone internacional completo pode ser digitado caractere por caractere");
+        verificar(MascarasFormulario.telefoneValidoOuExistente("3033-2023","3033-2023")
+                && !MascarasFormulario.telefoneValidoOuExistente("3033-2023",null),
+                "apenas contato legado inalterado pode manter formato sem DDD");
+        TextField limiteTexto = new TextField();
+        ValidacaoFormulario.limitarTexto(limiteTexto,80,"Nome");
+        limiteTexto.replaceSelection("á".repeat(80));
+        verificar(limiteTexto.getLength()==80,"texto aceita exatamente o limite do campo");
+        limiteTexto.appendText("x");
+        verificar(limiteTexto.getText().equals("á".repeat(80)),"caractere acima do limite é recusado");
+        limiteTexto.selectAll(); limiteTexto.replaceSelection("a".repeat(4000));
+        verificar(limiteTexto.getText().equals("á".repeat(80)),"colagem longa rejeita toda a edição");
+        limiteTexto.selectAll(); limiteTexto.replaceSelection("Ana");
+        verificar(limiteTexto.getText().equals("Ana"),"texto selecionado pode ser substituído");
+        TextField limiteNumerico = new TextField();
+        ValidacaoFormulario.limitarInteiro(limiteNumerico,24,"Horas");
+        limiteNumerico.replaceSelection("24");
+        limiteNumerico.appendText("0");
+        limiteNumerico.selectAll(); limiteNumerico.replaceSelection("25");
+        limiteNumerico.selectAll(); limiteNumerico.replaceSelection("2a");
+        verificar(limiteNumerico.getText().equals("24"),"campo numérico rejeita excesso de dígitos, valor acima da faixa e letras");
+        limiteNumerico.selectAll(); limiteNumerico.replaceSelection("10");
+        verificar(limiteNumerico.getText().equals("10"),"substituição numérica aceita valor dentro da faixa");
+        PasswordField senha = new PasswordField();
+        ValidacaoFormulario.limitarSenha(senha,Senhas.MAXIMO_NOVA);
+        senha.replaceSelection(" *. ".repeat(32));
+        senha.appendText("x");
+        verificar(senha.getLength()==128 && senha.getText().endsWith(" "),
+                "limite de senha preserva espaços e símbolos, sem aceitar o caractere 129");
+        String limiteEmail = "a".repeat(84)+"@x.com";
+        verificar(ValidacaoFormulario.email(limiteEmail).equals(limiteEmail),"e-mail no limite de 90 caracteres aceito");
+        for (String invalido : List.of("sem-arroba","a"+limiteEmail)) {
+            try { ValidacaoFormulario.email(invalido); throw new AssertionError("E-mail inválido aceito."); }
+            catch (IllegalArgumentException esperado) { verificar(true,"e-mail inválido ou acima do limite é rejeitado"); }
+        }
     }
 
     private static MedidaSocioeducativa medida(TipoMedida tipo) {

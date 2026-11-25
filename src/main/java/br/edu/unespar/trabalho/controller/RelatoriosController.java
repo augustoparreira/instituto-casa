@@ -7,6 +7,7 @@ import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
 import br.edu.unespar.trabalho.util.*;
 import javafx.collections.FXCollections;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -37,6 +38,7 @@ public class RelatoriosController {
     private List<RelatorioAcompanhamento> salvos=List.of();
     private RelatorioAcompanhamento documento;
     private boolean carregando, alterado;
+    private static final PseudoClass PENDENTE=PseudoClass.getPseudoClass("pendente");
     private static final DateTimeFormatter DATA=DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String INSTITUICAO="CENTRO DE APOIO SOCIAL AO ADOLESCENTE";
     private static final String CNPJ="CNPJ: 04.313.535/0001-73";
@@ -72,6 +74,15 @@ public class RelatoriosController {
             texto.textProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
             Label rotulo=new Label(campo.getRotulo()); rotulo.setWrapText(true); rotulo.getStyleClass().add("form-label-mini");
             gridIdentificacao.addRow(linha++,rotulo,texto); campos.put(campo,texto);
+        }
+        for (TextInputControl campo : List.of(campos.get(Campo.NOME), campos.get(Campo.PROCESSO),
+                txtRegistroFrequencia, txtDescumprimento, dpEmissao.getEditor())) {
+            campo.textProperty().addListener((obs, antes, depois) -> {
+                if (depois!=null && !depois.isBlank()) {
+                    campo.pseudoClassStateChanged(PENDENTE,false);
+                    if (campo==dpEmissao.getEditor()) dpEmissao.pseudoClassStateChanged(PENDENTE,false);
+                }
+            });
         }
         txtRegistroFrequencia.textProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
         txtDescumprimento.textProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
@@ -144,6 +155,7 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     private void exibir(RelatorioAcompanhamento r) {
+        limparPendencias();
         documento=r; carregando=true;
         if(r.getIdRelatorio()==0) listRelatorios.getSelectionModel().clearSelection();
         cmbAdolescente.setValue(cmbAdolescente.getItems().stream().filter(a->a.getCpf()==r.getCpfAdolescente()).findFirst().orElse(null));
@@ -154,12 +166,20 @@ public class RelatoriosController {
         carregando=false; alterado=false;
     }
     private RelatorioAcompanhamento lerFormulario() {
+        return lerFormulario(false);
+    }
+
+    private RelatorioAcompanhamento lerFormulario(boolean emitir) {
         if(documento==null) throw new IllegalArgumentException("Prepare um relatório ou abra um rascunho salvo.");
         dpEmissao.commitValue();
         RelatorioAcompanhamento r=new RelatorioAcompanhamento(); r.setIdRelatorio(documento.getIdRelatorio());
         r.setCpfAdolescente(documento.getCpfAdolescente()); r.setCompetencia(documento.getCompetencia()); r.setDataEmissao(dpEmissao.getValue());
         for(Campo campo:Campo.values()) r.setCampo(campo,campos.get(campo).getText());
-        r.setRegistroFrequencia(txtRegistroFrequencia.getText()); r.setDescumprimento(txtDescumprimento.getText()); r.validar(); return r;
+        r.setRegistroFrequencia(txtRegistroFrequencia.getText());
+        r.setDescumprimento(txtDescumprimento.getText());
+        if (emitir) validarExportacao(r);
+        r.validar();
+        return r;
     }
     @FXML public void salvarAtualizacaoRelatorio() {
         try { exigir(RELATORIO_ALTERAR); }
@@ -194,7 +214,7 @@ public class RelatoriosController {
         }
 
         try {
-            RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r);
+            RelatorioAcompanhamento r=lerFormulario(true);
             FileChooser escolha=new FileChooser(); escolha.setTitle("Salvar relatório de acompanhamento");
             escolha.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento de texto","*.txt"));
             escolha.setInitialFileName("acompanhamento-"+r.getCompetencia()+"-"+r.getCpfAdolescente()+".txt");
@@ -205,7 +225,7 @@ public class RelatoriosController {
     public void exportarPara(Path destino) throws java.io.IOException {
         exigir(RELATORIO_EXPORTAR);
 
-        RelatorioAcompanhamento r=lerFormulario(); validarExportacao(r); salvarTexto(r,destino);
+        RelatorioAcompanhamento r=lerFormulario(true); salvarTexto(r,destino);
     }
     private void salvarTexto(RelatorioAcompanhamento r,Path destino) throws java.io.IOException {
         exigir(RELATORIO_EXPORTAR);
@@ -229,17 +249,35 @@ public class RelatoriosController {
         }
     }
     @FXML public void imprimirRelatorio() {
-        br.edu.unespar.trabalho.service.AutorizacaoService.exigir(br.edu.unespar.trabalho.model.Operacao.RELATORIO_EXPORTAR);
         try {
-            RelatorioAcompanhamento r=lerFormulario();
-            validarExportacao(r);
+            exigir(RELATORIO_EXPORTAR);
+            RelatorioAcompanhamento r=lerFormulario(true);
             br.edu.unespar.trabalho.util.ImpressaoRelatorio.imprimirModelo(gridIdentificacao.getScene().getWindow(),r);
         } catch(RuntimeException e) { erro(e); }
     }
 
+    private void limparPendencias() {
+        for (var campo : List.of(campos.get(Campo.NOME), campos.get(Campo.PROCESSO),
+                dpEmissao, txtRegistroFrequencia, txtDescumprimento))
+            campo.pseudoClassStateChanged(PENDENTE,false);
+    }
+
     private void validarExportacao(RelatorioAcompanhamento r) {
-        if(r.getCampo(Campo.PROCESSO).isBlank() || r.getRegistroFrequencia().isBlank() || r.getDescumprimento().isBlank())
-            throw new IllegalArgumentException("Para exportar o relatório, informe o número do processo e revise as duas seções do relatório. Se não houve descumprimento, registre isso explicitamente.");
+        limparPendencias();
+        var pendencias = new LinkedHashMap<Control,String>();
+        if (r.getCampo(Campo.NOME).isBlank()) pendencias.put(campos.get(Campo.NOME),"nome do adolescente");
+        if (r.getDataEmissao()==null) pendencias.put(dpEmissao,"data de emissão");
+        if (r.getCampo(Campo.PROCESSO).isBlank()) pendencias.put(campos.get(Campo.PROCESSO),"número do processo");
+        if (r.getRegistroFrequencia().isBlank()) pendencias.put(txtRegistroFrequencia,"registro de frequência");
+        if (r.getDescumprimento().isBlank()) pendencias.put(txtDescumprimento,"seção de descumprimento e contato com a família");
+        if (!pendencias.isEmpty()) {
+            pendencias.keySet().forEach(campo -> campo.pseudoClassStateChanged(PENDENTE,true));
+            pendencias.firstEntry().getKey().requestFocus();
+            String mensagem = "Preencha os campos obrigatórios para imprimir ou exportar: "
+                    + String.join(", ",pendencias.values()) + ".";
+            lblMensagem.setText(mensagem);
+            throw new IllegalArgumentException(mensagem);
+        }
     }
     @FXML public void visualizarRelatorio() {
         try { exigir(RELATORIO_CONSULTAR); }

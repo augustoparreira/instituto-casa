@@ -5,6 +5,7 @@ import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.ComposicaoFamiliar;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,7 +26,11 @@ public class ComposicaoFamiliarDAO {
     private boolean salvar(ComposicaoFamiliar f,boolean edicao) {
         exigir(FAMILIA_ALTERAR); if(f.getRenda()!=null) exigir(SOCIAL_ALTERAR);
 
-        if(f.getNome()==null || f.getNome().isBlank()) throw new IllegalArgumentException("Informe o nome do familiar.");
+        ValidacaoFormulario.texto(f.getNome(),80,"Nome do familiar",true);
+        ValidacaoFormulario.texto(f.getParentesco(),80,"Parentesco",false);
+        ValidacaoFormulario.texto(f.getEscolaridade(),80,"Escolaridade",false);
+        ValidacaoFormulario.texto(f.getProfissao(),120,"Profissão",false);
+        if(f.getIdade()!=null && (f.getIdade()<0 || f.getIdade()>120)) throw new IllegalArgumentException("Idade: informe de 0 a 120 anos.");
         if(f.getRenda()!=null && (!Double.isFinite(f.getRenda()) || f.getRenda()<0)) throw new IllegalArgumentException("Renda inválida.");
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);

@@ -10,17 +10,19 @@ import javax.crypto.spec.PBEKeySpec;
 
 /** PBKDF2-HMAC-SHA256 nativo, salt individual e parâmetros junto ao hash. */
 public final class Senhas {
+    public static final int MAXIMO_NOVA = 128;
+    public static final int MAXIMO_AUTENTICACAO = 1024;
     private static final int ITERACOES = 600_000;
     private static final SecureRandom RANDOM = new SecureRandom();
     private Senhas() { }
 
     public static void validarNova(String senha) {
-        if (senha == null || senha.length() < 12 || senha.length() > 128 || senha.isBlank())
+        if (senha == null || senha.length() < 12 || senha.length() > MAXIMO_NOVA || senha.isBlank())
             throw new IllegalArgumentException("A senha deve ter entre 12 e 128 caracteres.");
     }
 
     public static String gerarHash(String senha) {
-        if (senha == null || senha.length() > 1024) throw new IllegalArgumentException("Senha inválida.");
+        if (senha == null || senha.length() > MAXIMO_AUTENTICACAO) throw new IllegalArgumentException("Senha inválida.");
         byte[] salt = new byte[16];
         RANDOM.nextBytes(salt);
         return "pbkdf2-sha256$" + ITERACOES + "$" + Base64.getEncoder().encodeToString(salt)
@@ -28,7 +30,7 @@ public final class Senhas {
     }
 
     public static boolean verificar(String senha, String hash) {
-        if (senha == null || hash == null || senha.length() > 1024) return false;
+        if (senha == null || hash == null || senha.length() > MAXIMO_AUTENTICACAO) return false;
         try {
             String[] partes = hash.split("\\$");
             if (partes.length != 4 || !partes[0].equals("pbkdf2-sha256")) return false;

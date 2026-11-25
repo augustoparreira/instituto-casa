@@ -6,6 +6,7 @@ import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.Sessao;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -35,6 +36,11 @@ public class AgendaController {
     private LocalDate dataSelecionada=LocalDate.now();
     private boolean carregandoCombo;
     private static final DateTimeFormatter HORA=DateTimeFormatter.ofPattern("HH:mm");
+
+    private static LocalTime lerHorario(String texto, LocalTime original) {
+        if (original!=null && original.format(HORA).equals(texto)) return original;
+        return LocalTime.parse(texto);
+    }
     private static final Locale PORTUGUES=Locale.forLanguageTag("pt-BR");
 
     @FXML public void initialize() {
@@ -169,6 +175,10 @@ public class AgendaController {
             TextField inicio=new TextField(existente==null?"09:00":existente.getHoraInicio().format(HORA)); inicio.setId("txtEventoInicio");
             TextField fim=new TextField(existente==null?"10:00":existente.getHoraFim().format(HORA)); fim.setId("txtEventoFim");
             TextField local=new TextField(existente==null?"":existente.getLocal()); local.setId("txtEventoLocal");
+            ValidacaoFormulario.limitarTexto(titulo,120,"Título");
+            ValidacaoFormulario.limitarTexto(local,160,"Local");
+            ValidacaoFormulario.filtrar(inicio,texto -> texto.matches("[0-9]{0,2}(:[0-9]{0,2})?"),"Use o formato HH:mm.");
+            ValidacaoFormulario.filtrar(fim,texto -> texto.matches("[0-9]{0,2}(:[0-9]{0,2})?"),"Use o formato HH:mm.");
             TextArea observacoes=new TextArea(existente==null?"":existente.getObservacoes()); observacoes.setPrefRowCount(3); observacoes.setWrapText(true);
             observacoes.setDisable(!pode(SIGILOSO_ALTERAR));
             ComboBox<EventoAgenda.Status> status=new ComboBox<>(FXCollections.observableArrayList(EventoAgenda.Status.values()));
@@ -221,7 +231,8 @@ public class AgendaController {
                     if(!inicio.getText().matches("[0-9]{2}:[0-9]{2}") || !fim.getText().matches("[0-9]{2}:[0-9]{2}"))
                         throw new IllegalArgumentException("Informe os horários no formato HH:mm, por exemplo 09:30.");
                     salvo.setIdEvento(existente==null?0:existente.getIdEvento()); salvo.setTitulo(titulo.getText()); salvo.setTipo(tipo.getValue());
-                    salvo.setData(data.getValue()); salvo.setHoraInicio(LocalTime.parse(inicio.getText())); salvo.setHoraFim(LocalTime.parse(fim.getText()));
+                    salvo.setData(data.getValue()); salvo.setHoraInicio(lerHorario(inicio.getText(),existente==null ? null : existente.getHoraInicio()));
+                    salvo.setHoraFim(lerHorario(fim.getText(),existente==null ? null : existente.getHoraFim()));
                     salvo.setLocal(local.getText()); salvo.setObservacoes(observacoes.getText()); salvo.setStatus(status.getValue());
                     salvo.setCpfAdolescente(adolescente.getValue()==null?null:adolescente.getValue().getCpf());
                     salvo.setCpfEquipe(tecnico.getValue()==null?null:tecnico.getValue().getCpf());

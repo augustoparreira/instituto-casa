@@ -5,6 +5,7 @@ import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.model.Atividade;
 import br.edu.unespar.trabalho.util.ConnectionFactory;
 import br.edu.unespar.trabalho.util.IdUtil;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -18,8 +19,7 @@ public class AtividadeDAO {
     public boolean inserir(Atividade a) {
         exigir(ATIVIDADE_GERENCIAR);
 
-        if(a.getNomeAtividade()==null || a.getNomeAtividade().isBlank() || a.getNomeAtividade().length()>25 || a.getCargaHoraria()<1 || a.getCargaHoraria()>24)
-            throw new IllegalArgumentException("Confira o nome da atividade e a carga horária (1 a 24).");
+        validar(a);
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try(PreparedStatement s=c.prepareStatement("INSERT INTO Atividade(id_atividade,nome_atividade,tipo,carga_horaria) VALUES(?,?,?,?)")) {
@@ -63,6 +63,7 @@ public class AtividadeDAO {
     public boolean atualizar(Atividade a) {
         exigir(ATIVIDADE_GERENCIAR);
 
+        validar(a);
         String sql = "UPDATE Atividade SET nome_atividade = ?, tipo = ?, carga_horaria = ? WHERE id_atividade = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -91,6 +92,13 @@ public class AtividadeDAO {
             System.err.println("Erro ao excluir atividade: " + e.getMessage());
             return false;
         }
+    }
+
+    private void validar(Atividade a) {
+        ValidacaoFormulario.texto(a.getNomeAtividade(),25,"Nome da atividade",true);
+        ValidacaoFormulario.texto(a.getTipo(),120,"Tipo de atividade",false);
+        if(a.getCargaHoraria()<1 || a.getCargaHoraria()>24)
+            throw new IllegalArgumentException("Informe uma carga horária de 1 a 24 horas.");
     }
 
     private Atividade mapear(ResultSet rs) throws SQLException {

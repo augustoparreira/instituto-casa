@@ -3,6 +3,7 @@ package br.edu.unespar.trabalho.util;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.geometry.Pos;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -23,25 +24,27 @@ import java.util.Locale;
 public final class ModeloRelatorio {
     private static final DateTimeFormatter MES = DateTimeFormatter.ofPattern("MMMM / yyyy", Locale.forLanguageTag("pt-BR"));
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.forLanguageTag("pt-BR"));
-    private static final double RODAPE = 32;
+    private static final double ESPACO = 8;
+    private static final double RODAPE = 16;
+    private static final double MARGEM_INTERNA = 14;
+    private static final double ALTURA_MINIMA_CAIXA = 90;
 
     private ModeloRelatorio() { }
 
     public static List<VBox> prepararPaginas(RelatorioAcompanhamento relatorio, double largura, double altura) {
         if (largura < 300 || altura < 400) throw new IllegalArgumentException("Área de impressão insuficiente.");
         List<Pagina> paginas = new ArrayList<>();
-        Pagina atual = novaPagina(paginas, largura);
-        atual.adicionar(cabecalho(largura), 118);
-        atual.adicionar(titulo(relatorio, largura), 74);
-        VBox identificacao = identificacao(relatorio, largura);
-        double alturaIdentificacao = 24 + textoIdentificacao(relatorio, largura).getLayoutBounds().getHeight();
-        atual.adicionar(identificacao, alturaIdentificacao);
+        Pagina atual = novaPagina(paginas, largura, altura);
+        atual.adicionar(cabecalho(largura));
+        atual.adicionar(titulo(relatorio, largura));
 
+        atual = adicionarSecao(paginas, atual, "Identificação",
+                textoIdentificacao(relatorio), false);
         atual = adicionarSecao(paginas, atual, "1. REGISTRO DE FREQUÊNCIA",
-                relatorio.getRegistroFrequencia(), largura, altura);
+                relatorio.getRegistroFrequencia(), true);
         adicionarSecao(paginas, atual,
                 "2. DESCUMPRIMENTO DA MEDIDA E CONTATO COM A FAMÍLIA E ACORDO FIRMADO",
-                relatorio.getDescumprimento(), largura, altura);
+                relatorio.getDescumprimento(), true);
 
         List<VBox> folhas = new ArrayList<>();
         for (int i = 0; i < paginas.size(); i++) {
@@ -53,40 +56,53 @@ public final class ModeloRelatorio {
             HBox rodape = new HBox(texto(data, 0, 10, false), espaco,
                     texto("Página " + (i + 1) + " de " + paginas.size(), 0, 10, false));
             rodape.setPrefWidth(largura);
-            pagina.conteudo.getChildren().add(rodape);
+            rodape.setMinHeight(RODAPE);
+            rodape.setPrefHeight(RODAPE);
+            var espacoVertical = new Region();
+            VBox.setVgrow(espacoVertical, Priority.ALWAYS);
+            pagina.conteudo.getChildren().addAll(espacoVertical, rodape);
             folhas.add(pagina.conteudo);
         }
         return folhas;
     }
 
     private static Pagina adicionarSecao(List<Pagina> paginas, Pagina pagina, String titulo,
-                                         String conteudo, double largura, double altura) {
+                                         String conteudo, boolean emCaixa) {
         String restante = conteudo.isEmpty() ? " " : conteudo;
+        double largura = pagina.largura;
+        double larguraTexto = emCaixa ? largura - 2*MARGEM_INTERNA : largura;
+        double alturaMinima = emCaixa ? ALTURA_MINIMA_CAIXA : medir(texto("Ag", larguraTexto, 11, false), larguraTexto);
         boolean continuacao = false;
         while (!restante.isEmpty()) {
-            String subtitulo = titulo + (continuacao ? " (continuação)" : "");
-            Text cabecalho = texto(subtitulo, largura, 12, true);
-            double alturaCabecalho = cabecalho.getLayoutBounds().getHeight();
-            double disponivel = altura - RODAPE - pagina.usada;
-            if (disponivel < alturaCabecalho + 106) {
-                pagina = novaPagina(paginas, largura);
-                disponivel = altura - RODAPE;
+            Text cabecalho = texto(titulo + (continuacao ? " (continuação)" : ""), largura, 12, true);
+            double disponivel = pagina.disponivel() - medir(cabecalho, largura) - ESPACO;
+            if (disponivel < alturaMinima + 6) {
+                pagina = novaPagina(paginas, largura, pagina.altura);
+                disponivel = pagina.disponivel() - medir(cabecalho, largura) - ESPACO;
             }
-            int corte = cortar(restante, largura - 28, disponivel - alturaCabecalho - 40);
-            if (corte == 0) throw new IllegalArgumentException("Área insuficiente para o relatório.");
-            String trecho = restante.substring(0, corte);
-            Text corpo = texto(trecho, largura - 28, 11, false);
-            VBox caixa = new VBox(corpo);
-            caixa.setPadding(new Insets(12));
-            caixa.setMinHeight(90);
-            caixa.setStyle("-fx-border-color: #222222; -fx-border-width: 1.2; -fx-background-color: white;");
-            VBox secao = new VBox(8, cabecalho, caixa);
-            pagina.adicionar(secao, cabecalho.getLayoutBounds().getHeight()
-                    + 8 + Math.max(90, corpo.getLayoutBounds().getHeight() + 24));
+            // A folga cobre o arredondamento do layout e o contorno da caixa.
+            int corte = cortar(restante, larguraTexto, disponivel - (emCaixa ? 2*MARGEM_INTERNA : 0) - 4);
+            if (corte==0) throw new IllegalArgumentException("Área insuficiente para o relatório.");
+            Text corpo = texto(restante.substring(0,corte), larguraTexto, 11, false);
+            Node bloco = corpo;
+            if (emCaixa) {
+                VBox caixa = new VBox(corpo);
+                caixa.setPadding(new Insets(MARGEM_INTERNA));
+                caixa.setMinHeight(ALTURA_MINIMA_CAIXA);
+                caixa.setStyle("-fx-border-color: #222222; -fx-border-width: 1; -fx-background-color: white;");
+                bloco = caixa;
+            }
+            pagina.adicionar(new VBox(ESPACO, cabecalho, bloco));
             restante = restante.substring(corte);
+            if (!restante.isEmpty()) pagina = novaPagina(paginas, largura, pagina.altura);
             continuacao = true;
         }
         return pagina;
+    }
+
+    private static double medir(Node bloco, double largura) {
+        double altura = bloco instanceof Region regiao ? regiao.prefHeight(largura) : bloco.getLayoutBounds().getHeight();
+        return Math.ceil(altura) + 2;
     }
 
     private static int cortar(String texto, double largura, double altura) {
@@ -134,45 +150,51 @@ public final class ModeloRelatorio {
         return titulo;
     }
 
-    private static VBox identificacao(RelatorioAcompanhamento relatorio, double largura) {
-        return new VBox(5, texto("Identificação", largura, 13, true), textoIdentificacao(relatorio, largura));
-    }
-
-    private static Text textoIdentificacao(RelatorioAcompanhamento relatorio, double largura) {
+    private static String textoIdentificacao(RelatorioAcompanhamento relatorio) {
         StringBuilder linhas = new StringBuilder();
         for (Campo campo : Campo.values())
             linhas.append(campo.getRotulo()).append(": ").append(relatorio.getCampo(campo)).append('\n');
-        return texto(linhas.toString(), largura, 11, false);
+        return linhas.toString();
     }
 
     private static Text texto(String valor, double largura, int tamanho, boolean negrito) {
         Text texto = new Text(valor);
         texto.setFont(Font.font("Arial", negrito ? FontWeight.BOLD : FontWeight.NORMAL, tamanho));
-        texto.setWrappingWidth(largura);
+        // A extremidade visual de alguns glifos ultrapassa a largura de quebra.
+        texto.setWrappingWidth(Math.max(0, largura - 4));
         return texto;
     }
 
-    private static Pagina novaPagina(List<Pagina> paginas, double largura) {
-        Pagina pagina = new Pagina(largura);
+    private static Pagina novaPagina(List<Pagina> paginas, double largura, double altura) {
+        Pagina pagina = new Pagina(largura, altura);
         paginas.add(pagina);
         return pagina;
     }
 
     private static final class Pagina {
-        private final VBox conteudo;
+        private final VBox conteudo = new VBox(ESPACO);
+        private final double largura, altura;
         private double usada;
 
-        private Pagina(double largura) {
-            conteudo = new VBox(8);
-            conteudo.setPrefWidth(largura);
-            conteudo.setMinWidth(largura);
-            conteudo.setMaxWidth(largura);
+        private Pagina(double largura, double altura) {
+            this.largura = largura;
+            this.altura = altura;
+            conteudo.setMinSize(largura, altura);
+            conteudo.setPrefSize(largura, altura);
+            conteudo.setMaxSize(largura, altura);
             conteudo.setStyle("-fx-background-color: white;");
         }
 
-        private void adicionar(javafx.scene.Node bloco, double altura) {
+        private double disponivel() {
+            return altura - RODAPE - ESPACO - usada;
+        }
+
+        private void adicionar(Node bloco) {
+            double alturaBloco = medir(bloco, largura);
+            if (alturaBloco > disponivel())
+                throw new IllegalArgumentException("Área insuficiente para o relatório.");
             conteudo.getChildren().add(bloco);
-            usada += altura + 8;
+            usada += alturaBloco + ESPACO;
         }
     }
 }

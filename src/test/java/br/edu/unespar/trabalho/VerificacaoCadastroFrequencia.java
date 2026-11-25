@@ -765,7 +765,7 @@ public class VerificacaoCadastroFrequencia {
                     }).map(Label::getText).collect(java.util.stream.Collectors.toSet());
             verifica(obrigatorios.equals(Set.of("NOME COMPLETO *","CPF *","DATA DE NASCIMENTO *","TELEFONE/CONTATO *")),
                     "cadastro técnico marca apenas os quatro campos básicos exigidos");
-            ((TextField)cadastro.lookup("#txtCpf")).setText("12345678950");
+            ((TextField)cadastro.lookup("#txtCpf")).setText("52998224725");
             ((TextField)cadastro.lookup("#txtNome")).setText("Cadastro técnico pela interface");
             ((TextField)cadastro.lookup("#txtContato")).setText("43999995555");
             ((DatePicker)cadastro.lookup("#dpNascimento")).setValue(LocalDate.of(2009,1,15));
@@ -773,11 +773,11 @@ public class VerificacaoCadastroFrequencia {
             ((Button)cadastro.lookupAll(".button").stream()
                     .filter(n -> n instanceof Button b && "Salvar cadastro".equalsIgnoreCase(b.getText()))
                     .findFirst().orElseThrow()).fire();
-            verifica(new AdolescenteDAO().buscarPorCpf(12345678950L).getStatus()==StatusAdolescente.ATIVO,
+            verifica(new AdolescenteDAO().buscarPorCpf(52998224725L).getStatus()==StatusAdolescente.ATIVO,
                     "cadastro técnico pela interface grava adolescente ativo");
             VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
-            verifica(new SituacaoSocialDAO().buscarPorCpf(12345678950L)==null
-                    && new SaudeDAO().buscarPorCpf(12345678950L)==null,
+            verifica(new SituacaoSocialDAO().buscarPorCpf(52998224725L)==null
+                    && new SaudeDAO().buscarPorCpf(52998224725L)==null,
                     "cadastro pela tela técnica não inventa fichas sociais nem de saúde");
             VerificacaoContas.entrar("agenda_teste", "senha fictícia");
 

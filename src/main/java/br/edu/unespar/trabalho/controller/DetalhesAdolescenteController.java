@@ -25,7 +25,10 @@ import br.edu.unespar.trabalho.model.Saude;
 import br.edu.unespar.trabalho.model.SituacaoSocial;
 import br.edu.unespar.trabalho.model.StatusPresenca;
 import br.edu.unespar.trabalho.model.TipoMedida;
+import br.edu.unespar.trabalho.util.DatasFormulario;
 import br.edu.unespar.trabalho.util.Formatadores;
+import br.edu.unespar.trabalho.util.MascarasFormulario;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 import br.edu.unespar.trabalho.util.IdUtil;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.Sessao;
@@ -167,7 +170,6 @@ public class DetalhesAdolescenteController {
     private final SaudeDAO saudeDAO = new SaudeDAO();
 
     /** Limite de 1.000 caracteres por campo textual do PIA, conforme o DDL ajustado. */
-    private static final int LIMITE_TEXTO_PIA = 1000;
 
     @FXML private Label lblInfoIdade, lblInfoAniversario, lblInfoNaturalidade, lblInfoCorRaca;
     @FXML private Label lblInfoTelefone, lblInfoEmail, lblInfoEstuda, lblInfoEscola, lblInfoSerie;
@@ -217,8 +219,11 @@ public class DetalhesAdolescenteController {
         cmbMedidaFrequenciaGeral.valueProperty().addListener((o,a,b)->exibirFrequenciaGeral());
         cmbTipoMedida.setItems(FXCollections.observableArrayList(TipoMedida.values()));
 
-        aplicarMascaraData(dpInicioMedida);
-        aplicarMascaraData(dpFimMedida);
+        DatasFormulario.configurarDigitacao(dpInicioMedida);
+        DatasFormulario.configurarDigitacao(dpFimMedida);
+        DatasFormulario.configurar(dpMesFrequencia);
+        ValidacaoFormulario.limitarInteiro(txtDuracao,Integer.MAX_VALUE,"Duração");
+        ValidacaoFormulario.limitarTexto(txtHistorico,256,"Histórico infracional");
 
 
         cmbTecnico.setConverter(new StringConverter<>() {
@@ -236,29 +241,6 @@ public class DetalhesAdolescenteController {
         });
     }
 
-    private void aplicarMascaraData(DatePicker datePicker) {
-        br.edu.unespar.trabalho.util.DatasFormulario.configurar(datePicker);
-        if (datePicker == null) return;
-        TextField editor = datePicker.getEditor();
-        editor.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null) return;
-            String limpo = newValue.replaceAll("[^0-9]", "");
-            if (limpo.length() > 8) limpo = limpo.substring(0, 8);
-
-            StringBuilder formatado = new StringBuilder();
-            for (int i = 0; i < limpo.length(); i++) {
-                if (i == 2 || i == 4) {
-                    formatado.append("/");
-                }
-                formatado.append(limpo.charAt(i));
-            }
-
-            if (!newValue.equals(formatado.toString())) {
-                editor.setText(formatado.toString());
-                editor.positionCaret(formatado.length());
-            }
-        });
-    }
 
     public void carregarDados(AdolescenteDTO jovem) {
         exigir(ADOLESCENTE_CONSULTAR);
@@ -295,7 +277,7 @@ public class DetalhesAdolescenteController {
             lblInfoBairro.setText(Formatadores.textoOuTraco(cadastro.getBairro()));
             lblInfoStatus.setText(cadastro.getStatus().getDescricao());
             lblInfoIdade.setText(cadastro.getIdade()+" anos");
-            lblInfoAniversario.setText(Formatadores.dataCurta(cadastro.getDataNascimento()));
+            lblInfoAniversario.setText(cadastro.getDataNascimento().format(DateTimeFormatter.ofPattern("dd/MM")));
             lblInfoNaturalidade.setText(Formatadores.textoOuTraco(cadastro.getNaturalidade()));
             lblInfoCorRaca.setText(Formatadores.textoOuTraco(cadastro.getCorRaca()));
             lblInfoTelefone.setText(Formatadores.textoOuTraco(cadastro.getContato()));
@@ -735,7 +717,7 @@ public class DetalhesAdolescenteController {
         txtCpf.setPromptText("000.000.000-00");
         DatePicker dpNascimento = new DatePicker();
         dpNascimento.setMaxWidth(Double.MAX_VALUE);
-        aplicarMascaraData(dpNascimento);
+        DatasFormulario.configurarDigitacao(dpNascimento);
 
         TextField txtContato = new TextField();
         txtContato.setPromptText("(41) 99999-9999");
@@ -765,7 +747,7 @@ public class DetalhesAdolescenteController {
             }
         } else txtCpf.focusedProperty().addListener((o,a,focused)-> {
             String numero=Formatadores.soDigitos(txtCpf.getText());
-            if(!focused && numero.length()==11) {
+            if(!focused && MascarasFormulario.cpfValido(txtCpf.getText())) {
                 try {
                     Responsavel r=responsavelDAO.buscarPessoa(Long.parseLong(numero));
                     boolean estavaReutilizando=txtNome.isDisabled();
@@ -774,7 +756,7 @@ public class DetalhesAdolescenteController {
                     txtNome.setDisable(reutilizado); dpNascimento.setDisable(reutilizado); txtContato.setDisable(reutilizado); txtEmail.setDisable(reutilizado);
                     if(r!=null) {
                         txtNome.setText(r.getNomeCompleto()); dpNascimento.setValue(r.getDataNascimento());
-                        br.edu.unespar.trabalho.util.MascarasFormulario.carregarTelefoneExistente(txtContato,r.getContato());
+                        MascarasFormulario.carregarTelefoneExistente(txtContato,r.getContato());
                         txtEmail.setText(Objects.toString(r.getEmail(),""));
                         aviso.setText("CPF já cadastrado: os dados pessoais serão reutilizados sem alteração.");
                     } else if (estavaReutilizando) {
@@ -785,25 +767,31 @@ public class DetalhesAdolescenteController {
             }
         });
 
-        br.edu.unespar.trabalho.util.MascarasFormulario.cpf(txtCpf);
-        br.edu.unespar.trabalho.util.MascarasFormulario.telefone(txtContato);
+        MascarasFormulario.cpf(txtCpf);
+        MascarasFormulario.telefone(txtContato);
+        ValidacaoFormulario.limitarTexto(txtNome,80,"Nome");
+        ValidacaoFormulario.limitarTexto(txtEmail,90,"E-mail");
+        ValidacaoFormulario.limitarTexto(txtParentesco,80,"Parentesco");
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
             try { dpNascimento.commitValue(); }
-            catch(java.time.DateTimeException invalida) { return "Informe uma data existente no formato DD/MM/AAAA."; }
-            String nome = txtNome.getText().trim();
-            if (nome.isEmpty() || nome.length() > 80) return "Informe o nome (até 80 caracteres).";
+            catch(java.time.DateTimeException invalida) { return DatasFormulario.DATA_INVALIDA; }
+            try {
+                ValidacaoFormulario.texto(txtNome.getText(),80,"Nome",true);
+                ValidacaoFormulario.texto(txtParentesco.getText(),80,"Parentesco",true);
+            } catch (IllegalArgumentException e) { return e.getMessage(); }
             String cpf = Formatadores.soDigitos(txtCpf.getText());
-            if (cpf.length() != 11) return "O CPF deve ter 11 dígitos.";
+            if (existente==null && !MascarasFormulario.cpfValido(txtCpf.getText())) return MascarasFormulario.CPF_INVALIDO;
             if (Long.parseLong(cpf) == cpfAtual) return "O responsável não pode ter o mesmo CPF do adolescente.";
             if (dpNascimento.getValue() == null || !dpNascimento.getValue().isBefore(LocalDate.now()))
                 return "Informe uma data de nascimento válida.";
-            String parentesco = txtParentesco.getText().trim();
-            if (parentesco.isEmpty() || parentesco.length() > 80) return "Parentesco: de 1 a 80 caracteres.";
             if (!txtContato.isDisabled() && !txtContato.getText().isBlank()
-                    && !br.edu.unespar.trabalho.util.MascarasFormulario.telefoneValidoOuExistente(
+                    && !MascarasFormulario.telefoneValidoOuExistente(
                             txtContato.getText(), existente==null ? null : existente.getContato()))
-                return "Contato: informe DDD e 10 ou 11 dígitos.";
-            if (txtEmail.getText().trim().length() > 90) return "E-mail: no máximo 90 caracteres.";
+                return MascarasFormulario.TELEFONE_INVALIDO;
+            if (!txtEmail.isDisabled()) {
+                try { ValidacaoFormulario.email(txtEmail.getText(), existente==null ? null : existente.getEmail()); }
+                catch (IllegalArgumentException e) { return e.getMessage(); }
+            }
             return null;
         });
         if (!salvar) return;
@@ -858,15 +846,21 @@ public class DetalhesAdolescenteController {
         if(existente!=null) {
             txtNome.setText(existente.getNome()); txtParentesco.setText(existente.getParentesco());
             txtIdade.setText(existente.getIdade()==null?"":existente.getIdade().toString());
-            txtRenda.setText(existente.getRenda()==null?"":String.format(new java.util.Locale("pt","BR"),"%.2f",existente.getRenda()));
+            txtRenda.setText(existente.getRenda()==null?"":Formatadores.decimal(existente.getRenda()));
             txtEscolaridade.setText(existente.getEscolaridade()); txtProfissao.setText(existente.getProfissao());
         }
+        ValidacaoFormulario.limitarTexto(txtNome,80,"Nome");
+        ValidacaoFormulario.limitarTexto(txtParentesco,80,"Parentesco");
+        ValidacaoFormulario.limitarInteiro(txtIdade,120,"Idade");
+        ValidacaoFormulario.limitarDecimal(txtRenda,true);
+        ValidacaoFormulario.limitarTexto(txtEscolaridade,80,"Escolaridade");
+        ValidacaoFormulario.limitarTexto(txtProfissao,120,"Profissão");
 
         boolean salvar = exibirFormulario(dialogo, grade, erro, () -> {
-            String nome = txtNome.getText().trim();
-            if (nome.isEmpty() || nome.length() > 80) return "Informe o nome (até 80 caracteres).";
-            String parentesco = txtParentesco.getText().trim();
-            if (parentesco.isEmpty() || parentesco.length() > 80) return "Informe o parentesco.";
+            try {
+                ValidacaoFormulario.texto(txtNome.getText(),80,"Nome",true);
+                ValidacaoFormulario.texto(txtParentesco.getText(),80,"Parentesco",true);
+            } catch (IllegalArgumentException e) { return e.getMessage(); }
             if (!txtIdade.getText().isBlank()) {
                 try {
                     int idade = Integer.parseInt(txtIdade.getText().trim());
@@ -882,8 +876,10 @@ public class DetalhesAdolescenteController {
                     return "Renda inválida. Use o formato 1500,00.";
                 }
             }
-            if (txtEscolaridade.getText().trim().length() > 80) return "Escolaridade: no máximo 80 caracteres.";
-            if (txtProfissao.getText().trim().length() > 120) return "Profissão: no máximo 120 caracteres.";
+            try {
+                ValidacaoFormulario.texto(txtEscolaridade.getText(),80,"Escolaridade",false);
+                ValidacaoFormulario.texto(txtProfissao.getText(),120,"Profissão",false);
+            } catch (IllegalArgumentException e) { return e.getMessage(); }
             return null;
         });
         if (!salvar) return;

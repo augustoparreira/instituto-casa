@@ -4,6 +4,7 @@ import static br.edu.unespar.trabalho.service.AutorizacaoService.*;
 import static br.edu.unespar.trabalho.model.Operacao.*;
 import br.edu.unespar.trabalho.dao.*;
 import br.edu.unespar.trabalho.model.*;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -33,6 +34,7 @@ public class RegistroFrequenciaController {
 
     @FXML public void initialize() {
         br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpData);
+        ValidacaoFormulario.limitarInteiro(txtHoras,24,"Horas de PSC");
 
 
         exigir(FREQUENCIA_CONSULTAR);
@@ -73,7 +75,8 @@ public class RegistroFrequenciaController {
                 && cmbMedida.getValue()!=null && cmbMedida.getValue().isPSC();
         txtHoras.setDisable(!contabiliza);
         if(!contabiliza) txtHoras.setText("0");
-        else if(sugerir) txtHoras.setText(cmbAtividade.getValue()==null?"0":Integer.toString(cmbAtividade.getValue().getCargaHoraria()));
+        else if(sugerir) ValidacaoFormulario.carregarExistente(txtHoras,
+                cmbAtividade.getValue()==null ? "0" : Integer.toString(cmbAtividade.getValue().getCargaHoraria()));
     }
 
     public void carregar(long cpf,LocalDate data,Runnable retorno) {
@@ -113,7 +116,8 @@ public class RegistroFrequenciaController {
         selecionada=f; cmbAtividade.setValue(cmbAtividade.getItems().stream().filter(a->a.getIdAtividade()==f.getIdAtividade()).findFirst().orElse(null));
         cmbAtividade.setDisable(true);
         cmbMedida.setValue(cmbMedida.getItems().stream().filter(m->f.getIdMedida()!=null && m.getIdMedida()==f.getIdMedida()).findFirst().orElse(null));
-        cmbStatus.setValue(f.getStatusPresenca()); txtHoras.setText(Integer.toString(f.getHorasContabilizadas()));
+        cmbStatus.setValue(f.getStatusPresenca());
+        ValidacaoFormulario.carregarExistente(txtHoras,Integer.toString(f.getHorasContabilizadas()));
         atualizarHoras(false);
         txtObservacoes.setText(f.getObservacoes()==null ? "" : f.getObservacoes());
         lblMensagem.setText(pode(FREQUENCIA_EXCLUIR)
@@ -178,13 +182,15 @@ public class RegistroFrequenciaController {
         }
 
         TextInputDialog nome=new TextInputDialog(); nome.setHeaderText("Nome da atividade (até 25 caracteres)");
+        ValidacaoFormulario.limitarTexto(nome.getEditor(),25,"Nome da atividade");
         var n=nome.showAndWait(); if(n.isEmpty()) return;
         TextInputDialog carga=new TextInputDialog("4"); carga.setHeaderText("Carga horária do encontro (1 a 24 horas inteiras)");
+        ValidacaoFormulario.limitarInteiro(carga.getEditor(),24,"Carga horária");
         var h=carga.showAndWait(); if(h.isEmpty()) return;
         try {
             int horas=Integer.parseInt(h.get().trim());
-            if(n.get().isBlank() || n.get().trim().length()>25 || horas<1 || horas>24) throw new IllegalArgumentException("Confira nome e carga horária.");
-            Atividade a=new Atividade(); a.setNomeAtividade(n.get().trim()); a.setCargaHoraria(horas);
+            if(horas<1 || horas>24) throw new IllegalArgumentException("Informe uma carga horária de 1 a 24 horas.");
+            Atividade a=new Atividade(); a.setNomeAtividade(ValidacaoFormulario.texto(n.get(),25,"Nome da atividade",true)); a.setCargaHoraria(horas);
             if(!new AtividadeDAO().inserir(a)) throw new IllegalStateException("Não foi possível cadastrar a atividade.");
             cmbAtividade.setItems(FXCollections.observableArrayList(new AtividadeDAO().listar()));
             cmbAtividade.setValue(cmbAtividade.getItems().stream().filter(x->x.getIdAtividade()==a.getIdAtividade()).findFirst().orElse(null));

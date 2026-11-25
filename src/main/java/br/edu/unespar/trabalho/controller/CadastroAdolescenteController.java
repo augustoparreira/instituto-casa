@@ -10,8 +10,11 @@ import java.time.format.TextStyle;
 import java.util.Locale;
 import br.edu.unespar.trabalho.model.Adolescente;
 import br.edu.unespar.trabalho.model.StatusAdolescente;
+import br.edu.unespar.trabalho.util.DatasFormulario;
+import br.edu.unespar.trabalho.util.Formatadores;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.MascarasFormulario;
+import br.edu.unespar.trabalho.util.ValidacaoFormulario;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -54,7 +57,7 @@ public class CadastroAdolescenteController {
     private Saude saudeAtual;
 
     private StatusAdolescente situacaoOriginal;
-    private String contatoOriginal;
+    private String contatoOriginal, emailOriginal;
     private AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
 
     @FXML
@@ -87,7 +90,23 @@ public class CadastroAdolescenteController {
         dpNascimento.valueProperty().addListener((o,a,b) -> atualizarIdade());
         MascarasFormulario.cpf(txtCpf);
         MascarasFormulario.telefone(txtContato);
-        aplicarMascaraData(dpNascimento);
+        DatasFormulario.configurarDigitacao(dpNascimento);
+        ValidacaoFormulario.limitarTexto(txtNome,80,"Nome");
+        ValidacaoFormulario.limitarTexto(txtEmail,90,"E-mail");
+        ValidacaoFormulario.limitarTexto(txtNaturalidade,120,"Naturalidade");
+        ValidacaoFormulario.limitarTexto(txtEscola,120,"Escola");
+        ValidacaoFormulario.limitarTexto(txtSerie,40,"Ano ou série");
+        ValidacaoFormulario.limitarTexto(txtLocalTrabalho,80,"Local de trabalho");
+        ValidacaoFormulario.limitarTexto(txtFuncao,120,"Função");
+        ValidacaoFormulario.limitarTexto(txtVinculo,80,"Vínculo empregatício");
+        ValidacaoFormulario.limitarTexto(txtBairro,60,"Bairro");
+        ValidacaoFormulario.limitarTexto(txtEndereco,60,"Endereço");
+        ValidacaoFormulario.limitarTexto(txtCras,120,"CRAS");
+        ValidacaoFormulario.limitarTexto(txtBeneficios,256,"Benefícios sociais");
+        ValidacaoFormulario.limitarTexto(txtUbs,120,"UBS");
+        ValidacaoFormulario.limitarTexto(txtSpa,90,"Substâncias utilizadas");
+        ValidacaoFormulario.limitarDigitos(txtNis,11,"NIS");
+        ValidacaoFormulario.limitarDecimal(txtRenda,false);
     }
 
     private boolean podeSalvarCadastroCompleto() {
@@ -100,28 +119,6 @@ public class CadastroAdolescenteController {
         componente.setManaged(visivel);
     }
 
-    private void aplicarMascaraData(DatePicker datePicker) {
-        br.edu.unespar.trabalho.util.DatasFormulario.configurar(datePicker);
-        TextField editor = datePicker.getEditor();
-        editor.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null) return;
-            String limpo = newValue.replaceAll("[^0-9]", "");
-            if (limpo.length() > 8) limpo = limpo.substring(0, 8);
-
-            StringBuilder formatado = new StringBuilder();
-            for (int i = 0; i < limpo.length(); i++) {
-                if (i == 2 || i == 4) {
-                    formatado.append("/");
-                }
-                formatado.append(limpo.charAt(i));
-            }
-
-            if (!newValue.equals(formatado.toString())) {
-                editor.setText(formatado.toString());
-                editor.positionCaret(formatado.length());
-            }
-        });
-    }
 
     private void atualizarIdade() {
         LocalDate data=dpNascimento.getValue();
@@ -148,7 +145,8 @@ public class CadastroAdolescenteController {
         dpNascimento.setValue(a.getDataNascimento());
         contatoOriginal=a.getContato();
         MascarasFormulario.carregarTelefoneExistente(txtContato,contatoOriginal);
-        txtEmail.setText(a.getEmail());
+        emailOriginal=a.getEmail();
+        txtEmail.setText(emailOriginal);
         txtNaturalidade.setText(a.getNaturalidade()); cmbGenero.setValue(a.getGenero()); cmbCorRaca.setValue(a.getCorRaca());
         situacaoOriginal=a.getStatus();
         cmbStatus.setValue(situacaoOriginal);
@@ -163,8 +161,9 @@ public class CadastroAdolescenteController {
         cmbMedidaProtetiva.setValue(a.isMedidaProtetiva() ? "Sim" : "Não");
         if(ss!=null) {
             txtEndereco.setText(ss.getEndereco()); txtBairro.setText(ss.getBairro());
-            txtRenda.setText(Double.toString(ss.getRendaFamiliar())); txtBeneficios.setText(ss.getBeneficioSocial());
-            txtNis.setText(ss.getNumeroNis()==0 ? "" : Long.toString(ss.getNumeroNis())); txtCras.setText(ss.getCrasNome());
+            txtRenda.setText(Formatadores.decimal(ss.getRendaFamiliar())); txtBeneficios.setText(ss.getBeneficioSocial());
+            ValidacaoFormulario.carregarExistente(txtNis,ss.getNumeroNis()==0 ? "" : Long.toString(ss.getNumeroNis()));
+            txtCras.setText(ss.getCrasNome());
         }
         if(saudeAtual!=null) { txtUbs.setText(saudeAtual.getUbsReferencia()); chkSpa.setSelected(saudeAtual.isUsoSpa()); txtSpa.setText(saudeAtual.getSubstanciasUtilizadas()); }
         if(et!=null) {
@@ -185,23 +184,22 @@ public class CadastroAdolescenteController {
         try {
             dpNascimento.commitValue();
 
-            if(txtNome.getText().isBlank() || dpNascimento.getValue()==null)
-                throw new IllegalArgumentException("Preencha o nome e uma data de nascimento válida (ex: DD/MM/AAAA).");
+            String nome = ValidacaoFormulario.texto(txtNome.getText(),80,"Nome",true);
+            if (dpNascimento.getValue()==null) throw new IllegalArgumentException("Informe a data de nascimento.");
 
             String cpf=txtCpf.getText().replaceAll("\\D","");
-            if(cpf.length()!=11) throw new IllegalArgumentException("O CPF deve ter 11 dígitos.");
+            if(!edicao && !MascarasFormulario.cpfValido(txtCpf.getText())) throw new IllegalArgumentException(MascarasFormulario.CPF_INVALIDO);
             if(dpNascimento.getValue().isAfter(LocalDate.now())) throw new IllegalArgumentException("Nascimento não pode estar no futuro.");
 
-            String email=texto(txtEmail,90,"E-mail");
-            if(!email.isBlank() && !email.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) throw new IllegalArgumentException("E-mail inválido.");
+            String email=ValidacaoFormulario.email(txtEmail.getText(),emailOriginal);
 
             Adolescente a=new Adolescente();
             a.setCpf(Long.parseLong(cpf));
-            a.setNomeCompleto(texto(txtNome,80,"Nome"));
+            a.setNomeCompleto(nome);
             a.setDataNascimento(dpNascimento.getValue());
-            a.setContato(texto(txtContato,30,"Telefone"));
+            a.setContato(ValidacaoFormulario.texto(txtContato.getText(),30,"Telefone",true));
             if (!MascarasFormulario.telefoneValidoOuExistente(a.getContato(),contatoOriginal))
-                throw new IllegalArgumentException("Informe um telefone com DDD e 10 ou 11 dígitos.");
+                throw new IllegalArgumentException(MascarasFormulario.TELEFONE_INVALIDO);
             a.setEmail(email);
             a.setNaturalidade(texto(txtNaturalidade,120,"Naturalidade"));
             a.setGenero(cmbGenero.getValue()==null ? "Não informado" : cmbGenero.getValue());
@@ -241,7 +239,7 @@ public class CadastroAdolescenteController {
             mostrarAlerta(Alert.AlertType.WARNING,"Valor inválido","Confira os campos numéricos. Renda é informada em salários mínimos, por exemplo: 1,5.");
         } catch(java.time.format.DateTimeParseException e) {
 
-            mostrarAlerta(Alert.AlertType.WARNING,"Data inválida","A data de nascimento informada é inválida ou está incompleta. Verifique o dia, mês e ano.");
+            mostrarAlerta(Alert.AlertType.WARNING,"Data inválida",DatasFormulario.DATA_INVALIDA);
         } catch(IllegalArgumentException e) {
             mostrarAlerta(Alert.AlertType.WARNING,"Confira os dados",e.getMessage());
         } catch(RuntimeException e) {
@@ -270,9 +268,7 @@ public class CadastroAdolescenteController {
     }
 
     private String texto(TextField campo,int max,String nome) {
-        String v=campo.getText()==null ? "" : campo.getText().trim();
-        if(v.length()>max) throw new IllegalArgumentException(nome+": máximo de "+max+" caracteres.");
-        return v;
+        return ValidacaoFormulario.texto(campo.getText(),max,nome,false);
     }
 
     private void abrirPerfil(ActionEvent event, long cpf) {

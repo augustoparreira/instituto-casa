@@ -63,6 +63,7 @@ public class MedidaSocioeducativa {
 
     /** Lança IllegalArgumentException se os campos condicionais estiverem inconsistentes. */
     public void validar() {
+        br.edu.unespar.trabalho.util.ValidacaoFormulario.texto(historicoInfracional,256,"Histórico infracional",false);
         if (tipoMedida == null) throw new IllegalArgumentException("Informe o tipo da medida (LA ou PSC).");
         if (dataInicio == null) throw new IllegalArgumentException("Informe a data de início da medida.");
         if (dataFim != null && dataFim.isBefore(dataInicio))

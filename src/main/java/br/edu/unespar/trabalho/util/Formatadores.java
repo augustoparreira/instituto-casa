@@ -35,6 +35,12 @@ public class Formatadores {
         return texto == null || texto.isBlank() ? "-" : texto;
     }
 
+    public static String decimal(double valor) {
+        return Double.isFinite(valor)
+                ? java.math.BigDecimal.valueOf(valor).stripTrailingZeros().toPlainString()
+                : Double.toString(valor);
+    }
+
     /** Aceita "1800", "1800,50" ou "1.800,50". Lança NumberFormatException se não for número. */
     public static double lerDecimal(String texto) {
         String t = texto.trim().replace("R$", "").replace(" ", "");

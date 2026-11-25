@@ -26,14 +26,14 @@ public class EventoAgenda {
     private Long cpfAdolescente, cpfEquipe;
 
     public void validar() {
-        if(titulo==null || titulo.isBlank() || titulo.trim().length()>120)
+        if(titulo==null || titulo.isBlank() || br.edu.unespar.trabalho.util.ValidacaoFormulario.tamanho(titulo.trim())>120)
             throw new IllegalArgumentException("Informe o título (até 120 caracteres).");
         if(tipo==null || data==null || horaInicio==null || horaFim==null || status==null)
             throw new IllegalArgumentException("Informe tipo, data, horários e situação.");
         if(!horaFim.isAfter(horaInicio)) throw new IllegalArgumentException("O horário final deve ser posterior ao inicial, no mesmo dia.");
         if(horaInicio.getSecond()!=0 || horaFim.getSecond()!=0 || horaInicio.getNano()!=0 || horaFim.getNano()!=0)
             throw new IllegalArgumentException("Informe os horários no formato HH:mm.");
-        if(local!=null && local.length()>160) throw new IllegalArgumentException("Local: máximo de 160 caracteres.");
+        if(local!=null && br.edu.unespar.trabalho.util.ValidacaoFormulario.tamanho(local)>160) throw new IllegalArgumentException("Local: máximo de 160 caracteres.");
         if(status==Status.CONCLUIDO && data.atTime(horaFim).isAfter(java.time.LocalDateTime.now()))
             throw new IllegalArgumentException("Um compromisso futuro não pode ser marcado como concluído.");
     }

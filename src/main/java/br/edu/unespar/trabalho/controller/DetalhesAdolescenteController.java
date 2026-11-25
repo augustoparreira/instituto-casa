@@ -800,7 +800,8 @@ public class DetalhesAdolescenteController {
             String parentesco = txtParentesco.getText().trim();
             if (parentesco.isEmpty() || parentesco.length() > 80) return "Parentesco: de 1 a 80 caracteres.";
             if (!txtContato.isDisabled() && !txtContato.getText().isBlank()
-                    && !br.edu.unespar.trabalho.util.MascarasFormulario.telefoneValido(txtContato.getText()))
+                    && !br.edu.unespar.trabalho.util.MascarasFormulario.telefoneValidoOuExistente(
+                            txtContato.getText(), existente==null ? null : existente.getContato()))
                 return "Contato: informe DDD e 10 ou 11 dígitos.";
             if (txtEmail.getText().trim().length() > 90) return "E-mail: no máximo 90 caracteres.";
             return null;

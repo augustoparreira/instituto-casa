@@ -20,6 +20,11 @@ public final class MascarasFormulario {
         return tamanho == 10 || tamanho == 11;
     }
 
+    public static boolean telefoneValidoOuExistente(String valor, String original) {
+        return telefoneValido(valor) || (valor!=null && !valor.isBlank()
+                && original!=null && valor.strip().equals(original.strip()));
+    }
+
     /** Exibe um contato legado sem modificar seu valor durante a abertura da edição. */
     public static void carregarTelefoneExistente(TextField campo, String valor) {
         TextFormatter<?> formatador = campo.getTextFormatter();

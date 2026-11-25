@@ -54,6 +54,7 @@ public class CadastroAdolescenteController {
     private Saude saudeAtual;
 
     private StatusAdolescente situacaoOriginal;
+    private String contatoOriginal;
     private AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
 
     @FXML
@@ -144,7 +145,10 @@ public class CadastroAdolescenteController {
         edicao=true; lblTitulo.setText("Editar cadastro"); txtCpf.setDisable(true);
         lblCpf.setText("CPF");
         txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(a.getNomeCompleto());
-        dpNascimento.setValue(a.getDataNascimento()); MascarasFormulario.carregarTelefoneExistente(txtContato,a.getContato()); txtEmail.setText(a.getEmail());
+        dpNascimento.setValue(a.getDataNascimento());
+        contatoOriginal=a.getContato();
+        MascarasFormulario.carregarTelefoneExistente(txtContato,contatoOriginal);
+        txtEmail.setText(a.getEmail());
         txtNaturalidade.setText(a.getNaturalidade()); cmbGenero.setValue(a.getGenero()); cmbCorRaca.setValue(a.getCorRaca());
         situacaoOriginal=a.getStatus();
         cmbStatus.setValue(situacaoOriginal);
@@ -196,7 +200,7 @@ public class CadastroAdolescenteController {
             a.setNomeCompleto(texto(txtNome,80,"Nome"));
             a.setDataNascimento(dpNascimento.getValue());
             a.setContato(texto(txtContato,30,"Telefone"));
-            if (!MascarasFormulario.telefoneValido(a.getContato()))
+            if (!MascarasFormulario.telefoneValidoOuExistente(a.getContato(),contatoOriginal))
                 throw new IllegalArgumentException("Informe um telefone com DDD e 10 ou 11 dígitos.");
             a.setEmail(email);
             a.setNaturalidade(texto(txtNaturalidade,120,"Naturalidade"));

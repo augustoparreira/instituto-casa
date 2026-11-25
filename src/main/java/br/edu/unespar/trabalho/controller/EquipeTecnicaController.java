@@ -13,6 +13,7 @@ import javafx.geometry.Insets;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Objects;
 import static br.edu.unespar.trabalho.model.Operacao.*;
 
 /** Administração de profissionais e contas, preservando vínculos ao desativar. */
@@ -91,14 +92,16 @@ public class EquipeTecnicaController {
         javafx.scene.Node[] campos={cpf,nome,nascimento,contato,email,funcao,login,perfil};
         for(int i=0;i<campos.length;i++) grade.addRow(i,new Label(rotulos[i]),campos[i]);
         grade.add(ativo,1,8);
-        if(existente==null) { grade.addRow(9,new Label("Senha (12 a 128 caracteres)"),senha); grade.addRow(10,new Label("Confirme a senha"),confirmar); }
-        else {
-            cpf.setText(String.format("%011d",existente.getCpf())); cpf.setDisable(true); nome.setText(existente.getNomeCompleto());
-            nascimento.setValue(existente.getDataNascimento()); contato.setText(existente.getContato()); email.setText(existente.getEmail());
-            funcao.setValue(existente.getCargoFuncao()); login.setText(existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
-        }
         MascarasFormulario.cpf(cpf);
         MascarasFormulario.telefone(contato);
+        if(existente==null) { grade.addRow(9,new Label("Senha (12 a 128 caracteres)"),senha); grade.addRow(10,new Label("Confirme a senha"),confirmar); }
+        else {
+            cpf.setText(String.format("%011d",existente.getCpf()));
+            cpf.setDisable(true); nome.setText(existente.getNomeCompleto());
+            MascarasFormulario.carregarTelefoneExistente(contato,existente.getContato());
+            nascimento.setValue(existente.getDataNascimento()); email.setText(existente.getEmail());
+            funcao.setValue(existente.getCargoFuncao()); login.setText(existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
+        }
         grade.add(erro,0,11,2,1); dialogo.getDialogPane().setContent(grade);
         ButtonType salvar=new ButtonType("Salvar",ButtonBar.ButtonData.OK_DONE);
         dialogo.getDialogPane().getButtonTypes().addAll(salvar,ButtonType.CANCEL);
@@ -107,14 +110,16 @@ public class EquipeTecnicaController {
                 AutorizacaoService.exigir(USUARIO_GERENCIAR);
                 String cpfDigitos = Formatadores.soDigitos(cpf.getText());
                 if(cpfDigitos.length()!=11) throw new IllegalArgumentException("Informe os 11 dígitos do CPF.");
-                if(!contato.getText().isBlank() && !MascarasFormulario.telefoneValido(contato.getText()))
+                String telefone = Objects.toString(contato.getText(),"");
+                if (!telefone.isBlank() && !MascarasFormulario.telefoneValidoOuExistente(
+                        telefone, existente==null ? null : existente.getContato()))
                     throw new IllegalArgumentException("Telefone: informe DDD e 10 ou 11 dígitos.");
                 String cargoSelecionado = funcao.getEditor().getText().trim();
                 if(cargoSelecionado.isEmpty() || cargoSelecionado.length()>60)
                     throw new IllegalArgumentException("Informe o cargo ou função (até 60 caracteres).");
                 nascimento.commitValue();
                 EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpfDigitos)); m.setNomeCompleto(nome.getText());
-                m.setDataNascimento(nascimento.getValue()); m.setContato(contato.getText()); m.setEmail(email.getText());
+                m.setDataNascimento(nascimento.getValue()); m.setContato(telefone); m.setEmail(email.getText());
                 m.setCargoFuncao(cargoSelecionado); m.setLogin(login.getText()); m.setNivelAcesso(perfil.getValue()); m.setAtivo(ativo.isSelected());
                 if(existente==null) {
                     if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");

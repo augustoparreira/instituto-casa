@@ -106,6 +106,26 @@ public class VerificacaoPreparacaoEntrega {
                     && new SituacaoSocialDAO().buscarPorCpf(CPF).getRendaFamiliar()==1.25,
                     "cadastro completo pela tela persiste data, renda declarada e situação Ativo");
 
+            String contatoLegado = "3033-2023";
+            salvoCadastro.setContato(contatoLegado);
+            new AdolescenteDAO().salvarDadosOperacionais(salvoCadastro,
+                    new EducacaoTrabalhoDAO().buscarPorCpf(CPF));
+            FXMLLoader edicao = carregar("CadastroAdolescenteView");
+            Parent raizEdicao = edicao.getRoot();
+            janela.setScene(new Scene(raizEdicao,1280,850));
+            raizEdicao.applyCss(); raizEdicao.layout();
+            var formularioEdicao = (CadastroAdolescenteController)edicao.getController();
+            formularioEdicao.carregarParaEdicao(CPF);
+            verificar(texto(raizEdicao,"txtContato").getText().equals(contatoLegado),
+                    "edição mantém telefone legado sem DDD visível");
+            texto(raizEdicao,"txtNome").setText("Adolescente da entrega revisado");
+            dialogo(ButtonType.OK,p -> {});
+            formularioEdicao.salvarAdolescente(new ActionEvent(raizEdicao,raizEdicao)); conferirDialogo();
+            var revisado = new AdolescenteDAO().buscarPorCpf(CPF);
+            verificar(revisado.getNomeCompleto().equals("Adolescente da entrega revisado")
+                    && revisado.getContato().equals(contatoLegado),
+                    "edição de outro campo preserva telefone legado");
+
             FXMLLoader perfil=carregar("DetalhesAdolescenteView");
             Parent perfilRaiz=perfil.getRoot();
             janela.setScene(new Scene(perfilRaiz,1280,850));

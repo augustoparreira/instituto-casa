@@ -7,12 +7,22 @@ import br.edu.unespar.trabalho.dao.EquipeTecnicaDAO;
 import br.edu.unespar.trabalho.service.AuthServiceImpl;
 
 public class Sessao {
+    enum Verificacao { VALIDA, INVALIDA, INDISPONIVEL }
+
     private static EquipeTecnicaDTO usuarioLogado;
+    private static EquipeTecnicaDTO sessaoComRascunho;
+    private static boolean revalidacaoPendente;
     private static long ultimaAtividade;
     private static final ThreadLocal<EquipeTecnicaDTO> sessaoDaConsulta = new ThreadLocal<>();
     private static Duration limite = Duration.ofMinutes(Math.max(1, Long.getLong("casa.sessao.minutos", 15L)));
 
     public static synchronized EquipeTecnicaDTO getUsuarioLogado() {
+        EquipeTecnicaDTO atual = identidadeAtual();
+        return revalidacaoPendente ? null : atual;
+    }
+
+    // O monitor ainda precisa reconhecer a sessão suspensa e verificar sua expiração.
+    private static EquipeTecnicaDTO identidadeAtual() {
         if (usuarioLogado != null && System.nanoTime() - ultimaAtividade >= limite.toNanos()) limparSessao();
         EquipeTecnicaDTO esperada = sessaoDaConsulta.get();
         return esperada==null || esperada==usuarioLogado ? usuarioLogado : null;
@@ -37,15 +47,63 @@ public class Sessao {
     }
 
     public static boolean validarContaAtual() {
-        EquipeTecnicaDTO atual = getUsuarioLogado();
-        if (atual==null) return false;
-        boolean valida = false;
-        try { valida = new EquipeTecnicaDAO().sessaoValida(atual); }
-        catch (RuntimeException e) { /* Falha de conexão não mantém autorização antiga. */ }
+        return verificarConta(false) == Verificacao.VALIDA;
+    }
+
+    static synchronized boolean existeSessao() {
+        return identidadeAtual() != null;
+    }
+
+    static synchronized boolean protegerRascunho() {
+        sessaoComRascunho = getUsuarioLogado();
+        return sessaoComRascunho != null;
+    }
+
+    static synchronized boolean rascunhoDaSessaoAtual() {
+        return sessaoComRascunho != null && sessaoComRascunho == identidadeAtual();
+    }
+
+    static synchronized boolean liberarRascunho() {
+        if (revalidacaoPendente) return false;
+        sessaoComRascunho = null;
+        return true;
+    }
+
+    static synchronized void desvincularRascunho() {
+        if (!liberarRascunho()) limparSessao();
+    }
+
+    static Verificacao revalidarPeloMonitor() {
+        return verificarConta(true);
+    }
+
+    private static Verificacao verificarConta(boolean monitor) {
+        EquipeTecnicaDTO atual;
         synchronized (Sessao.class) {
-            if (getUsuarioLogado()!=atual) return false;
-            if (!valida) limparSessao();
-            return valida;
+            atual = identidadeAtual();
+            if (atual == null) return Verificacao.INVALIDA;
+            if (revalidacaoPendente && !monitor) return Verificacao.INDISPONIVEL;
+        }
+
+        Verificacao resultado;
+        try {
+            resultado = new EquipeTecnicaDAO().sessaoValida(atual) ? Verificacao.VALIDA : Verificacao.INVALIDA;
+        } catch (RuntimeException erro) {
+            resultado = Verificacao.INDISPONIVEL;
+        }
+
+        synchronized (Sessao.class) {
+            if (identidadeAtual() != atual) return Verificacao.INVALIDA;
+            if (resultado == Verificacao.INDISPONIVEL && sessaoComRascunho == atual) {
+                revalidacaoPendente = true;
+                return Verificacao.INDISPONIVEL;
+            }
+            if (resultado != Verificacao.VALIDA) {
+                limparSessao();
+                return Verificacao.INVALIDA;
+            }
+            if (monitor) revalidacaoPendente = false;
+            return revalidacaoPendente ? Verificacao.INDISPONIVEL : Verificacao.VALIDA;
         }
     }
 
@@ -61,5 +119,7 @@ public class Sessao {
 
     public static synchronized void limparSessao() {
         usuarioLogado = null;
+        sessaoComRascunho = null;
+        revalidacaoPendente = false;
     }
 }

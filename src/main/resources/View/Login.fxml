@@ -39,7 +39,7 @@
         </padding>
         <VBox spacing="5.0">
             <Label text="Bem-vindo" styleClass="text-title-right" />
-            <Label text="Acesse com suas credenciais institucionais" styleClass="text-subtitle-right" />
+            <Label id="mensagem-login" text="Acesse com suas credenciais institucionais" styleClass="text-subtitle-right" wrapText="true" />
             <VBox.margin>
                 <Insets bottom="30.0" />
             </VBox.margin>

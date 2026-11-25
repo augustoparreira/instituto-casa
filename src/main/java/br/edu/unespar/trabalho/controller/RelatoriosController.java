@@ -7,9 +7,13 @@ import br.edu.unespar.trabalho.model.*;
 import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
 import br.edu.unespar.trabalho.util.*;
 import javafx.collections.FXCollections;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -17,6 +21,7 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.stage.WindowEvent;
 import javafx.util.StringConverter;
 import java.nio.file.Path;
 import java.io.FileWriter;
@@ -42,6 +47,11 @@ public class RelatoriosController {
     private List<RelatorioAcompanhamento> salvos=List.of();
     private RelatorioAcompanhamento documento;
     private boolean carregando, alterado;
+    private Alert dialogoSaida;
+    private boolean rascunhoBloqueado;
+    private static final String CONFIRMAR_SAIDA = "Descartar as alterações não salvas e sair de Relatórios?";
+    private static final String CONEXAO_INDISPONIVEL =
+            "Conexão indisponível. O rascunho está em memória e a edição aguarda a revalidação da sessão.";
     private static final PseudoClass PENDENTE=PseudoClass.getPseudoClass("pendente");
     private static final DateTimeFormatter DATA=DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String INSTITUICAO="CENTRO DE APOIO SOCIAL AO ADOLESCENTE";
@@ -55,9 +65,12 @@ public class RelatoriosController {
     @FXML public void initialize() {
         br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpCompetencia);
         br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpEmissao);
+        ChangeListener<Window> observarJanela = (obs, antes, depois) ->
+                protegerFechamento(gridIdentificacao.getScene(), depois);
         gridIdentificacao.sceneProperty().addListener((obs,anterior,scene) -> {
+            if(anterior!=null) anterior.windowProperty().removeListener(observarJanela);
             if(scene==null) return;
-            scene.windowProperty().addListener((o,antes,depois) -> protegerFechamento(scene,depois));
+            scene.windowProperty().addListener(observarJanela);
             protegerFechamento(scene,scene.getWindow());
         });
 
@@ -316,20 +329,77 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     private boolean confirmar(String texto) { return new Alert(Alert.AlertType.CONFIRMATION,texto,ButtonType.YES,ButtonType.NO).showAndWait().orElse(ButtonType.NO)==ButtonType.YES; }
-    private boolean confirmarSaida() {
-        return !alterado || confirmar("Descartar as alterações não salvas e sair de Relatórios?");
+    private boolean confirmarSaida(Parent raiz, boolean descarteLocal) {
+        if (dialogoSaida != null) return false;
+        if (!alterado) return true;
+        if (!SegurancaInterface.protegerRascunho(raiz, bloqueado -> atualizarBloqueio(raiz, bloqueado))) return false;
+
+        Scene cena = raiz.getScene();
+        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION, mensagemSaida(), ButtonType.YES, ButtonType.NO);
+        alerta.initOwner(cena.getWindow());
+        if (!descarteLocal) alerta.getDialogPane().lookupButton(ButtonType.YES).disableProperty().bind(raiz.disabledProperty());
+        dialogoSaida = alerta;
+        try {
+            return alerta.showAndWait().orElse(ButtonType.NO) == ButtonType.YES
+                    && cena.getRoot() == raiz && SegurancaInterface.possuiRascunho(raiz)
+                    && (descarteLocal || Sessao.getUsuarioLogado() != null);
+        } finally {
+            dialogoSaida = null;
+            SegurancaInterface.liberarRascunho(raiz);
+        }
     }
+
+    private String mensagemSaida() {
+        return rascunhoBloqueado ? CONFIRMAR_SAIDA + "\n\n" + CONEXAO_INDISPONIVEL : CONFIRMAR_SAIDA;
+    }
+
+    private void atualizarBloqueio(Parent raiz, boolean bloqueado) {
+        if (rascunhoBloqueado == bloqueado) return;
+        rascunhoBloqueado = bloqueado;
+        raiz.setDisable(bloqueado);
+        if (raiz instanceof BorderPane tela) {
+            tela.getCenter().setVisible(!bloqueado);
+            tela.getLeft().setVisible(!bloqueado);
+            if (bloqueado) {
+                Label aviso = new Label(CONEXAO_INDISPONIVEL);
+                aviso.setWrapText(true);
+                aviso.setStyle("-fx-padding: 20;");
+                tela.setTop(aviso);
+            } else tela.setTop(null);
+        }
+        if (dialogoSaida != null) dialogoSaida.setContentText(mensagemSaida());
+        else if (!bloqueado) SegurancaInterface.liberarRascunho(raiz);
+    }
+
     private void protegerFechamento(Scene scene, Window janela) {
         if(!(janela instanceof Stage stage)) return;
         Parent raiz=scene.getRoot();
-        stage.setOnCloseRequest(e -> {
-            // Confirmar o descarte é uma ação local. As operações de Relatórios validam a conta separadamente.
-            if(stage.getScene()==scene && scene.getRoot()==raiz && alterado
-                    && Sessao.getUsuarioLogado()!=null && !confirmarSaida()) e.consume();
+        EventHandler<WindowEvent> fechar = e -> {
+            if (stage.getScene() != scene || scene.getRoot() != raiz) return;
+            if (dialogoSaida != null) {
+                e.consume();
+                return;
+            }
+            if (!alterado || (Sessao.getUsuarioLogado() == null && !rascunhoBloqueado)) return;
+            if (confirmarSaida(raiz, true)) SegurancaInterface.desvincularRascunho(raiz);
+            else e.consume();
+        };
+        stage.setOnCloseRequest(fechar);
+        scene.rootProperty().addListener(new ChangeListener<Parent>() {
+            @Override public void changed(ObservableValue<? extends Parent> obs, Parent antes, Parent depois) {
+                if (depois == raiz) return;
+                if (stage.getOnCloseRequest() == fechar) stage.setOnCloseRequest(null);
+                scene.rootProperty().removeListener(this);
+                SegurancaInterface.desvincularRascunho(raiz);
+                if (dialogoSaida != null && dialogoSaida.isShowing()) dialogoSaida.close();
+            }
         });
     }
     private void sairPara(ActionEvent e, String caminho, String titulo) {
-        if (confirmarSaida()) NavegacaoUtil.mudarTela(e,caminho,titulo);
+        if (e.getSource() instanceof Node origem && origem.getScene()!=null
+                && confirmarSaida(origem.getScene().getRoot(), "/View/Login.fxml".equals(caminho))) {
+            NavegacaoUtil.mudarTela(e,caminho,titulo);
+        }
     }
     private void erro(RuntimeException e) { lblMensagem.setText(e instanceof java.time.DateTimeException
             ? "Informe datas existentes no formato DD/MM/AAAA." : e.getMessage()); if(!(e instanceof IllegalArgumentException) && !(e instanceof java.time.DateTimeException)) e.printStackTrace(); }

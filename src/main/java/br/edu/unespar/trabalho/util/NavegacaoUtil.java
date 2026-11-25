@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import br.edu.unespar.trabalho.model.Operacao;
 import br.edu.unespar.trabalho.service.AutorizacaoService;
 import java.util.List;
@@ -41,10 +42,17 @@ public class NavegacaoUtil {
     }
 
     public static void encerrarSessao(Stage principal) {
+        encerrarSessao(principal, false);
+    }
+
+    static void encerrarSessao(Stage principal, boolean haviaRascunho) {
         Sessao.limparSessao(); SegurancaInterface.marcarAutenticado(false);
         for(Window janela:List.copyOf(Window.getWindows())) if(janela!=principal) janela.hide();
         try {
             Parent raiz=FXMLLoader.load(NavegacaoUtil.class.getResource("/View/Login.fxml"));
+            if (haviaRascunho && raiz.lookup("#mensagem-login") instanceof Label mensagem) {
+                mensagem.setText("A sessão terminou. Havia alterações de Relatórios que não foram salvas.");
+            }
             trocarRaiz(principal,raiz,"Instituto C.A.S.A. - Login");
         } catch(java.io.IOException e) { principal.close(); }
     }

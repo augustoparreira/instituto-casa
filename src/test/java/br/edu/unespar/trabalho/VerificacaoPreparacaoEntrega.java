@@ -369,9 +369,9 @@ public class VerificacaoPreparacaoEntrega {
 
         Parent outraTela=new StackPane();
         janela.getScene().setRoot(outraTela);
-        WindowEvent foraDosRelatorios=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
-        janela.getOnCloseRequest().handle(foraDosRelatorios);
-        verificar(!foraDosRelatorios.isConsumed(),"outra tela não herda o aviso de Relatórios");
+        janela.show();
+        janela.fireEvent(new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST));
+        verificar(!janela.isShowing() && janela.getOnCloseRequest()==null,"outra tela não herda o aviso de Relatórios");
 
         FXMLLoader limpo=carregar("RelatoriosView");
         Parent raizLimpa=limpo.getRoot();

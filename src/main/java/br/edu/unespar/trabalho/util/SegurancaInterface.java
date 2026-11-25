@@ -24,6 +24,7 @@ import javafx.util.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.function.Consumer;
 
 /** Apresentação de permissões e monitoramento da inatividade em janelas JavaFX. */
 public final class SegurancaInterface {
@@ -31,21 +32,59 @@ public final class SegurancaInterface {
     private static boolean autenticado;
     private static Timeline monitor;
     private static int segundos;
+    private static ProtecaoRascunho protecaoRascunho;
+
+    private record ProtecaoRascunho(Parent raiz, Consumer<Boolean> atualizarBloqueio) { }
+
     private SegurancaInterface() { }
 
     public static void iniciarMonitor(Stage principal) {
         if (monitor != null) monitor.stop();
         monitor = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             for (Window janela : List.copyOf(Window.getWindows())) observar(janela.getScene());
-            if (autenticado && (Sessao.getUsuarioLogado() == null
-                    || (++segundos % 5 == 0 && !Sessao.validarContaAtual()))) {
-                NavegacaoUtil.encerrarSessao(principal);
+            if (!autenticado) return;
+            boolean haviaRascunho = protecaoRascunho != null && principal.getScene().getRoot() == protecaoRascunho.raiz();
+            if (!Sessao.existeSessao() || (haviaRascunho && !Sessao.rascunhoDaSessaoAtual())) {
+                NavegacaoUtil.encerrarSessao(principal, haviaRascunho);
+            } else if (++segundos % 5 == 0) {
+                switch (Sessao.revalidarPeloMonitor()) {
+                    case INVALIDA -> NavegacaoUtil.encerrarSessao(principal, haviaRascunho);
+                    case INDISPONIVEL -> { if (haviaRascunho) protecaoRascunho.atualizarBloqueio().accept(true); }
+                    case VALIDA -> { if (haviaRascunho) protecaoRascunho.atualizarBloqueio().accept(false); }
+                }
             }
         }));
         monitor.setCycleCount(Timeline.INDEFINITE); monitor.play();
     }
 
-    public static void marcarAutenticado(boolean valor) { autenticado = valor; }
+    public static void marcarAutenticado(boolean valor) {
+        autenticado = valor;
+        if (!valor) protecaoRascunho = null;
+    }
+
+    public static boolean protegerRascunho(Parent raiz, Consumer<Boolean> atualizarBloqueio) {
+        if (protecaoRascunho != null) return possuiRascunho(raiz);
+        if (!Sessao.protegerRascunho()) return false;
+        protecaoRascunho = new ProtecaoRascunho(raiz, atualizarBloqueio);
+        return true;
+    }
+
+    public static boolean possuiRascunho(Parent raiz) {
+        return protecaoRascunho != null && protecaoRascunho.raiz() == raiz && Sessao.rascunhoDaSessaoAtual();
+    }
+
+    public static void liberarRascunho(Parent raiz) {
+        if (possuiRascunho(raiz) && Sessao.liberarRascunho()) {
+            protecaoRascunho = null;
+        }
+    }
+
+    public static void desvincularRascunho(Parent raiz) {
+        if (protecaoRascunho != null && protecaoRascunho.raiz() == raiz) {
+            Sessao.desvincularRascunho();
+            protecaoRascunho = null;
+        }
+    }
 
     public static void observar(Scene scene) {
         if (scene == null || OBSERVADAS.putIfAbsent(scene,true) != null) return;

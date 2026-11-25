@@ -48,7 +48,9 @@ public class DashboardController {
     @FXML private Label lblNomeAlerta;
     @FXML private Label lblDataAlerta;
 
-    private AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
+    private final AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
+    private List<AdolescenteDTO> jovensDoPainel = List.of();
+    private br.edu.unespar.trabalho.model.EquipeTecnicaDTO usuarioDoPainel;
 
     @FXML
     public void initialize() {
@@ -57,13 +59,14 @@ public class DashboardController {
             lblDataAtualizacao.setText("Atualizado em " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")));
         }
 
-        carregarEstatisticasEAdolescentes();
+        usuarioDoPainel = br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado();
+        jovensDoPainel = adolescenteDAO.listarResumoDTO();
+        carregarEstatisticasEAdolescentes(jovensDoPainel);
         carregarAgendaSemanal();
-        carregarPrazo();
+        carregarPrazo(jovensDoPainel);
     }
 
-    private void carregarEstatisticasEAdolescentes() {
-        List<AdolescenteDTO> jovensCadastrados = adolescenteDAO.listarResumoDTO();
+    private void carregarEstatisticasEAdolescentes(List<AdolescenteDTO> jovensCadastrados) {
 
         long totalPsc = jovensCadastrados.stream().filter(j -> StatusAdolescente.ATIVO.getDescricao().equalsIgnoreCase(j.getStatus()))
                 .filter(j -> java.util.Arrays.stream(j.getMedida().split("/")).anyMatch(m -> "PSC".equalsIgnoreCase(m.trim()))).count();
@@ -136,7 +139,7 @@ public class DashboardController {
         }
     }
 
-    private void carregarPrazo() {
+    private void carregarPrazo(List<AdolescenteDTO> jovens) {
         if(cardPrazoGabriel==null) return;
         cardPrazoGabriel.setVisible(true);
         cardPrazoGabriel.setManaged(true);
@@ -144,26 +147,26 @@ public class DashboardController {
         lblNomeAlerta.setText("Sem previsão de LA disponível");
         lblDataAlerta.setText("PSC é acompanhada pelo saldo de horas. A extinção depende da decisão judicial.");
         try {
-            var medidas=new br.edu.unespar.trabalho.dao.MedidaSocioeducativaDAO().listarPorAdolescente(0);
+            var ativos = new java.util.HashMap<Long,AdolescenteDTO>();
+            for (AdolescenteDTO jovem : jovens) {
+                if (!StatusAdolescente.INATIVO.getDescricao().equals(jovem.getStatus()))
+                    ativos.put(Long.parseLong(jovem.getCpf().replaceAll("\\D","")),jovem);
+            }
+            var medidas=new br.edu.unespar.trabalho.dao.MedidaSocioeducativaDAO().listarParaFrequencia(0);
             var prevista=medidas.stream().filter(m -> m.isLA() && m.getDataFim()==null
                             && m.getDataInicio()!=null && !m.getDataInicio().isAfter(LocalDate.now())
                             && m.getDuracaoMeses()!=null && m.getDuracaoMeses()>0)
-                    .filter(m -> {
-                        var a=adolescenteDAO.buscarPorCpf(m.getCpfAdolescente());
-                        return a!=null && a.getStatus()!=StatusAdolescente.INATIVO;
-                    })
+                    .filter(m -> ativos.containsKey(m.getCpfAdolescente()))
                     .min(java.util.Comparator.comparing(m -> m.getDataInicio().plusMonths(m.getDuracaoMeses())));
             if(prevista.isEmpty()) return;
             var m=prevista.get();
-            var adolescente=adolescenteDAO.buscarPorCpf(m.getCpfAdolescente());
+            AdolescenteDTO adolescente=ativos.get(m.getCpfAdolescente());
             LocalDate data=m.getDataInicio().plusMonths(m.getDuracaoMeses());
-            lblNomeAlerta.setText(adolescente.getNomeCompleto());
+            lblNomeAlerta.setText(adolescente.getNome());
             lblDataAlerta.setText("LA · previsão pelo período determinado: "+data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                     +(data.isBefore(LocalDate.now()) ? "\nPeríodo previsto atingido. Conferir acompanhamento." : "")
                     +"\nEsta previsão não confirma o encerramento judicial.");
-            var resumo=adolescenteDAO.listarResumoDTO().stream()
-                    .filter(a -> a.getCpf().replaceAll("\\D","").equals(Long.toString(m.getCpfAdolescente()))).findFirst();
-            resumo.ifPresent(cardPrazoGabriel::setUserData);
+            cardPrazoGabriel.setUserData(adolescente);
         } catch(RuntimeException e) {
             lblNomeAlerta.setText("Previsão indisponível");
             lblDataAlerta.setText("Não foi possível consultar as medidas.");
@@ -246,13 +249,8 @@ public class DashboardController {
             AdolescenteDTO jovemSelecionado = (AdolescenteDTO) node.getUserData();
             if (jovemSelecionado == null) return;
 
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/View/DetalhesAdolescenteView.fxml"));
-            Parent root = loader.load();
-            DetalhesAdolescenteController detalheController = loader.getController();
-            detalheController.carregarDados(jovemSelecionado);
-
             Stage stage = (Stage) lblTotalCadastrados.getScene().getWindow();
-            NavegacaoUtil.trocarRaiz(stage, root, "Instituto C.A.S.A. - Perfil de " + jovemSelecionado.getNome());
+            DetalhesAdolescenteController.abrirPerfil(stage,jovemSelecionado);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -265,8 +263,23 @@ public class DashboardController {
 
     @FXML public void irParaRelatorios(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/RelatoriosView.fxml", "Relatórios"); }
     @FXML public void irParaEquipeTecnica(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/EquipeTecnicaView.fxml", "Equipe Técnica"); }
-    @FXML public void irParaAdolescentes(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes"); }
-    @FXML public void irParaListaAdolescentes(MouseEvent event) { NavegacaoUtil.mudarTela(event, "/View/AdolescentesView.fxml", "Adolescentes"); }
+    @FXML public void irParaAdolescentes(ActionEvent e) { abrirListaAdolescentes(e); }
+    @FXML public void irParaListaAdolescentes(MouseEvent e) { abrirListaAdolescentes(e); }
+
+    private void abrirListaAdolescentes(javafx.event.Event evento) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/View/AdolescentesView.fxml"));
+            Parent raiz = loader.load();
+            AdolescentesController lista = loader.getController();
+            if (usuarioDoPainel!=null && usuarioDoPainel==br.edu.unespar.trabalho.util.Sessao.getUsuarioLogado())
+                lista.apresentarLista(jovensDoPainel);
+            Stage stage = (Stage)((javafx.scene.Node)evento.getSource()).getScene().getWindow();
+            NavegacaoUtil.trocarRaiz(stage,raiz,"Instituto C.A.S.A. - Adolescentes");
+        } catch (java.io.IOException | RuntimeException e) {
+            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
+                    "Não foi possível abrir a lista de adolescentes. Confira a sessão e a conexão.").showAndWait();
+        }
+    }
     @FXML public void irParaAgenda(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/AgendaView.fxml", "Agenda institucional"); }
     @FXML public void irParaAgendaPeloLink(MouseEvent event) { NavegacaoUtil.mudarTela(event, "/View/AgendaView.fxml", "Agenda institucional"); }
     @FXML public void fazerLogout(ActionEvent event) { NavegacaoUtil.mudarTela(event, "/View/Login.fxml", "Login"); }

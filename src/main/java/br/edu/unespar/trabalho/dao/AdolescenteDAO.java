@@ -115,26 +115,124 @@ public class AdolescenteDAO {
     }
 
     public List<AdolescenteDTO> listarResumoDTO() {
-        exigir(ADOLESCENTE_CONSULTAR);
+        return consultarResumos(null);
+    }
 
-        List<AdolescenteDTO> lista=new ArrayList<>();
-        var linhas=new FrequenciaMensalDAO().listar(java.time.YearMonth.now());
-        java.util.Map<Long,String> tecnicos=new java.util.HashMap<>();
-        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
-                "SELECT ac.cpf_adolescente,p.nome_completo FROM Acompanhamento ac JOIN Pessoa p ON p.cpf=ac.cpf_equipe WHERE ac.tecnico_referencia=true ORDER BY ac.cpf_equipe"); ResultSet r=s.executeQuery()) {
-            while(r.next()) tecnicos.putIfAbsent(r.getLong(1),r.getString(2));
-        } catch(SQLException e) { throw new IllegalStateException("Não foi possível consultar os técnicos.",e); }
-        for(var linha:linhas) {
-            Adolescente a=linha.getAdolescente();
-            String progresso=linha.getHorasPrevistas()>0 ? linha.getHorasCumpridas()+"/"+linha.getHorasPrevistas()+"h" : "";
-            if(!linha.getMeses().isBlank()) progresso+=(progresso.isEmpty()?"":" · ")+linha.getMeses()+"m";
-            double percentual=linha.getHorasPrevistas()>0 ? Math.min(1.0,(double)linha.getHorasCumpridas()/linha.getHorasPrevistas()) :
-                    linha.getMedidasDoMes().stream().filter(MedidaSocioeducativa::isLA).mapToDouble(m->Math.min(1.0,(double)m.getMesesCorridos()/m.getDuracaoMeses())).findFirst().orElse(0);
-            lista.add(new AdolescenteDTO(a.getNomeCompleto(),a.getCpfFormatado(),linha.getMse().isEmpty()?"Sem medida":linha.getMse(),percentual,
-                    progresso.isEmpty()?"—":progresso,tecnicos.getOrDefault(a.getCpf(),"Sem técnico vinculado"),a.getStatus().getDescricao(),
-                    a.getBairro()==null?"":a.getBairro(),a.getDataNascimento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),a.getGenero()));
+    public AdolescenteDTO buscarResumoDTO(long cpf) {
+        var resumos = consultarResumos(cpf);
+        return resumos.isEmpty() ? null : resumos.getFirst();
+    }
+
+    private List<AdolescenteDTO> consultarResumos(Long cpf) {
+        var permissoes = permissoesDaConsulta(ADOLESCENTE_CONSULTAR,FREQUENCIA_CONSULTAR);
+        boolean social = permissoes.contains(SOCIAL_CONSULTAR);
+        boolean medidas = permissoes.contains(MEDIDA_CONSULTAR);
+        boolean horas = medidas && permissoes.contains(HORAS_PSC_CONSULTAR);
+        LocalDate hoje = LocalDate.now();
+        var mes = java.time.YearMonth.from(hoje);
+        String sql = """
+                SELECT p.cpf,p.nome_completo,p.data_nascimento,a.genero,a.status,t.nome_tecnico,
+                       %s AS bairro, m.id_medida,m.tipo_medida,m.data_inicio,m.data_fim,
+                       m.duracao_meses,m.duracao_horas,%s AS horas_cumpridas
+                FROM Adolescente a JOIN Pessoa p ON p.cpf=a.cpf_adolescente
+                %s
+                LEFT JOIN MedidaSocioeducativa m ON %s
+                %s
+                LEFT JOIN LATERAL (
+                    SELECT tecnico.nome_completo AS nome_tecnico
+                    FROM Acompanhamento ac JOIN Pessoa tecnico ON tecnico.cpf=ac.cpf_equipe
+                    WHERE ac.cpf_adolescente=a.cpf_adolescente AND ac.tecnico_referencia=true
+                    ORDER BY ac.cpf_equipe LIMIT 1
+                ) t ON true
+                %s
+                ORDER BY p.nome_completo,p.cpf,m.data_inicio,m.id_medida
+                """.formatted(social?"ss.bairro":"NULL::text",horas?"COALESCE(h.total,0)":"0",
+                social?"LEFT JOIN SituacaoSocial ss ON ss.cpf_adolescente=a.cpf_adolescente":"",
+                medidas ? """
+                        m.cpf_adolescente=a.cpf_adolescente AND m.data_inicio<=?
+                        AND (m.data_fim IS NULL OR m.data_fim>=?)
+                        """ : "false",
+                horas ? """
+                        LEFT JOIN LATERAL (
+                            SELECT SUM(f.horas_cumpridas) AS total
+                            FROM Frequencia f
+                            WHERE upper(btrim(m.tipo_medida))='PSC' AND f.id_medida=m.id_medida
+                              AND f.cpf_adolescente=a.cpf_adolescente
+                              AND f.data_presenca BETWEEN DATE '1900-01-01' AND ?
+                              AND upper(btrim(f.status_presenca))='PRESENTE'
+                        ) h ON true
+                        """ : "",
+                cpf==null?"":"WHERE a.cpf_adolescente=?");
+        List<AdolescenteDTO> lista = new ArrayList<>();
+        try (Connection c=ConnectionFactory.getConnection(); PreparedStatement consulta=c.prepareStatement(sql)) {
+            int parametro=1;
+            if (medidas) {
+                consulta.setObject(parametro++,mes.atEndOfMonth());
+                consulta.setObject(parametro++,mes.atDay(1));
+            }
+            if (horas) consulta.setObject(parametro++,hoje);
+            if (cpf!=null) consulta.setLong(parametro,cpf);
+            try (ResultSet r=consulta.executeQuery()) {
+                ResumoCadastro atual = null;
+                while (r.next()) {
+                    if (atual==null || atual.cpf!=r.getLong("cpf")) {
+                        if (atual!=null) lista.add(atual.toDTO());
+                        atual = new ResumoCadastro(r);
+                    }
+                    if (r.getObject("id_medida")!=null) atual.adicionarMedida(r,hoje);
+                }
+                if (atual!=null) lista.add(atual.toDTO());
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Não foi possível consultar o resumo dos adolescentes.",e);
         }
         return lista;
+    }
+
+    private static final class ResumoCadastro {
+        private final long cpf;
+        private final String nome, nascimento, genero, status, bairro, tecnico;
+        private final java.util.EnumSet<TipoMedida> tipos = java.util.EnumSet.noneOf(TipoMedida.class);
+        private final List<String> mesesLA = new ArrayList<>();
+        private double progressoLA;
+        private int previstas, cumpridas;
+
+        private ResumoCadastro(ResultSet r) throws SQLException {
+            cpf = r.getLong("cpf");
+            nome = r.getString("nome_completo");
+            nascimento = r.getObject("data_nascimento",LocalDate.class).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            genero = r.getString("genero");
+            status = StatusAdolescente.fromCodigo(r.getString("status")).getDescricao();
+            bairro = java.util.Objects.toString(r.getString("bairro"),"");
+            tecnico = java.util.Objects.toString(r.getString("nome_tecnico"),"Sem técnico vinculado");
+        }
+
+        private void adicionarMedida(ResultSet r, LocalDate hoje) throws SQLException {
+            TipoMedida tipo = TipoMedida.fromCodigo(r.getString("tipo_medida"));
+            tipos.add(tipo);
+            if (tipo==TipoMedida.PSC) {
+                previstas += r.getInt("duracao_horas");
+                cumpridas += (int)r.getLong("horas_cumpridas");
+            } else {
+                MedidaSocioeducativa medida = new MedidaSocioeducativa();
+                medida.setDataInicio(r.getObject("data_inicio",LocalDate.class));
+                medida.setDataFim(r.getObject("data_fim",LocalDate.class));
+                int duracao = r.getInt("duracao_meses");
+                int decorridos = medida.getMesesCorridos(hoje);
+                if (mesesLA.isEmpty()) progressoLA = Math.min(1.0,(double)decorridos/duracao);
+                mesesLA.add(decorridos+"/"+duracao);
+            }
+        }
+
+        private AdolescenteDTO toDTO() {
+            String medida = tipos.isEmpty()?"Sem medida":tipos.stream().map(TipoMedida::getCodigo)
+                    .collect(java.util.stream.Collectors.joining("/"));
+            String texto = previstas>0 ? cumpridas+"/"+previstas+"h" : "";
+            if (!mesesLA.isEmpty()) texto+=(texto.isEmpty()?"":" · ")+String.join("; ",mesesLA)+"m";
+            double progresso = previstas>0 ? Math.min(1.0,(double)cumpridas/previstas) : progressoLA;
+            return new AdolescenteDTO(nome, Pessoa.formatarCpf(cpf), medida, progresso,
+                    texto.isEmpty()?"—":texto,tecnico,status,bairro,nascimento,genero);
+        }
     }
 
     public List<Adolescente> listarCadastros() {

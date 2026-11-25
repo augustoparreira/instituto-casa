@@ -246,6 +246,7 @@ public class VerificacaoPreparacaoEntrega {
             evento.setHoraInicio(LocalTime.of(9,0)); evento.setHoraFim(LocalTime.of(10,0)); evento.setCpfAdolescente(CPF);
             EventoAgendaDAO agenda=new EventoAgendaDAO(); agenda.inserir(evento); evento.setTitulo("Compromisso atualizado"); agenda.atualizar(evento);
             verificar(agenda.listar(evento.getData(),evento.getData()).getFirst().getTitulo().equals("Compromisso atualizado"),"agenda reabre compromisso atualizado");
+            ((Button)perfilRaiz.lookup("#btnAbaPia")).fire();
             ((CheckBox)perfilRaiz.lookup("#chkEnvioPia")).setSelected(true);
             dialogo(ButtonType.OK,p -> {}); controller.salvarConfirmacaoPia();
             verificar(new PIADAO().consultarEnvio(CPF),"envio do PIA persiste pela tela");
@@ -305,9 +306,166 @@ public class VerificacaoPreparacaoEntrega {
             competencia.getEditor().setText(competencia.getConverter().toString(competencia.getValue()));
             dialogo(ButtonType.CLOSE,p -> verificar(p.getContent() instanceof ScrollPane,"prévia de impressão abre no fluxo integrado"));
             ((RelatoriosController)reaberto.getController()).visualizarRelatorio(); conferirDialogo();
+
+            FXMLLoader listaLoader = carregar("AdolescentesView");
+            Parent listaRaiz = listaLoader.getRoot();
+            janela.setScene(new Scene(listaRaiz,1280,850));
+            var listaAdolescentes = (ListView<?>)listaRaiz.lookup("#listAdolescentes");
+            verificar(listaAdolescentes.getItems().isEmpty()
+                    && ((Label)listaRaiz.lookup("#lblTotalRegistros")).getText().startsWith("Carregando"),
+                    "lista apresenta a tela antes de concluir a consulta JDBC");
+            aguardarInterface(() -> !listaAdolescentes.getItems().isEmpty());
+            listaAdolescentes.getSelectionModel().selectFirst();
+            ((AdolescentesController)listaLoader.getController()).clicarAdolescente(null);
+            Parent perfilAberto = janela.getScene().getRoot();
+            Label carregamento = (Label)perfilAberto.lookup("#lblCarregamentoPerfil");
+            verificar(carregamento.isVisible() && carregamento.getText().startsWith("Carregando")
+                    && ((Label)perfilAberto.lookup("#lblNome")).getText().equals(revisado.getNomeCompleto()),
+                    "clique abre o perfil com cabeçalho antes de concluir a consulta pessoal");
+            aguardarInterface(() -> !carregamento.isVisible());
+            perfilAberto.applyCss();
+            perfilAberto.layout();
+            verificar(((Label)perfilAberto.lookup("#lblInfoAniversario")).getText().equals("29/02"),
+                    "consulta em segundo plano entrega dados à tela do perfil");
+            verificar(((ListView<?>)perfilAberto.lookup("#listaFrequenciaPerfil")).getItems().isEmpty(),
+                    "abrir o perfil não consulta nem preenche a aba de frequência oculta");
+            medirAberturaFrequencia(perfilAberto);
+
+            FXMLLoader painelLoader = carregar("Dashboard");
+            Parent painel = painelLoader.getRoot();
+            janela.getScene().setRoot(painel);
+            ((DashboardController)painelLoader.getController()).irParaAdolescentes(new ActionEvent(painel,painel));
+            Parent listaDoPainel = janela.getScene().getRoot();
+            listaDoPainel.applyCss();
+            listaDoPainel.layout();
+            var linhasImediatas = (ListView<?>)listaDoPainel.lookup("#listAdolescentes");
+            verificar(linhasImediatas!=null && !linhasImediatas.getItems().isEmpty(),
+                    "painel abre a lista com os adolescentes já na primeira renderização");
+            verificarRespostaObsoletaFrequencia(janela);
         } finally { janela.close(); }
     }
 
+
+    private static void medirAberturaFrequencia(Parent perfil) {
+        var mes = YearMonth.from(((DatePicker)perfil.lookup("#dpMesFrequencia")).getValue());
+        var abrir = (Button)perfil.lookup("#btnAbaFrequencia");
+        var dados = (Button)perfil.lookup("#btnAbaDados");
+        var conteudo = perfil.lookup("#conteudoFrequencia");
+        var aviso = (Label)perfil.lookup("#lblCarregamentoFrequencia");
+        var lista = (ListView<?>)perfil.lookup("#listaFrequenciaPerfil");
+        long inicio = System.nanoTime();
+        abrir.fire();
+        double troca = (System.nanoTime()-inicio)/1_000_000.0;
+        perfil.applyCss();
+        perfil.layout();
+        double layout = (System.nanoTime()-inicio)/1_000_000.0;
+        verificar(perfil.lookup("#paneFrequencia").isVisible() && aviso.isVisible()
+                        && conteudo.isDisabled() && !conteudo.isVisible(),
+                "primeira abertura mostra frequência e bloqueia ações antes de concluir a consulta");
+        dados.fire();
+        verificar(perfil.lookup("#paneDados").isVisible(),"pode sair da frequência durante o carregamento");
+        abrir.fire();
+        verificar(aviso.isVisible() && !conteudo.isVisible(),"retornar durante a consulta mantém o carregamento pendente");
+
+        aguardarInterface(conteudo::isVisible);
+        double pronta = (System.nanoTime()-inicio)/1_000_000.0;
+        var registros = lista.getItems();
+        verificar(!aviso.isVisible() && !conteudo.isDisabled() && !registros.isEmpty(),
+                "frequência libera os controles com os registros carregados");
+        dados.fire();
+        abrir.fire();
+        verificar(!aviso.isVisible() && lista.getItems()==registros,
+                "retornar à frequência reutiliza os registros carregados");
+
+        var tempo = new CompletableFuture<Double>();
+        ConsultaInterface.iniciar(perfil,() -> medirConsultasFrequencia(mes),tempo::complete,tempo::completeExceptionally);
+        aguardarInterface(tempo::isDone);
+        System.out.printf(java.util.Locale.ROOT,
+                "FREQUENCIA: consultas JDBC + autorizacao independente %.1f ms | clique/retorno %.1f ms | clique/CSS/layout %.1f ms | clique/dados visiveis (amostrado) %.1f ms%n",
+                tempo.join(),troca,layout,pronta);
+    }
+
+    private static double medirConsultasFrequencia(YearMonth mes) {
+        FrequenciaDAO frequencias = new FrequenciaDAO();
+        long inicio = System.nanoTime();
+        frequencias.listar(CPF,mes.atDay(1),mes.atEndOfMonth());
+        var medidas = new MedidaSocioeducativaDAO().listarPorAdolescente(CPF);
+        LocalDate hoje = LocalDate.now();
+        LocalDate desde = medidas.stream().map(MedidaSocioeducativa::getDataInicio).min(LocalDate::compareTo).orElse(hoje);
+        if (!desde.isAfter(hoje)) frequencias.listar(CPF,desde,hoje);
+        return (System.nanoTime()-inicio)/1_000_000.0;
+    }
+
+    private static void verificarRespostaObsoletaFrequencia(Stage janela) throws Exception {
+        var dao = new AdolescenteDAO();
+        var outro = new Adolescente();
+        outro.setCpf(CPF+8);
+        outro.setNomeCompleto("Segunda pessoa do cenário de teste");
+        outro.setDataNascimento(LocalDate.of(2009,1,1));
+        outro.setContato("(43) 99999-0808");
+        outro.setNaturalidade("");
+        outro.setCorRaca("Não informada");
+        dao.salvarDadosOperacionais(outro,new EducacaoTrabalho(),false);
+        var primeiro = dao.buscarResumoDTO(CPF);
+        var segundo = dao.buscarResumoDTO(outro.getCpf());
+
+        var campoCarga = DetalhesAdolescenteController.class.getDeclaredField("cargaFrequencia");
+        campoCarga.setAccessible(true);
+        for (boolean trocaCpf : new boolean[]{false,true}) {
+            FXMLLoader loader = carregar("DetalhesAdolescenteView");
+            Parent perfil = loader.getRoot();
+            janela.getScene().setRoot(perfil);
+            perfil.applyCss();
+            perfil.layout();
+            var controller = (DetalhesAdolescenteController)loader.getController();
+            controller.carregarDados(primeiro);
+            @SuppressWarnings("unchecked")
+            var lista = (ListView<Frequencia>)perfil.lookup("#listaFrequenciaPerfil");
+            var mes = (DatePicker)perfil.lookup("#dpMesFrequencia");
+            var conteudo = perfil.lookup("#conteudoFrequencia");
+            var antigaAplicada = new java.util.concurrent.atomic.AtomicBoolean();
+            lista.itemsProperty().addListener((obs,anterior,registros) -> {
+                if (registros.stream().anyMatch(f -> f.getCpfAdolescente()==CPF
+                        && YearMonth.from(f.getDataPresenca()).equals(YearMonth.now())))
+                    antigaAplicada.set(true);
+            });
+            ((Button)perfil.lookup("#btnAbaFrequencia")).fire();
+            var antiga = (javafx.concurrent.Task<?>)campoCarga.get(controller);
+            if (!trocaCpf) mes.setValue(LocalDate.now().minusMonths(1));
+            controller.carregarDados(trocaCpf ? segundo : primeiro);
+            aguardarInterface(() -> conteudo.isVisible() && !antiga.isRunning()
+                    && antiga.getState()==javafx.concurrent.Worker.State.SUCCEEDED);
+            verificar(!antigaAplicada.get() && lista.getItems().isEmpty(),
+                    trocaCpf ? "resposta atrasada não aparece no perfil de outro adolescente"
+                            : "resposta atrasada não sobrescreve a solicitação mais recente");
+        }
+    }
+
+    static void aguardarInterface(java.util.function.BooleanSupplier pronta) {
+        if (pronta.getAsBoolean()) return;
+        Object chave = new Object();
+        boolean[] esperando = {true};
+        var relogio = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().daemon().factory());
+        relogio.scheduleAtFixedRate(() -> Platform.runLater(() -> {
+            if (esperando[0] && pronta.getAsBoolean()) {
+                esperando[0] = false;
+                Platform.exitNestedEventLoop(chave,true);
+            }
+        }),0,20,TimeUnit.MILLISECONDS);
+        relogio.schedule(() -> Platform.runLater(() -> {
+            if (esperando[0]) {
+                esperando[0] = false;
+                Platform.exitNestedEventLoop(chave,false);
+            }
+        }),15,TimeUnit.SECONDS);
+        try {
+            if (!Boolean.TRUE.equals(Platform.enterNestedEventLoop(chave)))
+                throw new AssertionError("O carregamento em segundo plano não concluiu.");
+        } finally {
+            esperando[0] = false;
+            relogio.shutdownNow();
+        }
+    }
 
     private static void verificarMascaras() {
         TextField cpf = new TextField();

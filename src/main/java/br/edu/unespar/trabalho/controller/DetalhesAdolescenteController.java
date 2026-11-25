@@ -13,7 +13,9 @@ import br.edu.unespar.trabalho.dao.PerfilAdolescenteDAO;
 import br.edu.unespar.trabalho.dao.ResponsavelDAO;
 import br.edu.unespar.trabalho.dao.SaudeDAO;
 import br.edu.unespar.trabalho.dao.SituacaoSocialDAO;
+import br.edu.unespar.trabalho.model.Adolescente;
 import br.edu.unespar.trabalho.model.AdolescenteDTO;
+import br.edu.unespar.trabalho.model.EducacaoTrabalho;
 import br.edu.unespar.trabalho.model.ComposicaoFamiliar;
 import br.edu.unespar.trabalho.model.EquipeTecnica;
 import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
@@ -105,8 +107,10 @@ public class DetalhesAdolescenteController {
     @FXML private Button btnAbaFamilia;
 
     @FXML private VBox paneDados;
+    @FXML private Label lblCarregamentoPerfil;
     @FXML private VBox paneMedida;
-    @FXML private VBox paneFrequencia;
+    @FXML private VBox paneFrequencia, conteudoFrequencia;
+    @FXML private Label lblCarregamentoFrequencia;
     @FXML private VBox panePia;
     @FXML private VBox paneFamilia;
 
@@ -183,6 +187,11 @@ public class DetalhesAdolescenteController {
     private AdolescenteDTO jovemAtual;
     @FXML private CheckBox chkEnvioPia;
     private boolean piaEnviadoAtual;
+    private final java.util.Set<VBox> abasCarregadas = new java.util.HashSet<>();
+    private Saude saudePerfil;
+    private boolean atualizandoMedidas;
+    private long geracaoFrequencia;
+    private javafx.concurrent.Task<DadosFrequencia> cargaFrequencia;
 
     @FXML
     public void initialize() {
@@ -207,6 +216,7 @@ public class DetalhesAdolescenteController {
             }
         });
         cmbMedidaPerfil.valueProperty().addListener((o,a,b)-> {
+            if (atualizandoMedidas) return;
             exibirMedidaSelecionada();
             if (b!=null && b.getDataFim()!=null && !pode(MEDIDA_ENCERRAR)) cancelarMedida();
         });
@@ -242,11 +252,31 @@ public class DetalhesAdolescenteController {
     }
 
 
+    static void abrirPerfil(Stage stage, AdolescenteDTO jovem) throws java.io.IOException {
+        FXMLLoader loader = new FXMLLoader(DetalhesAdolescenteController.class.getResource("/View/DetalhesAdolescenteView.fxml"));
+        Parent raiz = loader.load();
+        DetalhesAdolescenteController controller = loader.getController();
+        controller.prepararPerfil(jovem);
+        NavegacaoUtil.trocarRaiz(stage,raiz,"Instituto C.A.S.A. - Perfil de "+jovem.getNome());
+        controller.carregarDadosEmSegundoPlano();
+    }
+
     public void carregarDados(AdolescenteDTO jovem) {
         exigir(ADOLESCENTE_CONSULTAR);
+        if (jovem==null) return;
+        prepararPerfil(jovem);
+        try { exibirDadosPessoais(consultarDadosPessoais(cpfAtual)); }
+        catch (RuntimeException e) { erroBanco(e); }
+    }
 
-        if (jovem == null) return;
-
+    private void prepararPerfil(AdolescenteDTO jovem) {
+        abasCarregadas.clear();
+        geracaoFrequencia++;
+        cargaFrequencia = null;
+        conteudoFrequencia.setDisable(true);
+        alternar(conteudoFrequencia,false);
+        alternar(lblCarregamentoFrequencia,false);
+        saudePerfil = null;
         jovemAtual = jovem;
         cpfAtual = Long.parseLong(jovem.getCpf().replaceAll("\\D", ""));
 
@@ -265,59 +295,93 @@ public class DetalhesAdolescenteController {
         lblInfoBairro.setText(jovem.getBairro());
         lblInfoStatus.setText(jovem.getStatus());
 
-        try {
-            var cadastro=adolescenteDAO.buscarPorCpf(cpfAtual);
-            piaEnviadoAtual = cadastro.isPiaEnviado();
-            var estudo=new EducacaoTrabalhoDAO().buscarPorCpf(cpfAtual);
-            var saude=pode(SAUDE_CONSULTAR)?saudeDAO.buscarPorCpf(cpfAtual):null;
-            lblInfoNome.setText(Formatadores.textoOuTraco(cadastro.getNomeCompleto()));
-            lblInfoCpf.setText(cadastro.getCpfFormatado());
-            lblInfoNascimento.setText(Formatadores.dataCurta(cadastro.getDataNascimento()));
-            lblInfoGenero.setText(Formatadores.textoOuTraco(cadastro.getGenero()));
-            lblInfoBairro.setText(Formatadores.textoOuTraco(cadastro.getBairro()));
-            lblInfoStatus.setText(cadastro.getStatus().getDescricao());
-            lblInfoIdade.setText(cadastro.getIdade()+" anos");
-            lblInfoAniversario.setText(cadastro.getDataNascimento().format(DateTimeFormatter.ofPattern("dd/MM")));
-            lblInfoNaturalidade.setText(Formatadores.textoOuTraco(cadastro.getNaturalidade()));
-            lblInfoCorRaca.setText(Formatadores.textoOuTraco(cadastro.getCorRaca()));
-            lblInfoTelefone.setText(Formatadores.textoOuTraco(cadastro.getContato()));
-            lblInfoEmail.setText(Formatadores.textoOuTraco(cadastro.getEmail()));
-            lblInfoEstuda.setText(estudo!=null && estudo.isEstuda()?"Sim":"Não");
-            lblInfoEscola.setText(estudo!=null && estudo.isEstuda()?Formatadores.textoOuTraco(estudo.getEscola()):"—");
-            lblInfoSerie.setText(estudo!=null && estudo.isEstuda()?Formatadores.textoOuTraco(estudo.getSerie()):"—");
-            lblInfoTrabalha.setText(estudo!=null && estudo.isTrabalha()?"Sim":"Não");
-            lblInfoLocalTrabalho.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getLocalTrabalho()):"—");
-            lblInfoFuncao.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getFuncao()):"—");
-            lblInfoVinculo.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"—");
-            boolean acessoSaude=pode(SAUDE_CONSULTAR);
-            lblInfoUbs.setText(!acessoSaude?"Acesso restrito":saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()));
-            lblInfoUsoSpa.setText(!acessoSaude?"Acesso restrito":saude!=null && saude.isUsoSpa()?"Sim":"Não");
-            lblInfoSubstancias.setText(!acessoSaude?"Acesso restrito":saude!=null && saude.isUsoSpa()
-                    ?Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"—");
-            lblInfoImm.setText(cadastro.isImm()?"Sim":"Não");
-            lblInfoValeTransporte.setText(cadastro.isValeTransporte()?"Sim":"Não");
-            lblInfoObservacoes.setText(pode(SIGILOSO_CONSULTAR)
-                    ?Formatadores.textoOuTraco(cadastro.getObservacoes()):"Acesso restrito");
-            carregarAbaMedida();
-            carregarAbaFrequencia();
-            if(pode(PIA_CONSULTAR)) carregarAbaPia();
-            carregarAbaFamilia();
-        } catch (RuntimeException e) {
-            erroBanco(e);
-        }
+    }
+
+    private void carregarDadosEmSegundoPlano() {
+        long cpf = cpfAtual;
+        paneDados.setDisable(true);
+        var abas = List.of(btnAbaMedida,btnAbaFrequencia,btnAbaPia,btnAbaFamilia);
+        abas.forEach(botao -> botao.setDisable(true));
+        lblCarregamentoPerfil.setText("Carregando dados pessoais…");
+        alternar(lblCarregamentoPerfil,true);
+        br.edu.unespar.trabalho.util.ConsultaInterface.iniciar(lblNome,() -> consultarDadosPessoais(cpf),dados -> {
+            exibirDadosPessoais(dados);
+            alternar(lblCarregamentoPerfil,false);
+            paneDados.setDisable(false);
+            abas.forEach(botao -> botao.setDisable(false));
+        },falha -> lblCarregamentoPerfil.setText("Não foi possível carregar os dados. Volte à lista e tente novamente."));
+    }
+
+    private DadosPessoais consultarDadosPessoais(long cpf) {
+        var cadastro = adolescenteDAO.buscarPorCpf(cpf);
+        if (cadastro==null) throw new IllegalArgumentException("Adolescente não encontrado.");
+        var estudo = new EducacaoTrabalhoDAO().buscarPorCpf(cpf);
+        boolean acessoSaude = pode(SAUDE_CONSULTAR);
+        Saude saude = acessoSaude ? saudeDAO.buscarPorCpf(cpf) : null;
+        return new DadosPessoais(cadastro,estudo,saude,acessoSaude,pode(SIGILOSO_CONSULTAR));
+    }
+
+    private record DadosPessoais(Adolescente cadastro, EducacaoTrabalho estudo,
+                                Saude saude, boolean acessoSaude, boolean acessoObservacoes) { }
+
+    private void exibirDadosPessoais(DadosPessoais dados) {
+        var cadastro = dados.cadastro();
+        var estudo = dados.estudo();
+        var saude = dados.saude();
+        boolean acessoSaude = dados.acessoSaude();
+        saudePerfil = saude;
+        lblInfoNome.setText(Formatadores.textoOuTraco(cadastro.getNomeCompleto()));
+        lblInfoCpf.setText(cadastro.getCpfFormatado());
+        lblInfoNascimento.setText(Formatadores.dataCurta(cadastro.getDataNascimento()));
+        lblInfoGenero.setText(Formatadores.textoOuTraco(cadastro.getGenero()));
+        lblInfoBairro.setText(Formatadores.textoOuTraco(cadastro.getBairro()));
+        lblInfoStatus.setText(cadastro.getStatus().getDescricao());
+        lblInfoIdade.setText(cadastro.getIdade()+" anos");
+        lblInfoAniversario.setText(cadastro.getDataNascimento().format(DateTimeFormatter.ofPattern("dd/MM")));
+        lblInfoNaturalidade.setText(Formatadores.textoOuTraco(cadastro.getNaturalidade()));
+        lblInfoCorRaca.setText(Formatadores.textoOuTraco(cadastro.getCorRaca()));
+        lblInfoTelefone.setText(Formatadores.textoOuTraco(cadastro.getContato()));
+        lblInfoEmail.setText(Formatadores.textoOuTraco(cadastro.getEmail()));
+        lblInfoEstuda.setText(estudo!=null && estudo.isEstuda()?"Sim":"Não");
+        lblInfoEscola.setText(estudo!=null && estudo.isEstuda()?Formatadores.textoOuTraco(estudo.getEscola()):"—");
+        lblInfoSerie.setText(estudo!=null && estudo.isEstuda()?Formatadores.textoOuTraco(estudo.getSerie()):"—");
+        lblInfoTrabalha.setText(estudo!=null && estudo.isTrabalha()?"Sim":"Não");
+        lblInfoLocalTrabalho.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getLocalTrabalho()):"—");
+        lblInfoFuncao.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getFuncao()):"—");
+        lblInfoVinculo.setText(estudo!=null && estudo.isTrabalha()?Formatadores.textoOuTraco(estudo.getVinculoEmpregaticio()):"—");
+        lblInfoUbs.setText(!acessoSaude?"Acesso restrito":saude==null?"—":Formatadores.textoOuTraco(saude.getUbsReferencia()));
+        lblInfoUsoSpa.setText(!acessoSaude?"Acesso restrito":saude!=null && saude.isUsoSpa()?"Sim":"Não");
+        lblInfoSubstancias.setText(!acessoSaude?"Acesso restrito":saude!=null && saude.isUsoSpa()
+                ?Formatadores.textoOuTraco(saude.getSubstanciasUtilizadas()):"—");
+        lblInfoImm.setText(cadastro.isImm()?"Sim":"Não");
+        lblInfoValeTransporte.setText(cadastro.isValeTransporte()?"Sim":"Não");
+        lblInfoObservacoes.setText(dados.acessoObservacoes()
+                ?Formatadores.textoOuTraco(cadastro.getObservacoes()):"Acesso restrito");
+        for (VBox painel : List.of(paneMedida, paneFrequencia, panePia, paneFamilia))
+            if (painel.isVisible()) carregarAba(painel);
     }
 
     private void carregarAbaMedida() {
         var anterior=cmbMedidaPerfil.getValue();
         var medidas=medidaDAO.listarPorAdolescente(cpfAtual);
-        cmbMedidaPerfil.setItems(FXCollections.observableArrayList(medidas));
-        cmbMedidaPerfil.setValue(medidas.stream().filter(m->anterior!=null && m.getIdMedida()==anterior.getIdMedida()).findFirst().orElse(medidas.isEmpty()?null:medidas.getFirst()));
+        atualizandoMedidas = true;
+        try {
+            cmbMedidaPerfil.setItems(FXCollections.observableArrayList(medidas));
+            cmbMedidaPerfil.setValue(medidas.stream().filter(m->anterior!=null && m.getIdMedida()==anterior.getIdMedida()).findFirst().orElse(medidas.isEmpty()?null:medidas.getFirst()));
+        } finally {
+            atualizandoMedidas = false;
+        }
         alternar(boxMedidaForm,medidas.isEmpty());
         alternar(boxMedidaCadastrada,!medidas.isEmpty());
         exibirMedidaSelecionada();
 
-        if(pode(REFERENCIA_DEFINIR)) cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listar()));
-        cmbTecnico.setDisable(!pode(REFERENCIA_DEFINIR));
+        boolean defineReferencia = pode(REFERENCIA_DEFINIR);
+        cmbTecnico.setDisable(!defineReferencia);
+        if (!defineReferencia) {
+            lblTecnicoAtual.setText(jovemAtual.getTecnico());
+            return;
+        }
+        cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listar()));
         Long cpfReferencia = perfilDAO.buscarCpfTecnicoReferencia(cpfAtual);
         EquipeTecnica atual = null;
         if (cpfReferencia != null) {
@@ -328,7 +392,7 @@ public class DetalhesAdolescenteController {
                 }
             }
         }
-        lblTecnicoAtual.setText(!pode(REFERENCIA_DEFINIR)?jovemAtual.getTecnico():atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
+        lblTecnicoAtual.setText(atual != null ? atual.getNomeCompleto() : "Sem técnico vinculado");
         cmbTecnico.setValue(atual);
     }
 
@@ -370,13 +434,7 @@ public class DetalhesAdolescenteController {
 
     private void recarregarPerfil() {
         try {
-            String cpfDigitos = String.format("%011d", cpfAtual);
-            for (AdolescenteDTO d : adolescenteDAO.listarResumoDTO()) {
-                if (d.getCpf().replaceAll("\\D", "").equals(cpfDigitos)) {
-                    carregarDados(d);
-                    return;
-                }
-            }
+            carregarDados(adolescenteDAO.buscarResumoDTO(cpfAtual));
         } catch (RuntimeException e) {
             erroBanco(e);
         }
@@ -393,7 +451,23 @@ public class DetalhesAdolescenteController {
         else if (origem == btnAbaFamilia) ativarAba(btnAbaFamilia, paneFamilia);
     }
 
+    private void carregarAba(VBox painel) {
+        if (jovemAtual==null || painel==paneDados || abasCarregadas.contains(painel)) return;
+        if (painel==paneFrequencia) {
+            iniciarFrequencia();
+            return;
+        }
+        if (painel==paneMedida) carregarAbaMedida();
+        else if (painel==panePia) carregarAbaPia();
+        else if (painel==paneFamilia) carregarAbaFamilia();
+        abasCarregadas.add(painel);
+    }
+
     private void ativarAba(Button botaoAtivo, VBox painelAtivo) {
+        if (painelAtivo!=paneFrequencia) {
+            try { carregarAba(painelAtivo); }
+            catch (RuntimeException e) { erroBanco(e); return; }
+        }
         for (VBox painel : new VBox[]{paneDados, paneMedida, paneFrequencia, panePia, paneFamilia}) {
             alternar(painel, painel == painelAtivo);
         }
@@ -405,6 +479,7 @@ public class DetalhesAdolescenteController {
         }
         botaoAtivo.getStyleClass().remove("tab-btn");
         botaoAtivo.getStyleClass().add("tab-btn-active");
+        if (painelAtivo==paneFrequencia) carregarAba(painelAtivo);
     }
 
     private void alternar(Node caixa, boolean mostrar) {
@@ -508,15 +583,73 @@ public class DetalhesAdolescenteController {
         }
     }
 
-    @FXML public void atualizarFrequenciaMes() {
-        try { dpMesFrequencia.commitValue(); carregarAbaFrequencia(); }
-        catch(RuntimeException e) { erroBanco(e); }
+    private void iniciarFrequencia() {
+        if (cargaFrequencia!=null) return;
+        LocalDate data = dpMesFrequencia.getValue();
+        if (data==null) {
+            data = LocalDate.now().withDayOfMonth(1);
+            dpMesFrequencia.setValue(data);
+        }
+        YearMonth mes = YearMonth.from(data);
+        long cpf = cpfAtual;
+        long geracao = ++geracaoFrequencia;
+        avisarFrequencia("Carregando frequência…");
+        cargaFrequencia = br.edu.unespar.trabalho.util.ConsultaInterface.iniciar(paneFrequencia,
+                () -> consultarFrequencia(cpf,mes),dados -> {
+                    if (geracao!=geracaoFrequencia || cpf!=cpfAtual) return;
+                    cargaFrequencia = null;
+                    try {
+                        exibirFrequencia(dados);
+                        abasCarregadas.add(paneFrequencia);
+                        alternar(lblCarregamentoFrequencia,false);
+                        conteudoFrequencia.setDisable(false);
+                        alternar(conteudoFrequencia,true);
+                    } catch (RuntimeException e) {
+                        avisarFalhaFrequencia();
+                    }
+                },falha -> {
+                    if (geracao!=geracaoFrequencia || cpf!=cpfAtual) return;
+                    cargaFrequencia = null;
+                    avisarFalhaFrequencia();
+                });
     }
 
-    private void carregarAbaFrequencia() {
-        if(dpMesFrequencia.getValue()==null) throw new IllegalArgumentException("Informe o mês da frequência.");
-        YearMonth mes=YearMonth.from(dpMesFrequencia.getValue());
-        List<Frequencia> registros=frequenciaDAO.listar(cpfAtual,mes.atDay(1),mes.atEndOfMonth());
+    private void avisarFalhaFrequencia() {
+        avisarFrequencia("Não foi possível carregar a frequência. Abra a aba novamente para tentar.");
+    }
+
+    private void avisarFrequencia(String mensagem) {
+        conteudoFrequencia.setDisable(true);
+        alternar(conteudoFrequencia,false);
+        lblCarregamentoFrequencia.setText(mensagem);
+        alternar(lblCarregamentoFrequencia,true);
+    }
+
+    @FXML public void atualizarFrequenciaMes() {
+        if (!abasCarregadas.contains(paneFrequencia)) return;
+        try {
+            dpMesFrequencia.commitValue();
+            if (dpMesFrequencia.getValue()==null) throw new IllegalArgumentException("Informe o mês da frequência.");
+            exibirFrequencia(consultarFrequencia(cpfAtual,YearMonth.from(dpMesFrequencia.getValue())));
+        } catch(RuntimeException e) { erroBanco(e); }
+    }
+
+    private DadosFrequencia consultarFrequencia(long cpf, YearMonth mes) {
+        List<Frequencia> registros = frequenciaDAO.listar(cpf,mes.atDay(1),mes.atEndOfMonth());
+        List<MedidaSocioeducativa> medidas = medidaDAO.listarPorAdolescente(cpf);
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioGeral = medidas.stream().map(MedidaSocioeducativa::getDataInicio)
+                .min(LocalDate::compareTo).orElse(hoje);
+        List<Frequencia> historico = inicioGeral.isAfter(hoje) ? List.of() : frequenciaDAO.listar(cpf,inicioGeral,hoje);
+        return new DadosFrequencia(mes,registros,medidas,historico);
+    }
+
+    private record DadosFrequencia(YearMonth mes, List<Frequencia> registros,
+                                   List<MedidaSocioeducativa> medidas, List<Frequencia> historico) { }
+
+    private void exibirFrequencia(DadosFrequencia dados) {
+        YearMonth mes = dados.mes();
+        List<Frequencia> registros = dados.registros();
         long presencas=registros.stream().filter(Frequencia::isPresente).count();
         long faltas=registros.stream().filter(f->!f.isPresente()).count();
         long injustificadas=registros.stream().filter(f->f.getStatusPresenca()==StatusPresenca.FALTA_INJUSTIFICADA).map(Frequencia::getDataPresenca).distinct().count();
@@ -526,7 +659,7 @@ public class DetalhesAdolescenteController {
         lblFreqPercentual.setText(injustificadas>=FrequenciaMensalDTO.LIMITE_FALTAS_INJUSTIFICADAS?"Irregular":"Regular");
 
 
-        medidasFrequenciaGeral=medidaDAO.listarPorAdolescente(cpfAtual);
+        medidasFrequenciaGeral=dados.medidas();
         var resumoMes=new FrequenciaMensalDTO(null,medidasFrequenciaGeral,registros,mes,false);
         boolean temPsc=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isPSC);
         boolean temLa=resumoMes.getMedidasDoMes().stream().anyMatch(MedidaSocioeducativa::isLA);
@@ -534,8 +667,7 @@ public class DetalhesAdolescenteController {
         alternar(cardFreqHoras,temPsc);
         alternar(cardFreqMeses,temLa);
         listaFrequenciaPerfil.setItems(FXCollections.observableArrayList(registros));
-        LocalDate inicioGeral=medidasFrequenciaGeral.stream().map(MedidaSocioeducativa::getDataInicio).min(LocalDate::compareTo).orElse(LocalDate.now());
-        registrosFrequenciaGeral=inicioGeral.isAfter(LocalDate.now()) ? List.of() : frequenciaDAO.listar(cpfAtual,inicioGeral,LocalDate.now());
+        registrosFrequenciaGeral=dados.historico();
         MedidaSocioeducativa anterior=cmbMedidaFrequenciaGeral.getValue();
         cmbMedidaFrequenciaGeral.setItems(FXCollections.observableArrayList(medidasFrequenciaGeral));
         cmbMedidaFrequenciaGeral.setValue(anterior==null ? null : medidasFrequenciaGeral.stream()
@@ -544,6 +676,7 @@ public class DetalhesAdolescenteController {
     }
 
     @FXML public void mostrarMedidasVigentesFrequencia() {
+        if (!abasCarregadas.contains(paneFrequencia)) return;
         cmbMedidaFrequenciaGeral.setValue(null);
         exibirFrequenciaGeral();
     }
@@ -589,11 +722,13 @@ public class DetalhesAdolescenteController {
     }
 
     @FXML public void corrigirFrequenciaSelecionada() {
+        if (!abasCarregadas.contains(paneFrequencia)) return;
         Frequencia frequencia = listaFrequenciaPerfil.getSelectionModel().getSelectedItem();
         if (frequencia != null) RegistroFrequenciaController.abrir(frequencia, this::recarregarPerfil);
     }
 
     @FXML public void registrarPresenca() {
+        if (!abasCarregadas.contains(paneFrequencia)) return;
         RegistroFrequenciaController.abrir(cpfAtual,LocalDate.now(),this::recarregarPerfil);
     }
 
@@ -656,7 +791,7 @@ public class DetalhesAdolescenteController {
         }
 
         SituacaoSocial social = pode(SOCIAL_CONSULTAR)?situacaoSocialDAO.buscarPorCpf(cpfAtual):null;
-        Saude saude = pode(SAUDE_CONSULTAR)?saudeDAO.buscarPorCpf(cpfAtual):null;
+        Saude saude = pode(SAUDE_CONSULTAR)?saudePerfil:null;
         boolean temDados = social != null || saude != null;
 
         alternar(boxSocialVazio, !temDados);

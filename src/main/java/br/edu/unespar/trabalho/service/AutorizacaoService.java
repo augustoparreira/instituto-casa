@@ -49,8 +49,28 @@ public final class AutorizacaoService {
     public static void exigir(Operacao operacao, ContextoAcesso contexto) {
         EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
         if (operacao == null || usuario == null || usuario.getPerfil() == null
-                || !Sessao.validarContaAtual() || !permitido(usuario, operacao, contexto))
+                || !Sessao.validarContaAtual() || Sessao.getUsuarioLogado()!=usuario
+                || !permitido(usuario, operacao, contexto))
             throw new AcessoNegadoException();
+        if (Platform.isFxApplicationThread()) {
+            usuarioValidadoNaInterface = usuario;
+            instanteValidacao = System.nanoTime();
+        }
+    }
+
+    /** Valida a conta uma vez para uma consulta que usa várias projeções. */
+    public static EnumSet<Operacao> permissoesDaConsulta(Operacao... obrigatorias) {
+        EquipeTecnicaDTO usuario = Sessao.getUsuarioLogado();
+        if (usuario==null || usuario.getPerfil()==null || !Sessao.validarContaAtual()
+                || Sessao.getUsuarioLogado()!=usuario) throw new AcessoNegadoException();
+        EnumSet<Operacao> permissoes = EnumSet.noneOf(Operacao.class);
+        for (Operacao operacao : Operacao.values()) {
+            if (permitido(usuario,operacao,null)) permissoes.add(operacao);
+        }
+        for (Operacao operacao : obrigatorias) {
+            if (!permissoes.contains(operacao)) throw new AcessoNegadoException();
+        }
+        return permissoes;
     }
 
     private static boolean sessaoValida(EquipeTecnicaDTO usuario) {
@@ -58,7 +78,7 @@ public final class AutorizacaoService {
         long agora = System.nanoTime();
         if (interfaceJavaFx && usuario == usuarioValidadoNaInterface
                 && agora - instanteValidacao < INTERVALO_INTERFACE_NANOS) return true;
-        boolean valida = Sessao.validarContaAtual();
+        boolean valida = Sessao.validarContaAtual() && Sessao.getUsuarioLogado()==usuario;
         if (interfaceJavaFx && valida) {
             usuarioValidadoNaInterface = usuario;
             instanteValidacao = agora;

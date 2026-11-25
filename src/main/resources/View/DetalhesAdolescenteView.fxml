@@ -91,6 +91,8 @@
                 </VBox>
             </GridPane>
 
+            <Label fx:id="lblCarregamentoPerfil" styleClass="page-subtitle" visible="false" managed="false" wrapText="true" />
+
             <!-- Abas de Navegação interna -->
             <FlowPane hgap="8.0" vgap="8.0" styleClass="tabs-bar">
                 <Button fx:id="btnAbaDados" text="Dados Pessoais" styleClass="tab-btn-active" onAction="#mostrarAba" />
@@ -288,45 +290,48 @@
 
                     <!-- ABA: Frequência e Horas -->
                     <VBox fx:id="paneFrequencia" styleClass="content-box" spacing="20.0" visible="false" managed="false">
-                        <HBox alignment="CENTER_LEFT" spacing="12.0">
-                            <Label text="Registro de frequência" styleClass="box-title" />
-                            <Region HBox.hgrow="ALWAYS" />
-                            <Button fx:id="btnCorrigirFrequencia" text="Corrigir selecionado" styleClass="btn-outline" onAction="#corrigirFrequenciaSelecionada" />
-                            <Button text="+  Registrar presença" styleClass="btn-outline" onAction="#registrarPresenca" />
-                        </HBox>
+                        <Label fx:id="lblCarregamentoFrequencia" styleClass="page-subtitle" visible="false" managed="false" wrapText="true" />
+                        <VBox fx:id="conteudoFrequencia" spacing="20.0" visible="false" managed="false" disable="true">
+                            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                                <Label text="Registro de frequência" styleClass="box-title" />
+                                <Region HBox.hgrow="ALWAYS" />
+                                <Button fx:id="btnCorrigirFrequencia" text="Corrigir selecionado" styleClass="btn-outline" onAction="#corrigirFrequenciaSelecionada" />
+                                <Button text="+  Registrar presença" styleClass="btn-outline" onAction="#registrarPresenca" />
+                            </HBox>
 
-                        <Label text="Resumo geral por medida" styleClass="box-title"/>
-                        <Label text="Totais até hoje, independentes do mês consultado. Presenças e faltas incluem apenas os lançamentos vinculados à respectiva medida." wrapText="true" styleClass="page-subtitle"/>
-                        <HBox spacing="12"><ComboBox fx:id="cmbMedidaFrequenciaGeral" promptText="Medidas vigentes (LA e PSC)" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="search-field"/><Button text="Medidas vigentes" onAction="#mostrarMedidasVigentesFrequencia" styleClass="btn-outline"/></HBox>
-                        <VBox fx:id="boxFrequenciaGeral" spacing="16"/>
-                        <Region styleClass="divider"/>
-                        <Label text="Consulta mensal" styleClass="box-title"/>
-                        <HBox spacing="12"><DatePicker fx:id="dpMesFrequencia"/><Button text="Consultar mês" onAction="#atualizarFrequenciaMes" styleClass="filter-btn"/><Button text="Planilha mensal" onAction="#abrirFrequenciaMensal" styleClass="btn-outline"/></HBox>
-                        <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. PSC mostra as horas do mês e LA mostra os meses decorridos até a referência consultada." wrapText="true" styleClass="page-subtitle"/>
-                        <HBox spacing="12.0">
-                            <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
-                                <Label fx:id="lblFreqPresencas" text="0" styleClass="stat-number-green" />
-                                <Label text="Presenças" styleClass="stat-label" />
-                            </VBox>
-                            <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
-                                <Label fx:id="lblFreqFaltas" text="0" styleClass="stat-number-red" />
-                                <Label text="Faltas" styleClass="stat-label" />
-                            </VBox>
-                            <VBox fx:id="cardFreqHoras" styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
-                                <Label fx:id="lblFreqHoras" text="0h" styleClass="stat-number-dark" />
-                                <Label text="Horas de PSC no mês" styleClass="stat-label" />
-                            </VBox>
-                            <VBox fx:id="cardFreqMeses" styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
-                                <Label fx:id="lblFreqMeses" text="0/0" styleClass="stat-number-dark" />
-                                <Label text="Meses de LA cumpridos" styleClass="stat-label" />
-                            </VBox>
-                            <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
-                                <Label fx:id="lblFreqPercentual" text="-" styleClass="stat-number-orange" />
-                                <Label text="Situação mensal" styleClass="stat-label" />
-                            </VBox>
-                        </HBox>
+                            <Label text="Resumo geral por medida" styleClass="box-title"/>
+                            <Label text="Totais até hoje, independentes do mês consultado. Presenças e faltas incluem apenas os lançamentos vinculados à respectiva medida." wrapText="true" styleClass="page-subtitle"/>
+                            <HBox spacing="12"><ComboBox fx:id="cmbMedidaFrequenciaGeral" promptText="Medidas vigentes (LA e PSC)" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="search-field"/><Button text="Medidas vigentes" onAction="#mostrarMedidasVigentesFrequencia" styleClass="btn-outline"/></HBox>
+                            <VBox fx:id="boxFrequenciaGeral" spacing="16"/>
+                            <Region styleClass="divider"/>
+                            <Label text="Consulta mensal" styleClass="box-title"/>
+                            <HBox spacing="12"><DatePicker fx:id="dpMesFrequencia"/><Button text="Consultar mês" onAction="#atualizarFrequenciaMes" styleClass="filter-btn"/><Button text="Planilha mensal" onAction="#abrirFrequenciaMensal" styleClass="btn-outline"/></HBox>
+                            <Label text="Indicadores do mês. Regularidade considera duas datas com falta injustificada. PSC mostra as horas do mês e LA mostra os meses decorridos até a referência consultada." wrapText="true" styleClass="page-subtitle"/>
+                            <HBox spacing="12.0">
+                                <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="lblFreqPresencas" text="0" styleClass="stat-number-green" />
+                                    <Label text="Presenças" styleClass="stat-label" />
+                                </VBox>
+                                <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="lblFreqFaltas" text="0" styleClass="stat-number-red" />
+                                    <Label text="Faltas" styleClass="stat-label" />
+                                </VBox>
+                                <VBox fx:id="cardFreqHoras" styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="lblFreqHoras" text="0h" styleClass="stat-number-dark" />
+                                    <Label text="Horas de PSC no mês" styleClass="stat-label" />
+                                </VBox>
+                                <VBox fx:id="cardFreqMeses" styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="lblFreqMeses" text="0/0" styleClass="stat-number-dark" />
+                                    <Label text="Meses de LA cumpridos" styleClass="stat-label" />
+                                </VBox>
+                                <VBox styleClass="stat-box" alignment="CENTER" spacing="4.0" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="lblFreqPercentual" text="-" styleClass="stat-number-orange" />
+                                    <Label text="Situação mensal" styleClass="stat-label" />
+                                </VBox>
+                            </HBox>
 
-                        <ListView fx:id="listaFrequenciaPerfil" styleClass="frequencia-lista" prefHeight="260.0" />
+                            <ListView fx:id="listaFrequenciaPerfil" styleClass="frequencia-lista" prefHeight="260.0" />
+                        </VBox>
                     </VBox>
 
                     <!-- ABA: PIA -->

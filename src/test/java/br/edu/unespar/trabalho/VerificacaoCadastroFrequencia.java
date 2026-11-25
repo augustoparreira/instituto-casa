@@ -214,7 +214,20 @@ public class VerificacaoCadastroFrequencia {
                 for(int dia:new int[]{9,14}) freq.registrar(frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,dia),StatusPresenca.FALTA_INJUSTIFICADA,0));
                 var mensal=new FrequenciaMensalDAO().listar(JANEIRO).stream().filter(l->l.getAdolescente().getCpf()==CPF).findFirst().orElseThrow();
                 verifica(mensal.getSituacao().equals("Irregular") && mensal.getMse().equals("LA/PSC"),"planilha combina medidas sem duplicar adolescente e calcula irregularidade mensal");
-                verifica(adao.listarResumoDTO().stream().filter(l->l.getCpf().equals(a.getCpfFormatado())).count()==1,"listagem de cadastro tem uma linha por adolescente");
+                var resumos = adao.listarResumoDTO();
+                verifica(resumos.stream().filter(l->l.getCpf().equals(a.getCpfFormatado())).count()==1,
+                        "listagem de cadastro tem uma linha por adolescente");
+                var resumo = resumos.stream().filter(l->l.getCpf().equals(a.getCpfFormatado())).findFirst().orElseThrow();
+                var mensalAtual = new FrequenciaMensalDAO().listar(YearMonth.now()).stream()
+                        .filter(l->l.getAdolescente().getCpf()==CPF).findFirst().orElseThrow();
+                String progressoEsperado = mensalAtual.getHorasPrevistas()>0
+                        ? mensalAtual.getHorasCumpridas()+"/"+mensalAtual.getHorasPrevistas()+"h" : "";
+                if (!mensalAtual.getMeses().isEmpty())
+                    progressoEsperado+=(progressoEsperado.isEmpty()?"":" · ")+mensalAtual.getMeses()+"m";
+                verifica(resumo.getMedida().equals(mensalAtual.getMse().isEmpty()?"Sem medida":mensalAtual.getMse())
+                                && resumo.getTextoProgresso().equals(progressoEsperado.isEmpty()?"—":progressoEsperado)
+                                && adao.buscarResumoDTO(CPF).getTextoProgresso().equals(resumo.getTextoProgresso()),
+                        "consulta compacta preserva medidas e progresso da planilha");
                 var fevereiro1=frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,2,4),StatusPresenca.FALTA_INJUSTIFICADA,0);
                 var fevereiro2=frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,2,11),StatusPresenca.FALTA_INJUSTIFICADA,0);
                 freq.registrar(fevereiro1); freq.registrar(fevereiro2);
@@ -260,7 +273,9 @@ public class VerificacaoCadastroFrequencia {
         String notas = new AdolescenteDAO().buscarPorCpf(CPF).getObservacoes();
         try {
             VerificacaoContas.entrar("agenda_teste", "senha fictícia");
-            verifica(!new AdolescenteDAO().listarResumoDTO().isEmpty(),"técnico consulta listagem operacional");
+            var listaTecnica = new AdolescenteDAO().listarResumoDTO();
+            verifica(!listaTecnica.isEmpty() && listaTecnica.stream().allMatch(jovem -> jovem.getBairro().isEmpty()),
+                    "consulta compacta da lista técnica omite o bairro protegido");
             verifica(new AdolescenteDAO().buscarPorCpf(CPF).getBairro()==null,"projeção técnica omite dados sociais");
             var adolescentes = new AdolescenteDAO();
             var novo = adolescente(CPF+10);
@@ -448,8 +463,8 @@ public class VerificacaoCadastroFrequencia {
 
     private static void testarInterface() throws Exception {
         CompletableFuture<Void> fim=new CompletableFuture<>();
-        Platform.startup(()-> {
-            Platform.setImplicitExit(false);
+        Platform.startup(() -> Platform.setImplicitExit(false));
+        Platform.runLater(() -> {
             try {
                 Files.createDirectories(Path.of("target/verificacao"));
                 verificarLoginELogout();
@@ -540,7 +555,12 @@ public class VerificacaoCadastroFrequencia {
                         verifica(encerramento.getParent() instanceof javafx.scene.layout.VBox grupo
                                 && grupo.getChildren().getFirst() instanceof Label rotulo
                                 && rotulo.getText().contains("ENCERRAMENTO"),"calendário de encerramento tem rótulo acima do campo");
+                        verifica(((ListView<?>)root.lookup("#listaFrequenciaPerfil")).getItems().isEmpty()
+                                        && ((ComboBox<?>)root.lookup("#cmbMedidaPerfil")).getItems().isEmpty(),
+                                "perfil abre sem carregar frequência ou medidas de abas ocultas");
                         ((Button)root.lookup("#btnAbaFrequencia")).fire();
+                        var conteudoFrequencia = root.lookup("#conteudoFrequencia");
+                        VerificacaoPreparacaoEntrega.aguardarInterface(conteudoFrequencia::isVisible);
                         javafx.scene.layout.VBox geral=(javafx.scene.layout.VBox)root.lookup("#boxFrequenciaGeral");
                         verifica(geral.getChildren().size()==2,"resumo geral mostra LA e PSC vigentes juntas");
                         javafx.scene.layout.VBox pscAtual=(javafx.scene.layout.VBox)geral.getChildren().stream()
@@ -709,6 +729,7 @@ public class VerificacaoCadastroFrequencia {
                         root.applyCss(); root.layout();
                     }
                     if(controller instanceof DetalhesAdolescenteController perfilPia) {
+                        ((Button)root.lookup("#btnAbaPia")).fire();
                         CheckBox enviado=(CheckBox)root.lookup("#chkEnvioPia");
                         verifica(enviado!=null && root.lookup("#txtPiaDiagnostico")==null,"interface PIA contém apenas confirmação");
                         enviado.setSelected(false);
@@ -786,11 +807,13 @@ public class VerificacaoCadastroFrequencia {
             perfil.applyCss(); perfil.layout();
             ((DetalhesAdolescenteController)detalhes.getController()).carregarDados(new AdolescenteDAO().listarResumoDTO().stream()
                     .filter(a -> a.getCpf().replaceAll("[^0-9]","").equals(Long.toString(CPF))).findFirst().orElseThrow());
+            ((Button)perfil.lookup("#btnAbaMedida")).fire();
             @SuppressWarnings("unchecked")
             ComboBox<MedidaSocioeducativa> medidas=(ComboBox<MedidaSocioeducativa>)perfil.lookup("#cmbMedidaPerfil");
             medidas.setValue(medidas.getItems().stream().filter(m -> m.getDataFim()!=null).findFirst().orElseThrow());
             verifica(!perfil.lookup("#btnEditarMedida").isVisible() && !perfil.lookup("#btnDefinirReferencia").isVisible(),
                     "perfil técnico exibe medida encerrada sem oferecer edição nem definição de referência");
+            ((Button)perfil.lookup("#btnAbaFamilia")).fire();
             verifica(perfil.lookupAll(".button").stream().noneMatch(n -> n instanceof Button b && "Desvincular".equals(b.getText())),
                     "perfil técnico não oferece desvinculação");
 

@@ -273,14 +273,7 @@ public class CadastroAdolescenteController {
 
     private void abrirPerfil(ActionEvent event, long cpf) {
         try {
-            String cpfDigitos = String.format("%011d", cpf);
-            AdolescenteDTO dto = null;
-            for (AdolescenteDTO d : adolescenteDAO.listarResumoDTO()) {
-                if (d.getCpf().replaceAll("\\D", "").equals(cpfDigitos)) {
-                    dto = d;
-                    break;
-                }
-            }
+            AdolescenteDTO dto = adolescenteDAO.buscarResumoDTO(cpf);
             if (dto == null) {
                 voltarParaLista(event);
                 return;

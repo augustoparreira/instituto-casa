@@ -10,8 +10,6 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -50,15 +48,12 @@ public class AdolescentesController {
     private String filtroStatusAtual = "Todos";
 
     @FXML private Button btnNovoAdolescente;
-    private AdolescenteDAO adolescenteDAO;
 
     @FXML
     public void initialize() {
         exigir(ADOLESCENTE_CONSULTAR);
         br.edu.unespar.trabalho.util.ApresentacaoAcesso.aplicar(btnNovoAdolescente, ADOLESCENTE_CADASTRAR);
-        adolescenteDAO = new AdolescenteDAO();
-
-        listaOriginal = FXCollections.observableArrayList(adolescenteDAO.listarResumoDTO());
+        listaOriginal = FXCollections.observableArrayList();
 
         listaFiltrada = new FilteredList<>(listaOriginal, p -> true);
 
@@ -113,6 +108,24 @@ public class AdolescentesController {
             }
         });
 
+        listAdolescentes.sceneProperty().addListener((obs, anterior, cena) -> {
+            if (cena==null) return;
+            if (listaOriginal.isEmpty()) lblTotalRegistros.setText("Carregando adolescentes…");
+            br.edu.unespar.trabalho.util.ConsultaInterface.iniciar(listAdolescentes,
+                    () -> new AdolescenteDAO().listarResumoDTO(),jovens -> {
+                apresentarLista(jovens);
+            }, falha -> {
+                listaOriginal.clear();
+                lblTotalRegistros.setText("Não foi possível carregar os adolescentes.");
+            });
+        });
+    }
+
+    void apresentarLista(java.util.List<AdolescenteDTO> jovens) {
+        var selecionado = listAdolescentes.getSelectionModel().getSelectedItem();
+        listaOriginal.setAll(jovens);
+        if (selecionado!=null) listaFiltrada.stream().filter(jovem -> jovem.getCpf().equals(selecionado.getCpf()))
+                .findFirst().ifPresent(listAdolescentes.getSelectionModel()::select);
         atualizarContador();
     }
 
@@ -168,19 +181,11 @@ public class AdolescentesController {
 
     @FXML
     public void clicarAdolescente(MouseEvent event) {
-        exigir(ADOLESCENTE_CONSULTAR);
-
         AdolescenteDTO selecionado = listAdolescentes.getSelectionModel().getSelectedItem();
         if (selecionado != null) {
             try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/View/DetalhesAdolescenteView.fxml"));
-                Parent root = loader.load();
-
-                DetalhesAdolescenteController detalheController = loader.getController();
-                detalheController.carregarDados(selecionado);
-
                 Stage stage = (Stage) listAdolescentes.getScene().getWindow();
-                NavegacaoUtil.trocarRaiz(stage, root, "Instituto C.A.S.A. - Perfil de " + selecionado.getNome());
+                DetalhesAdolescenteController.abrirPerfil(stage,selecionado);
             } catch (Exception e) {
                 e.printStackTrace();
             }

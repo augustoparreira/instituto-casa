@@ -23,6 +23,10 @@ public abstract class Pessoa {
 
     /** CPF com 11 dígitos (preserva zeros à esquerda): 123.456.789-00 */
     public String getCpfFormatado() {
+        return formatarCpf(cpf);
+    }
+
+    public static String formatarCpf(long cpf) {
         String d = String.format("%011d", cpf);
         return d.substring(0, 3) + "." + d.substring(3, 6) + "." + d.substring(6, 9) + "-" + d.substring(9);
     }

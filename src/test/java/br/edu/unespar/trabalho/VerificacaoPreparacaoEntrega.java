@@ -342,7 +342,59 @@ public class VerificacaoPreparacaoEntrega {
             verificar(linhasImediatas!=null && !linhasImediatas.getItems().isEmpty(),
                     "painel abre a lista com os adolescentes já na primeira renderização");
             verificarRespostaObsoletaFrequencia(janela);
+            verificarFechamentoRelatorios(janela);
         } finally { janela.close(); }
+    }
+
+    private static void verificarFechamentoRelatorios(Stage janela) throws Exception {
+        FXMLLoader relatorio=carregar("RelatoriosView");
+        Parent raiz=relatorio.getRoot();
+        janela.setScene(new Scene(raiz,1280,850));
+        raiz.applyCss(); raiz.layout();
+        TextArea rascunho=(TextArea)raiz.lookup("#txtDescumprimento");
+        rascunho.setText("Rascunho fictício ainda não salvo");
+
+        dialogo(ButtonType.NO,p -> verificar(p.getContentText().contains("alterações não salvas"),
+                "X e Alt+F4 avisam sobre o rascunho pendente"));
+        WindowEvent cancelar=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
+        janela.getOnCloseRequest().handle(cancelar); conferirDialogo();
+        verificar(cancelar.isConsumed() && janela.getScene().getRoot()==raiz
+                && rascunho.getText().equals("Rascunho fictício ainda não salvo"),
+                "cancelar o X mantém a janela e preserva o rascunho");
+
+        dialogo(ButtonType.YES,p -> {});
+        WindowEvent confirmar=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
+        janela.getOnCloseRequest().handle(confirmar); conferirDialogo();
+        verificar(!confirmar.isConsumed(),"confirmar o descarte permite fechar a janela");
+
+        Parent outraTela=new StackPane();
+        janela.getScene().setRoot(outraTela);
+        WindowEvent foraDosRelatorios=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
+        janela.getOnCloseRequest().handle(foraDosRelatorios);
+        verificar(!foraDosRelatorios.isConsumed(),"outra tela não herda o aviso de Relatórios");
+
+        FXMLLoader limpo=carregar("RelatoriosView");
+        Parent raizLimpa=limpo.getRoot();
+        janela.setScene(new Scene(raizLimpa,1280,850));
+        raizLimpa.applyCss(); raizLimpa.layout();
+        WindowEvent semAlteracoes=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
+        janela.getOnCloseRequest().handle(semAlteracoes);
+        verificar(!semAlteracoes.isConsumed(),"janela de Relatórios sem alterações fecha normalmente");
+
+        ((TextArea)raizLimpa.lookup("#txtDescumprimento")).setText("Outro rascunho fictício");
+        Sessao.limparSessao();
+        WindowEvent sessaoEncerrada=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
+        janela.getOnCloseRequest().handle(sessaoEncerrada);
+        verificar(!sessaoEncerrada.isConsumed(),"sessão inválida não abre aviso de rascunho");
+
+        VerificacaoContas.entrar("teste.entrega",VerificacaoContas.SENHA);
+        Sessao.configurarInatividade(Duration.ofNanos(1));
+        try {
+            WindowEvent sessaoExpirada=new WindowEvent(janela,WindowEvent.WINDOW_CLOSE_REQUEST);
+            janela.getOnCloseRequest().handle(sessaoExpirada);
+            verificar(!sessaoExpirada.isConsumed() && Sessao.getUsuarioLogado()==null,
+                    "sessão expirada não bloqueia o fechamento por rascunho");
+        } finally { Sessao.configurarInatividade(Duration.ofMinutes(15)); }
     }
 
 

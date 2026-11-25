@@ -10,9 +10,13 @@ import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.StringConverter;
 import java.nio.file.Path;
 import java.io.FileWriter;
@@ -51,6 +55,11 @@ public class RelatoriosController {
     @FXML public void initialize() {
         br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpCompetencia);
         br.edu.unespar.trabalho.util.DatasFormulario.configurar(dpEmissao);
+        gridIdentificacao.sceneProperty().addListener((obs,anterior,scene) -> {
+            if(scene==null) return;
+            scene.windowProperty().addListener((o,antes,depois) -> protegerFechamento(scene,depois));
+            protegerFechamento(scene,scene.getWindow());
+        });
 
         exigir(RELATORIO_CONSULTAR);
 
@@ -309,6 +318,14 @@ public class RelatoriosController {
     private boolean confirmar(String texto) { return new Alert(Alert.AlertType.CONFIRMATION,texto,ButtonType.YES,ButtonType.NO).showAndWait().orElse(ButtonType.NO)==ButtonType.YES; }
     private boolean confirmarSaida() {
         return !alterado || confirmar("Descartar as alterações não salvas e sair de Relatórios?");
+    }
+    private void protegerFechamento(Scene scene, Window janela) {
+        if(!(janela instanceof Stage stage)) return;
+        Parent raiz=scene.getRoot();
+        stage.setOnCloseRequest(e -> {
+            if(stage.getScene()==scene && scene.getRoot()==raiz && alterado
+                    && Sessao.validarContaAtual() && !confirmarSaida()) e.consume();
+        });
     }
     private void sairPara(ActionEvent e, String caminho, String titulo) {
         if (confirmarSaida()) NavegacaoUtil.mudarTela(e,caminho,titulo);

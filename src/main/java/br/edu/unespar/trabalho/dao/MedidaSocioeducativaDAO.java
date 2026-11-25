@@ -115,7 +115,7 @@ public class MedidaSocioeducativaDAO {
     public int consultarHorasDaMedida(int id,LocalDate ate) {
         exigir(HORAS_PSC_CONSULTAR);
 
-        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE id_medida=? AND upper(status_presenca)='PRESENTE' AND data_presenca<=?")) {
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE id_medida=? AND upper(btrim(status_presenca))='PRESENTE' AND data_presenca<=?")) {
             s.setInt(1,id); s.setObject(2,ate);
             try(ResultSet r=s.executeQuery()) { r.next(); return r.getInt(1); }
         } catch(SQLException e) { throw new IllegalStateException("Não foi possível calcular as horas.",e); }

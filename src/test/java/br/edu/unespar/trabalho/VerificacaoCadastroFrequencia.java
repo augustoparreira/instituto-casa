@@ -189,6 +189,17 @@ public class VerificacaoCadastroFrequencia {
                 var presenca=frequencia(at.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,7),StatusPresenca.PRESENTE,4); freq.registrar(presenca);
                 rejeita(IllegalArgumentException.class,()->freq.registrar(presenca),"duplicidade atividade/data rejeitada");
                 verifica(mdao.consultarHorasDaMedida(psc.getIdMedida(),LocalDate.now())==4,"presença credita horas à PSC");
+                try(Connection c=ConnectionFactory.getConnection(); PreparedStatement legado=c.prepareStatement(
+                        "UPDATE Frequencia SET status_presenca=? WHERE cpf_adolescente=? AND id_atividade=? AND data_presenca=?")) {
+                    legado.setLong(2,CPF); legado.setInt(3,at.getIdAtividade()); legado.setObject(4,LocalDate.of(2025,1,7));
+                    legado.setString(1,"PRESENTE "); verifica(legado.executeUpdate()==1,"cenário legado fictício preparado");
+                    try {
+                        verifica(mdao.consultarHorasDaMedida(psc.getIdMedida(),LocalDate.now())==4,
+                                "saldo da PSC conta presença legada com espaço final");
+                        rejeita(IllegalArgumentException.class,()->freq.registrar(frequencia(at2.getIdAtividade(),psc.getIdMedida(),LocalDate.of(2025,1,7),StatusPresenca.PRESENTE,21)),
+                                "limite diário inclui presença legada com espaço final");
+                    } finally { legado.setString(1,"PRESENTE"); legado.executeUpdate(); }
+                }
                 psc.setDataFim(LocalDate.of(2025,1,6));
                 rejeita(IllegalArgumentException.class,()->mdao.atualizar(psc),"encerramento não pode excluir frequência já vinculada");
                 psc.setDataFim(LocalDate.of(2025,2,28));
@@ -434,7 +445,7 @@ public class VerificacaoCadastroFrequencia {
         }
     }
 
-    private static void testarAgenda() {
+    private static void testarAgenda() throws Exception {
         EventoAgendaDAO dao=new EventoAgendaDAO();
         EventoAgenda evento=eventoAgenda(LocalDate.of(2026,8,31),"Evento de teste");
         evento.setCpfAdolescente(CPF); evento.setCpfEquipe(77777777770L); dao.inserir(evento);
@@ -453,6 +464,22 @@ public class VerificacaoCadastroFrequencia {
         rejeita(IllegalArgumentException.class,()->dao.inserir(futuro),"compromisso futuro não pode ser concluído");
         EventoAgenda invalido=eventoAgenda(LocalDate.now(),"Horário inválido"); invalido.setHoraFim(invalido.getHoraInicio());
         rejeita(IllegalArgumentException.class,()->dao.inserir(invalido),"agenda rejeita horário final igual ao inicial");
+        EventoAgenda legado=eventoAgenda(LocalDate.of(2025,5,15),"Compromisso legado fictício"); dao.inserir(legado);
+        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                "UPDATE EventoAgenda SET hora_inicio=?,hora_fim=? WHERE id_evento=?")) {
+            s.setObject(1,LocalTime.of(9,0,30)); s.setObject(2,LocalTime.of(10,0,45)); s.setInt(3,legado.getIdEvento());
+            verifica(s.executeUpdate()==1,"horário legado fictício preparado");
+        }
+        legado=dao.listar(legado.getData(),legado.getData()).getFirst();
+        legado.setTitulo("Título legado corrigido"); dao.atualizar(legado);
+        EventoAgenda relido=dao.listar(legado.getData(),legado.getData()).getFirst();
+        verifica(relido.getTitulo().equals("Título legado corrigido") && relido.getHoraInicio().equals(LocalTime.of(9,0,30))
+                && relido.getHoraFim().equals(LocalTime.of(10,0,45)),"edição de título preserva segundos legados");
+        relido.setHoraInicio(LocalTime.of(9,0,31));
+        rejeita(IllegalArgumentException.class,()->dao.atualizar(relido),"mudança de horário continua exigindo HH:mm");
+        relido.setHoraInicio(LocalTime.of(9,30)); dao.atualizar(relido);
+        verifica(dao.listar(relido.getData(),relido.getData()).getFirst().getHoraFim().equals(LocalTime.of(10,0,45)),
+                "alterar um horário preserva o outro horário legado");
         dao.inserir(eventoAgenda(LocalDate.now(),"Agenda real da semana"));
     }
 
@@ -670,12 +697,24 @@ public class VerificacaoCadastroFrequencia {
                         EventoAgendaDAO eventos=new EventoAgendaDAO();
                         verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream()
                                 .anyMatch(e->e.getTitulo().equals("Compromisso pela tela") && e.getCpfAdolescente()!=null),"formulário JavaFX grava compromisso e vínculo no JDBC");
+                        EventoAgenda legadoTela=eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream()
+                                .filter(e->e.getTitulo().equals("Compromisso pela tela")).findFirst().orElseThrow();
+                        try(Connection c=ConnectionFactory.getConnection(); PreparedStatement s=c.prepareStatement(
+                                "UPDATE EventoAgenda SET hora_inicio=?,hora_fim=? WHERE id_evento=?")) {
+                            s.setObject(1,LocalTime.of(14,0,30)); s.setObject(2,LocalTime.of(15,0,45));
+                            s.setInt(3,legadoTela.getIdEvento()); s.executeUpdate();
+                        }
+                        agenda.exibirData(LocalDate.of(2026,8,31));
                         javafx.scene.layout.VBox painel=(javafx.scene.layout.VBox)root.lookup("#listaEventosPainel");
                         javafx.scene.layout.VBox card=(javafx.scene.layout.VBox)painel.getChildren().stream()
                                 .filter(n->n.getUserData() instanceof EventoAgenda e && e.getTitulo().equals("Compromisso pela tela")).findFirst().orElseThrow();
                         fecharProximoDialogo(ButtonType.OK,p->((TextField)p.lookup("#txtEventoTitulo")).setText("Compromisso editado pela tela"));
                         ((Button)card.lookupAll(".button").stream().filter(n->n instanceof Button b && b.getText().equals("Editar")).findFirst().orElseThrow()).fire();
-                        verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream().anyMatch(e->e.getTitulo().equals("Compromisso editado pela tela")),"agenda edita compromisso pela tela");
+                        verifica(eventos.listar(LocalDate.of(2026,8,31),LocalDate.of(2026,8,31)).stream()
+                                .anyMatch(e->e.getTitulo().equals("Compromisso editado pela tela")
+                                        && e.getHoraInicio().equals(LocalTime.of(14,0,30))
+                                        && e.getHoraFim().equals(LocalTime.of(15,0,45))),
+                                "agenda edita título pela tela sem alterar segundos legados");
                         card=(javafx.scene.layout.VBox)painel.getChildren().stream().filter(n->n.getUserData() instanceof EventoAgenda e && e.getTitulo().equals("Compromisso editado pela tela")).findFirst().orElseThrow();
                         fecharProximoDialogo(ButtonType.YES);
                         ((Button)card.lookupAll(".button").stream().filter(n->n instanceof Button b && b.getText().equals("Cancelar")).findFirst().orElseThrow()).fire();

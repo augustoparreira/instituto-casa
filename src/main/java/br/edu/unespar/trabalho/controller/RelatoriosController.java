@@ -307,12 +307,18 @@ public class RelatoriosController {
         } catch(RuntimeException e) { erro(e); }
     }
     private boolean confirmar(String texto) { return new Alert(Alert.AlertType.CONFIRMATION,texto,ButtonType.YES,ButtonType.NO).showAndWait().orElse(ButtonType.NO)==ButtonType.YES; }
+    private boolean confirmarSaida() {
+        return !alterado || confirmar("Descartar as alterações não salvas e sair de Relatórios?");
+    }
+    private void sairPara(ActionEvent e, String caminho, String titulo) {
+        if (confirmarSaida()) NavegacaoUtil.mudarTela(e,caminho,titulo);
+    }
     private void erro(RuntimeException e) { lblMensagem.setText(e instanceof java.time.DateTimeException
             ? "Informe datas existentes no formato DD/MM/AAAA." : e.getMessage()); if(!(e instanceof IllegalArgumentException) && !(e instanceof java.time.DateTimeException)) e.printStackTrace(); }
-    @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/Dashboard.fxml","Painel de Controle"); }
-    @FXML public void irParaAdolescentes(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AdolescentesView.fxml","Adolescentes"); }
-    @FXML public void irParaAgenda(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/AgendaView.fxml","Agenda institucional"); }
+    @FXML public void irParaPainel(ActionEvent e) { sairPara(e,"/View/Dashboard.fxml","Painel de Controle"); }
+    @FXML public void irParaAdolescentes(ActionEvent e) { sairPara(e,"/View/AdolescentesView.fxml","Adolescentes"); }
+    @FXML public void irParaAgenda(ActionEvent e) { sairPara(e,"/View/AgendaView.fxml","Agenda institucional"); }
     @FXML public void irParaRelatorios(ActionEvent e) { }
-    @FXML public void irParaEquipeTecnica(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/EquipeTecnicaView.fxml","Equipe Técnica"); }
-    @FXML public void fazerLogout(ActionEvent e) { Sessao.limparSessao(); NavegacaoUtil.mudarTela(e,"/View/Login.fxml","Login"); }
+    @FXML public void irParaEquipeTecnica(ActionEvent e) { sairPara(e,"/View/EquipeTecnicaView.fxml","Equipe Técnica"); }
+    @FXML public void fazerLogout(ActionEvent e) { sairPara(e,"/View/Login.fxml","Login"); }
 }

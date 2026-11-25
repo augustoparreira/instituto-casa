@@ -22,13 +22,22 @@ public class EventoAgendaDAO {
         boolean alterarNotas = pode(SIGILOSO_ALTERAR);
         if (!alterarNotas && e.getObservacoes() != null && !e.getObservacoes().isBlank()) exigir(SIGILOSO_ALTERAR);
 
-        e.validar();
+        if(!edicao) e.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {
                 // Pessoas compartilhadas serializam a verificação e a gravação de horários.
                 try(PreparedStatement s=c.prepareStatement("SELECT cpf FROM Pessoa WHERE cpf IN (?,?) ORDER BY cpf FOR UPDATE")) {
                     s.setObject(1,e.getCpfAdolescente()); s.setObject(2,e.getCpfEquipe()); s.executeQuery().close();
+                }
+                if(edicao) {
+                    try(PreparedStatement s=c.prepareStatement("SELECT hora_inicio,hora_fim FROM EventoAgenda WHERE id_evento=? FOR UPDATE")) {
+                        s.setInt(1,e.getIdEvento());
+                        try(ResultSet r=s.executeQuery()) {
+                            if(!r.next()) throw new IllegalArgumentException("O compromisso não existe mais. Atualize a agenda.");
+                            e.validar(r.getObject("hora_inicio",java.time.LocalTime.class),r.getObject("hora_fim",java.time.LocalTime.class));
+                        }
+                    }
                 }
                 if(e.getStatus()==EventoAgenda.Status.AGENDADO && (e.getCpfAdolescente()!=null || e.getCpfEquipe()!=null)) {
                     try(PreparedStatement s=c.prepareStatement("SELECT 1 FROM EventoAgenda WHERE status='AGENDADO' AND id_evento<>? "

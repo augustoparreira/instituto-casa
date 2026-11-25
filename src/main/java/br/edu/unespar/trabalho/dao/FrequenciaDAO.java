@@ -59,7 +59,7 @@ public class FrequenciaDAO {
                         }
                     }
                 }
-                try(PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE cpf_adolescente=? AND data_presenca=? AND upper(status_presenca)='PRESENTE' AND id_atividade<>?")) {
+                try(PreparedStatement s=c.prepareStatement("SELECT COALESCE(sum(horas_cumpridas),0) FROM Frequencia WHERE cpf_adolescente=? AND data_presenca=? AND upper(btrim(status_presenca))='PRESENTE' AND id_atividade<>?")) {
                     s.setLong(1,f.getCpfAdolescente()); s.setObject(2,f.getDataPresenca()); s.setInt(3,edicao?f.getIdAtividade():-1);
                     try(ResultSet r=s.executeQuery()) { r.next(); if(r.getInt(1)+f.getHorasContabilizadas()>24) throw new IllegalArgumentException("A soma de horas do dia não pode ultrapassar 24."); }
                 }

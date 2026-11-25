@@ -37,3 +37,18 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Credenciais e backups locais ###
+.env
+.env.*
+!.env.example
+pgpass.conf
+*.pgpass
+*.backup
+*.backup.partial
+*.dump
+*.sql.gz
+*.pem
+*.key
+*.p12
+*.pfx

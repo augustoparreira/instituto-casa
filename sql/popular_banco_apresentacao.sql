@@ -1,5 +1,23 @@
--- PostgreSQL: base ficticia para apresentacao do Instituto C.A.S.A.
--- Executar em db_instituto_casa
+-- SOMENTE para a base descartavel casa_apresentacao, com marcador instalado
+-- conforme docs/ambiente-demonstracao.md. Nunca executar na base operacional.
+-- A transacao inteira permanece abortada se a validacao ou qualquer comando falhar,
+-- mesmo quando o cliente SQL continua depois de um erro.
+BEGIN;
+SET LOCAL search_path TO public;
+DO $casa$
+BEGIN
+    IF current_database() <> 'casa_apresentacao'
+       OR to_regclass('public.casa_autorizacao_demonstracao') IS NULL THEN
+        RAISE EXCEPTION 'Carga ficticia recusada: destino nao autorizado';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM public.casa_autorizacao_demonstracao
+        WHERE finalidade = 'DADOS_FICTICIOS_DESCARTAVEIS'
+    ) THEN
+        RAISE EXCEPTION 'Carga ficticia recusada: marcador ausente';
+    END IF;
+END
+$casa$;
 
 TRUNCATE TABLE Adolescente, Responsavel, Atividade CASCADE;
 
@@ -140,3 +158,5 @@ INSERT INTO Frequencia (cpf_adolescente, id_atividade, data_presenca, status_pre
     (90000010138, 1, CURRENT_DATE - INTERVAL '1 day', 'FALTA_INJ', NULL),
     (90000010219, 2, CURRENT_DATE - INTERVAL '2 days', 'PRESENTE', 4),
     (90000010308, 3, CURRENT_DATE - INTERVAL '1 day', 'PRESENTE', 2);
+
+COMMIT;

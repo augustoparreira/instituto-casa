@@ -43,8 +43,10 @@ iniciar sem IDE.
 - O script recusou `CASA_DB_URL` vazia antes de iniciar Java. Com as variáveis
   apontando explicitamente para o PostgreSQL fictício, permaneceu em execução
   sem erro imediato até interrupção controlada, fora da IDE. A validação visual do login e da navegação na pasta
-  distribuída, assim como a execução após copiar para outro computador, estão
-  pendentes. Os testes JavaFX/JDBC da revisão separada passaram no mesmo PC.
+  distribuída e a execução em outro computador estão pendentes. A pasta também
+  foi copiada para outro caminho com espaços neste PC; o inicializador tornou
+  a permanecer em execução sem erro imediato. Os testes JavaFX/JDBC da revisão
+  separada passaram no mesmo PC.
 - A impressão física via Microsoft Print to PDF não foi executada nesta etapa.
 
 Esta pasta é uma distribuição técnica simples, não uma instalação institucional.

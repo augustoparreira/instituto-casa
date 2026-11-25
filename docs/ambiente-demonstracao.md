@@ -21,10 +21,16 @@ operacional, um banco com dados reais ou a base pessoal de outro desenvolvedor.
    VALUES ('DADOS_FICTICIOS_DESCARTAVEIS');
    ```
 
-4. Confirme o destino com `SELECT current_database();` e execute o arquivo
-   inteiro, sem extrair comandos. No psql: `psql -X -v ON_ERROR_STOP=1 -d
-   casa_apresentacao -f sql/popular_banco_apresentacao.sql`. No pgAdmin, selecione
-   essa base na Query Tool e execute o arquivo inteiro como uma única sessão.
+4. Confirme host, porta, usuário e destino com `SELECT current_database();` e
+   execute o arquivo inteiro, sem extrair comandos. No psql, informe a conexão
+   explicitamente:
+
+   ```powershell
+   psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U conta_teste -d casa_apresentacao -f sql/popular_banco_apresentacao.sql
+   ```
+
+   No pgAdmin, selecione essa base na Query Tool e execute o arquivo inteiro
+   como uma única sessão.
 
 O script inicia `BEGIN`, fixa `search_path` em `public`, confere nome e marcador
 antes de qualquer exclusão e termina com `COMMIT`. Uma falha deixa a transação

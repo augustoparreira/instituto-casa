@@ -12,9 +12,9 @@ responsável entrega o atalho ou a pasta de execução e o login individual.
 2. Para mudar sua senha, use **Alterar minha senha** no menu lateral. Informe a
    senha atual e a nova senha quando solicitado. Entre novamente se a sessão
    for encerrada após a troca.
-3. Ao terminar, escolha **Sair do sistema**. Se houver texto não salvo em
-   Relatórios, leia a confirmação antes de descartar. Salve o que deseja
-   conservar. Uma sessão expirada exige novo login.
+3. Salve o rascunho de Relatórios antes de escolher **Sair do sistema**.
+   Nesta versão, o logout pode descartar o texto sem confirmação. Uma sessão
+   expirada exige novo login.
 
 ## O que cada perfil pode fazer
 
@@ -74,7 +74,6 @@ de verificação física antes de uso institucional.
   se o registro foi gravado.
 - **Dados inválidos ou obrigatórios**: revise os campos indicados e tente
   novamente.
-- **Alterações não salvas**: cancele a saída para conservar o texto e salvar.
 
 Procure suporte técnico quando o aplicativo não abrir, o banco ficar
 indisponível, a senha não funcionar após conferência do login, ou um registro

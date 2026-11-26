@@ -32,17 +32,18 @@ operacional, um banco com dados reais ou a base pessoal de outro desenvolvedor.
    No pgAdmin, selecione essa base na Query Tool e execute o arquivo inteiro
    como uma única sessão.
 
-O script inicia `BEGIN`, fixa `search_path` em `public`, confere nome e marcador
-antes de qualquer exclusão e termina com `COMMIT`. Uma falha deixa a transação
-abortada: mesmo um cliente que continue enviando instruções não executa as
-exclusões seguintes. Erro em qualquer inserção também desfaz toda a carga.
+O arquivo é uma única instrução `DO` no servidor. O bloco fixa o
+`search_path`, confere o nome e o marcador antes de qualquer exclusão e
+executa toda a carga na mesma unidade atômica. Uma falha na validação ou em uma
+inserção reverte o bloco inteiro, mesmo que o cliente continue e use pontos
+de salvamento automáticos.
 O marcador não substitui a conferência humana do servidor e da base.
 
 As credenciais ficam fora do Git. Use `PGPASSWORD` somente em processo local
 temporário ou um arquivo `pgpass` protegido. Não registre senhas no terminal,
 em capturas ou na documentação.
 
-## Ensaio em PostgreSQL 18 local e isolado (25/11/2026)
+## Ensaio anterior à correção (25/11/2026)
 
 - `casa_proibida_teste`: base nova, esquema completo e uma pessoa fictícia
   sentinela. O arquivo **inteiro** foi enviado por `psql -v ON_ERROR_STOP=0`.
@@ -58,5 +59,8 @@ em capturas ou na documentação.
   ficaram idênticos nas 1.061 linhas normalizadas. O trigger de ensaio foi
   removido da base descartável.
 
-Este ensaio comprova os fluxos executados no cliente psql. A execução manual
-no pgAdmin ainda precisa ser conferida no ambiente em que ele será usado.
+Esse ensaio anterior não cobria a continuação após erro com pontos de salvamento
+automáticos. Os resultados da correção estão no [registro de validação](registro-validacao-entrega.md).
+O backend da Query Tool do pgAdmin aceitou a base marcada e recusou a proibida
+em perfil descartável. A execução pela interface gráfica ainda precisa ser
+conferida.

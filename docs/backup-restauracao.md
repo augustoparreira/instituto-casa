@@ -23,6 +23,12 @@ move o arquivo para `*.backup` e informa o SHA-256. Um parcial após falha **nã
 é backup válido**; investigue antes de removê-lo. Backups anteriores nunca são
 substituídos nem apagados automaticamente.
 
+Informe em `-Banco` um nome literal de até 63 caracteres, começando com letra
+ASCII ou sublinhado. Também são aceitos dígitos e hífens nas posições
+seguintes. URIs e strings de conexão são recusadas. Os scripts usam o
+host, a porta, o usuário e o banco indicados na chamada. As variáveis
+`PGHOSTADDR` e `PGSERVICE` são ignoradas durante a operação.
+
 O catálogo legível prova apenas que o arquivo é reconhecido. Confirme a
 recuperação por restauração periódica em uma base nova.
 
@@ -39,9 +45,20 @@ desenvolvedor. Exemplo:
 ```
 
 O script exige confirmação explícita, padrão de nome, arquivo não vazio e
-catálogo reconhecido. Conecta ao banco e recusa tabelas, visões ou sequências
-existentes. Restaura com `--exit-on-error --single-transaction`, sem `--clean`,
-`DROP DATABASE` ou sobrescrita. Depois, compare dados, relacionamentos,
+catálogo reconhecido. Confere o nome da base, a ausência de objetos grandes
+e de configurações de papéis específicas da base, além do inventário de
+esquema gerado pelo `pg_dump`. Recusa destinos com objetos
+de usuário, incluindo esquemas, funções, procedimentos, tipos, tabelas, visões,
+sequências e extensões. Se a conferência falhar, a restauração é recusada.
+Use um endpoint direto em um servidor isolado e mantenha a base exclusiva
+para o ensaio, sem alterações concorrentes entre a conferência e a restauração.
+
+Restaure apenas backups de origem confiável. O `pg_restore` pode executar
+instruções contidas no arquivo. Um catálogo legível e o SHA-256 informado
+pelo script não comprovam a procedência do conteúdo.
+
+A restauração usa `--exit-on-error --single-transaction --no-owner --no-privileges`,
+sem `--clean` ou `DROP DATABASE`. Depois, compare dados, relacionamentos,
 restrições e sequências com a origem. A conta usada precisa de privilégios
 para criar os objetos na base descartável. Um erro de restauração impede a
 mensagem de sucesso.
@@ -62,9 +79,15 @@ com origem inexistente não criou arquivo `*.backup` válido. Testes de servidor
 indisponível, falha real no meio do `pg_restore`, diretório sem permissão,
 restauração em outro Windows e login no banco restaurado ainda estão pendentes.
 
-O dump do banco não inclui papéis globais, configuração do servidor, versão do
-aplicativo, variáveis JDBC, arquivos externos nem credenciais. Preserve esses
-itens separadamente. O `.gitignore` reduz o risco de adicionar dumps e chaves
+O dump preserva os dados e o esquema do banco e pode conter dados sigilosos
+e hashes das senhas das contas **da aplicação**, armazenados nas tabelas.
+Preserve separadamente a configuração do PostgreSQL e do JDBC, a versão do
+aplicativo e seus arquivos externos. Papéis globais do PostgreSQL e a
+autenticação do servidor também exigem procedimento separado. O dump pode
+registrar proprietários e concessões dos objetos, mas o script de teste usa
+`--no-owner --no-privileges` para ignorá-los. Em uma recuperação definitiva,
+reconfigure e valide os papéis, proprietários e privilégios antes do uso.
+O `.gitignore` reduz o risco de adicionar dumps e chaves
 ao Git, mas não protege arquivos já versionados. Backups com dados reais exigem
 acesso restrito e criptografia mantida por ferramenta apropriada; o dump puro
 do ensaio não é modelo para mídia externa. Não há ainda decisão sobre HD,

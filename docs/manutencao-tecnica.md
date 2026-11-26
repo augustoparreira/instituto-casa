@@ -49,8 +49,10 @@ fora dela; preserve esses itens conforme a política de informação da ONG.
 ## Backup, restauração e continuidade
 
 `docs/backup-restauracao.md` traz os comandos, verificações e limites. O dump
-customizado do PostgreSQL recupera o banco, mas não papéis globais,
-configuração do servidor, credenciais, arquivos exportados ou versão Java.
+customizado preserva dados e esquema, incluindo os hashes de senha das contas
+da aplicação. Preserve à parte papéis globais e configuração do PostgreSQL,
+configuração e credenciais JDBC, arquivos exportados e a versão da aplicação.
+A restauração de teste também ignora proprietários e privilégios do dump.
 Para outro computador: instale Java 21 e PostgreSQL compatível, prepare contas
 e banco com um técnico, restaure primeiro **em base nova de teste**, compare
 dados e só depois planeje a mudança operacional. Nunca restaure sobre a base

@@ -1,11 +1,9 @@
 -- SOMENTE para a base descartavel casa_apresentacao, com marcador instalado
 -- conforme docs/ambiente-demonstracao.md. Nunca executar na base operacional.
--- A transacao inteira permanece abortada se a validacao ou qualquer comando falhar,
--- mesmo quando o cliente SQL continua depois de um erro.
-BEGIN;
-SET LOCAL search_path TO public;
+-- A validacao e a carga formam uma unica instrucao atomica no servidor.
 DO $casa$
 BEGIN
+    PERFORM pg_catalog.set_config('search_path', 'pg_catalog, public, pg_temp', true);
     IF current_database() <> 'casa_apresentacao'
        OR to_regclass('public.casa_autorizacao_demonstracao') IS NULL THEN
         RAISE EXCEPTION 'Carga ficticia recusada: destino nao autorizado';
@@ -16,9 +14,6 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Carga ficticia recusada: marcador ausente';
     END IF;
-END
-$casa$;
-
 TRUNCATE TABLE Adolescente, Responsavel, Atividade CASCADE;
 
 DELETE FROM Pessoa
@@ -159,4 +154,5 @@ INSERT INTO Frequencia (cpf_adolescente, id_atividade, data_presenca, status_pre
     (90000010219, 2, CURRENT_DATE - INTERVAL '2 days', 'PRESENTE', 4),
     (90000010308, 3, CURRENT_DATE - INTERVAL '1 day', 'PRESENTE', 2);
 
-COMMIT;
+END
+$casa$;

@@ -11,12 +11,11 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.shape.Circle?>
 
-<BorderPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@dashboard-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.DashboardController">
+<BorderPane fx:id="raizPainel" styleClass="painel" prefHeight="700.0" prefWidth="1200.0" stylesheets="@dashboard-style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="br.edu.unespar.trabalho.controller.DashboardController">
 
     <!-- MENU LATERAL -->
     <left>
-        <VBox styleClass="sidebar" prefWidth="240.0" spacing="10.0">
-            <padding><Insets top="25.0" bottom="25.0" left="20.0" right="20.0" /></padding>
+        <VBox styleClass="sidebar" spacing="10.0">
             <VBox spacing="2.0">
                 <Label text="INSTITUTO" styleClass="sidebar-logo-sub" />
                 <Label text="C.A.S.A." styleClass="sidebar-logo-main" />
@@ -44,8 +43,6 @@
     <!-- CONTEÚDO PRINCIPAL -->
     <center>
         <VBox styleClass="main-content" spacing="25.0">
-            <padding><Insets top="30.0" bottom="30.0" left="40.0" right="40.0" /></padding>
-
             <VBox spacing="4.0">
                 <Label text="Painel de controle" styleClass="page-title" />
                 <Label fx:id="lblDataAtualizacao" text="Atualizado Hoje" styleClass="page-subtitle" />
@@ -53,23 +50,23 @@
 
             <!-- ESTATÍSTICAS NUMÉRICAS -->
             <HBox spacing="20.0">
-                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
-                    <Label text="Total em acompanhamento" styleClass="card-title" />
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0" minWidth="0">
+                    <Label text="Total em acompanhamento" styleClass="card-title" wrapText="true" />
                     <Label fx:id="lblTotalCadastrados" text="0" styleClass="card-number-green" />
                     <Label text="cadastrados" styleClass="card-footer-text" />
                 </VBox>
-                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
-                    <Label text="Prestação de Serviços" styleClass="card-title" />
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0" minWidth="0">
+                    <Label text="Prestação de Serviços" styleClass="card-title" wrapText="true" />
                     <Label fx:id="lblTotalPsc" text="0" styleClass="card-number-blue" />
                     <Label text="PSC ativos" styleClass="card-footer-text" />
                 </VBox>
-                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
-                    <Label text="Liberdade Assistida" styleClass="card-title" />
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0" minWidth="0">
+                    <Label text="Liberdade Assistida" styleClass="card-title" wrapText="true" />
                     <Label fx:id="lblTotalLa" text="0" styleClass="card-number-purple" />
                     <Label text="LA ativos" styleClass="card-footer-text" />
                 </VBox>
-                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0">
-                    <Label text="Medidas concluídas" styleClass="card-title" />
+                <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="8.0" minWidth="0">
+                    <Label text="Medidas concluídas" styleClass="card-title" wrapText="true" />
                     <Label text="2" styleClass="card-number-orange" />
                     <Label text="neste ciclo" styleClass="card-footer-text" />
                 </VBox>
@@ -88,7 +85,7 @@
                 </VBox>
 
                 <!-- LATERAL DIREITA: PRAZOS E AGENDA -->
-                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minHeight="0" minWidth="205.0" prefWidth="320.0" styleClass="painel-scroll">
+                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minHeight="0" styleClass="painel-scroll">
                 <VBox spacing="20.0">
 
                     <!-- Alerta Lateral -->

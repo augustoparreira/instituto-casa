@@ -1,5 +1,26 @@
 # Registro de validação da entrega
 
+## Correções de usabilidade
+
+A linha `feature/correcoes-usabilidade` parte de `3278044` e pode ser revisada
+separadamente da proposta de permissões. A revisão de `feda43a`, que inclui
+aquela base, reproduziu a cópia da senha visível, a extrapolação horizontal
+em 680 × 650 e a aceitação de quebra de linha pela validação final.
+
+As 338 verificações dirigidas conferiram os dois eixos do painel, incluindo
+680 × 650, 800 × 650, 1024 × 768, 1366 × 768 e 1920 × 1080, com nomes longos
+e medidas LA, PSC e LA/PSC. Também conferiram edição, seleção, colagem por
+teclado e menu, bloqueio de cópia e recorte e recusa de controles nas
+validações da interface e do DAO. Usaram Java 21, JavaFX e dados fictícios
+em PostgreSQL isolado. Na mesma linha, passaram 218 verificações gerais,
+78 de preparação e a recusa das operações protegidas sem sessão.
+
+Com teclas nativas do Windows e texto fictício, Ctrl+C e Ctrl+X transferiam
+o conteúdo do campo visível em `3278044`. Na versão corrigida, as duas ações
+preservaram a seleção e a área de transferência usada no ensaio. Ctrl+V
+funcionou nas duas versões. As evidências de impressão da revisão anterior
+pertencem a `feda43a`.
+
 ## Ajustes finais de usabilidade (28/11/2026)
 
 Branch local `feature/ajustes-finais-usabilidade`, a partir de

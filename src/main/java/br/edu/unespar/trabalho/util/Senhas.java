@@ -13,18 +13,26 @@ public final class Senhas {
     public static final int MINIMO_NOVA = 12;
     public static final int MAXIMO_NOVA = 128;
     public static final int MAXIMO_AUTENTICACAO = 1024;
+    static final String MENSAGEM_CONTROLE = "Use uma senha sem tabulações, quebras de linha ou caracteres de controle.";
     private static final int ITERACOES = 600_000;
     private static final SecureRandom RANDOM = new SecureRandom();
     private Senhas() { }
 
     public static void validarNova(String senha) {
+        if (senha != null && contemControle(senha))
+            throw new IllegalArgumentException(MENSAGEM_CONTROLE);
         if (!novaValida(senha))
             throw new IllegalArgumentException("A senha deve ter entre " + MINIMO_NOVA + " e " + MAXIMO_NOVA
                     + " caracteres e não pode conter apenas espaços em branco.");
     }
 
     public static boolean novaValida(String senha) {
-        return senha != null && tamanho(senha) >= MINIMO_NOVA && tamanho(senha) <= MAXIMO_NOVA && !senha.isBlank();
+        return senha != null && tamanho(senha) >= MINIMO_NOVA && tamanho(senha) <= MAXIMO_NOVA
+                && !senha.isBlank() && !contemControle(senha);
+    }
+
+    static boolean contemControle(String senha) {
+        return senha.chars().anyMatch(c -> Character.isISOControl(c) || c == 0x2028 || c == 0x2029);
     }
 
     public static int tamanho(String senha) {

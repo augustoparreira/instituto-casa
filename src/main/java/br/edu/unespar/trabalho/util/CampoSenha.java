@@ -6,8 +6,11 @@ import javafx.beans.value.ChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -17,20 +20,33 @@ import javafx.stage.WindowEvent;
 /** Campo editável em modo oculto ou visível, com a mesma validação nos dois modos. */
 public final class CampoSenha extends HBox {
     private final PasswordField oculto = new PasswordField();
-    private final TextField visivel = new TextField();
+    private final TextField visivel = new TextField() {
+        @Override public void copy() { }
+        @Override public void cut() { }
+    };
     private final Button alternar = new Button("Mostrar");
     private final ReadOnlyStringWrapper texto = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper erro = new ReadOnlyStringWrapper("");
     private TextField ativo = oculto;
 
     public CampoSenha(String rotulo, int limite) {
+        this(rotulo, limite, false);
+    }
+
+    CampoSenha(String rotulo) {
+        this(rotulo, Senhas.MAXIMO_NOVA, true);
+    }
+
+    private CampoSenha(String rotulo, int limite, boolean senhaNova) {
         setAlignment(Pos.CENTER_LEFT);
         setSpacing(6);
         getStylesheets().add(CampoSenha.class.getResource("/View/senha-style.css").toExternalForm());
         for (TextField campo : new TextField[]{oculto, visivel}) {
             campo.setAccessibleText(rotulo);
             campo.setMaxWidth(Double.MAX_VALUE);
-            ValidacaoFormulario.limitarSenha(campo, limite, aviso -> {
+            campo.setContextMenu(menuEdicao(campo));
+            campo.addEventFilter(MouseEvent.DRAG_DETECTED, MouseEvent::consume);
+            ValidacaoFormulario.limitarSenha(campo, limite, senhaNova, aviso -> {
                 if (campo == ativo) erro.set(aviso);
             });
             campo.textProperty().addListener((obs, antes, depois) -> {
@@ -66,6 +82,20 @@ public final class CampoSenha extends HBox {
                 if (depois.getWindow() != null) depois.getWindow().addEventHandler(WindowEvent.WINDOW_HIDDEN, limparAoOcultar);
             }
         });
+    }
+
+    private static ContextMenu menuEdicao(TextField campo) {
+        MenuItem desfazer = new MenuItem("Desfazer");
+        desfazer.disableProperty().bind(campo.undoableProperty().not());
+        desfazer.setOnAction(e -> campo.undo());
+        MenuItem refazer = new MenuItem("Refazer");
+        refazer.disableProperty().bind(campo.redoableProperty().not());
+        refazer.setOnAction(e -> campo.redo());
+        MenuItem colar = new MenuItem("Colar");
+        colar.setOnAction(e -> campo.paste());
+        MenuItem selecionar = new MenuItem("Selecionar tudo");
+        selecionar.setOnAction(e -> campo.selectAll());
+        return new ContextMenu(desfazer, refazer, colar, selecionar);
     }
 
     public void estilizarLogin() {

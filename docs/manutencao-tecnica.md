@@ -34,10 +34,11 @@ Os formulários de senha compartilham `CampoSenha`, `FormularioNovaSenha`
 e a política de `Senhas`. Novas senhas exigem de 12 a 128 unidades UTF-16,
 como na política já usada pelo Java. Um caractere suplementar, como certos
 emojis, ocupa duas unidades. Uma senha precisa conter pelo menos um caractere
-que não seja espaço em branco. A interface confirma a repetição e recusa
-edições acima do limite ou com controles que seriam removidos pelo campo
-JavaFX. O DAO mantém a validação final. O limite existente para autenticar
-contas legadas e o formato PBKDF2 permanecem preservados.
+que não seja espaço em branco. A interface e a validação final usam o mesmo
+critério de comprimento e recusam controles ISO e separadores de linha e
+parágrafo nas novas senhas. O componente permite colar e bloqueia copiar,
+recortar e arrastar a seleção. A proteção se limita às ações do aplicativo.
+O limite de autenticação legada e o formato PBKDF2 permanecem preservados.
 
 Relatórios vincula a edição pendente à sessão desde a primeira alteração.
 Se a conexão falhar, o acesso fica bloqueado até a revalidação da mesma

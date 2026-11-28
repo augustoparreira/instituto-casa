@@ -1,5 +1,21 @@
 # Registro de validação da entrega
 
+## Ajustes finais de usabilidade (28/11/2026)
+
+Branch local `feature/ajustes-finais-usabilidade`, a partir de
+`add761c92e5e39d4a7e6cefb3dad673cb561a311`. Compilação com Java 21 e
+ensaios com PostgreSQL isolado e dados fictícios.
+
+| Ensaio | Resultado |
+| --- | --- |
+| Painel e formulários de senha | 141 verificações passaram. O painel foi exercitado com 0, 1, 3, 5, 6 e 12 registros, em dimensões diferentes e com maximização. Os diálogos reais de criação, redefinição e alteração da senha foram abertos e cancelados. Os testes verificaram limites, espaços, Unicode, seleção, alternância, limpeza e recusa direta no DAO. |
+| Regressão | Passaram 218 verificações gerais, 78 de preparação e 172 de Relatórios. O teste de autorização confirmou que as operações protegidas ficam negadas sem sessão. |
+
+A colagem foi exercitada por substituição de texto selecionado na interface
+JavaFX. A comprovação física de Ctrl+V, da sequência de foco com Tab e do uso
+com gerenciadores de senhas permanece pendente. As capturas foram produzidas
+com dados fictícios e senhas ocultas.
+
 ## Integração local (27/11/2026)
 
 - Código integrado validado antes do commit de documentação

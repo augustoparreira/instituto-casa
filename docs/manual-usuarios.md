@@ -1,7 +1,7 @@
 # Manual rápido para a equipe do Instituto C.A.S.A.
 
-Este manual descreve a versão integrada `8fea887` e sua matriz provisória de
-permissões. As contas e dados de exemplos devem ser fictícios. O técnico
+Este manual descreve a versão integrada com os ajustes finais de usabilidade
+e sua matriz provisória de permissões. As contas e dados de exemplos devem ser fictícios. O técnico
 responsável entrega o atalho ou a pasta de execução e o login individual.
 
 ## Abrir, entrar e sair
@@ -15,6 +15,21 @@ responsável entrega o atalho ou a pasta de execução e o login individual.
 3. Salve o trabalho antes de escolher **Sair do sistema**. Em Relatórios, se
    houver alterações pendentes, confirme o descarte ou cancele a saída para
    voltar ao rascunho. Uma sessão encerrada exige novo login.
+
+Use **Mostrar** para conferir a senha digitada e **Ocultar** para voltar à
+exibição protegida. Cada formulário abre com a senha oculta. É possível colar
+o texto. Ao criar, redefinir ou alterar uma senha, preencha de 12 a 128
+caracteres e repita o mesmo valor. Confira os indicadores antes de salvar.
+Prefira uma frase-senha longa e fácil de lembrar. Maiúsculas, números e
+símbolos são opcionais.
+
+## Painel de controle
+
+O cartão **Adolescentes em acompanhamento** mostra até cinco adolescentes na
+ordem da lista. Em uma janela mais baixa, são exibidas somente as linhas que
+couberem inteiras. Clique em uma linha para abrir o perfil ou em **Ver todos**
+para consultar a lista completa. Os indicadores numéricos consideram o
+conjunto completo de registros.
 
 ## O que cada perfil pode fazer
 

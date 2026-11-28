@@ -7,9 +7,10 @@ Aplicação Java 21 com JavaFX 21.0.2, JDBC PostgreSQL 42.7.2, FXML e CSS.
 DAOs e modelos; `src/main/resources/View` contém telas, estilos e imagem;
 `sql` contém migrações e carga fictícia; `scripts` contém verificações,
 distribuição e backup. Registre o hash Git e a versão das ferramentas junto
-com qualquer distribuição entregue. A versão de código validada é
-`8fea8872654a41b4f4a657e0a4403c90f990e651`, na `feature/integracao-final`.
-Ela reúne as correções de Relatórios e os scripts de estabilização.
+com qualquer distribuição entregue. Os ajustes finais de usabilidade partem
+de `add761c92e5e39d4a7e6cefb3dad673cb561a311` na `feature/integracao-final`.
+O código integrado dessa base foi validado em
+`8fea8872654a41b4f4a657e0a4403c90f990e651`.
 
 ## Preparar e atualizar uma base
 
@@ -28,6 +29,15 @@ Se já existirem contas sem Administrador ativo, a recuperação exige análise 
 responsável pelo banco; não recrie uma conta por edição direta. O Administrador
 gerencia contas no menu **Equipe Técnica** e cada pessoa troca sua própria
 senha no menu lateral. Revogação e expiração de sessão protegem operações.
+
+Os formulários de senha compartilham `CampoSenha`, `FormularioNovaSenha`
+e a política de `Senhas`. Novas senhas exigem de 12 a 128 unidades UTF-16,
+como na política já usada pelo Java. Um caractere suplementar, como certos
+emojis, ocupa duas unidades. Uma senha precisa conter pelo menos um caractere
+que não seja espaço em branco. A interface confirma a repetição e recusa
+edições acima do limite ou com controles que seriam removidos pelo campo
+JavaFX. O DAO mantém a validação final. O limite existente para autenticar
+contas legadas e o formato PBKDF2 permanecem preservados.
 
 Relatórios vincula a edição pendente à sessão desde a primeira alteração.
 Se a conexão falhar, o acesso fica bloqueado até a revalidação da mesma

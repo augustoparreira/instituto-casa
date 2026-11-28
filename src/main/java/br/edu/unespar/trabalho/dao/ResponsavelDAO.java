@@ -40,7 +40,7 @@ public class ResponsavelDAO {
                     }
                 }
                 if (edicao) {
-                    if (pode(FAMILIA_PESSOA_COMPARTILHADA_ALTERAR) || podeEditarDadosPessoais(c,r.getCpf())) {
+                    if (podeEditarDadosPessoais(c,r.getCpf())) {
                         try (PreparedStatement s=c.prepareStatement("UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?")) {
                             preencherPessoa(s,r,ContatoPessoaDAO.validar(c,r.getCpf(),r.getContato(),true,false));
                             s.executeUpdate();
@@ -94,7 +94,10 @@ public class ResponsavelDAO {
     }
 
     private boolean podeEditarDadosPessoais(Connection c,long cpf) throws SQLException {
+        boolean compartilhada = pode(FAMILIA_PESSOA_COMPARTILHADA_ALTERAR);
+        if (compartilhada && pode(USUARIO_GERENCIAR)) return true;
         if (!bloquearResponsavelReutilizavel(c,cpf)) return false;
+        if (compartilhada) return true;
         try (PreparedStatement s=c.prepareStatement("SELECT count(*)=1 FROM Responsabiliza WHERE cpf_responsavel=?")) {
             s.setLong(1,cpf);
             try (ResultSet r=s.executeQuery()) { return r.next() && r.getBoolean(1); }
@@ -103,7 +106,6 @@ public class ResponsavelDAO {
 
     public boolean podeEditarDadosPessoais(long cpf) {
         exigir(FAMILIA_ALTERAR);
-        if (pode(FAMILIA_PESSOA_COMPARTILHADA_ALTERAR)) return true;
         try (Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try { return podeEditarDadosPessoais(c,cpf); }

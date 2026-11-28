@@ -60,6 +60,15 @@ public class EquipeTecnicaDAO {
     /** Agenda consulta apenas os dados públicos de trabalho necessários ao vínculo. */
     public List<EquipeTecnica> listarParaAgenda() {
         AutorizacaoService.exigir(AGENDA_CONSULTAR);
+        return listarDadosOperacionais();
+    }
+
+    public List<EquipeTecnica> listarParaReferencia() {
+        AutorizacaoService.exigir(REFERENCIA_DEFINIR);
+        return listarDadosOperacionais();
+    }
+
+    private List<EquipeTecnica> listarDadosOperacionais() {
         List<EquipeTecnica> profissionais = new ArrayList<>();
         try (Connection conexao = ConnectionFactory.getConnection();
              PreparedStatement consulta = conexao.prepareStatement(
@@ -189,6 +198,7 @@ public class EquipeTecnicaDAO {
 
     /** Conversão offline transacional; não existe fallback de senha em texto no login. */
     public int migrarSenhasLegadas() {
+        if (Sessao.getUsuarioLogado() != null) AutorizacaoService.exigir(USUARIO_GERENCIAR);
         try(Connection c=ConnectionFactory.getConnection()) {
             c.setAutoCommit(false);
             try {

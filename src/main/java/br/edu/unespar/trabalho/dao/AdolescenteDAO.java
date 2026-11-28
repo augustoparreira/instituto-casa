@@ -66,6 +66,7 @@ public class AdolescenteDAO {
         try {
             conn = ConnectionFactory.getConnection();
             conn.setAutoCommit(false);
+            exigirEdicaoDePessoa(conn,adolescente.getCpf());
 
             try (PreparedStatement stmtPessoa = conn.prepareStatement(sqlPessoa)) {
                 stmtPessoa.setString(1, adolescente.getNomeCompleto());
@@ -87,7 +88,7 @@ public class AdolescenteDAO {
             conn.commit();
             return true;
 
-        } catch (IllegalArgumentException e) {
+        } catch (RuntimeException e) {
             try { if (conn != null) conn.rollback(); } catch (SQLException rollback) { e.addSuppressed(rollback); }
             throw e;
         } catch (SQLException e) {
@@ -317,6 +318,7 @@ public class AdolescenteDAO {
             c.setAutoCommit(false);
             try {
                 if (edicao) {
+                    exigirEdicaoDePessoa(c,a.getCpf());
                     if (executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,imm=?,vale_transporte=?,medida_protetiva=? WHERE cpf_adolescente=?",
                             a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva(),a.getCpf()) != 1)
                         throw new IllegalArgumentException("Cadastro não encontrado.");
@@ -365,6 +367,7 @@ public class AdolescenteDAO {
             c.setAutoCommit(false);
             try {
                 if(edicao) {
+                    exigirEdicaoDePessoa(c,a.getCpf());
                     if(executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
                             a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),true,true),a.getEmail(),a.getCpf())!=1)
                         throw new SQLException("Cadastro não encontrado.");
@@ -396,6 +399,16 @@ public class AdolescenteDAO {
         } catch(SQLException e) {
             if("23505".equals(e.getSQLState())) throw new IllegalArgumentException("Este CPF já está cadastrado. Abra o cadastro existente para editar.",e);
             throw new IllegalStateException("Não foi possível salvar o cadastro completo. Nenhuma alteração foi gravada.",e);
+        }
+    }
+
+    private void exigirEdicaoDePessoa(Connection c,long cpf) throws SQLException {
+        if (pode(USUARIO_GERENCIAR)) return;
+        try (PreparedStatement s=c.prepareStatement("SELECT 1 FROM EquipeTecnica WHERE cpf_equipe=?")) {
+            s.setLong(1,cpf);
+            try (ResultSet r=s.executeQuery()) {
+                if (r.next()) throw new br.edu.unespar.trabalho.service.AcessoNegadoException();
+            }
         }
     }
 

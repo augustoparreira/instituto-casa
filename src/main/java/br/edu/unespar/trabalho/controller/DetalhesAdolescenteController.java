@@ -381,7 +381,7 @@ public class DetalhesAdolescenteController {
             lblTecnicoAtual.setText(jovemAtual.getTecnico());
             return;
         }
-        cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listar()));
+        cmbTecnico.setItems(FXCollections.observableArrayList(equipeDAO.listarParaReferencia()));
         Long cpfReferencia = perfilDAO.buscarCpfTecnicoReferencia(cpfAtual);
         EquipeTecnica atual = null;
         if (cpfReferencia != null) {

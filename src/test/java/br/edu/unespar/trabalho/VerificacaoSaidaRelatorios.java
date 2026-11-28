@@ -51,9 +51,11 @@ public class VerificacaoSaidaRelatorios {
     private static Throwable falhaDialogo;
     private static Conta conta = Conta.ATIVA;
     private static Runnable aposConsulta;
+    private static NivelAcesso perfilTeste = NivelAcesso.ADMINISTRADOR;
     private static int verificacoes;
 
     public static void main(String[] args) throws Exception {
+        if (List.of(args).contains("--equipe-tecnica")) perfilTeste = NivelAcesso.EQUIPE_TECNICA;
         configurarJdbcSimulado();
         Sessao.configurarInatividade(Duration.ofMinutes(15));
         CompletableFuture<Void> fim = new CompletableFuture<>();
@@ -345,7 +347,7 @@ public class VerificacaoSaidaRelatorios {
     }
 
     private static EquipeTecnicaDTO iniciarSessao(long cpf, Duration inatividade) throws Exception {
-        var contaTeste = new EquipeTecnicaDTO(cpf, "teste", "Teste", "Teste", NivelAcesso.ADMINISTRADOR);
+        var contaTeste = new EquipeTecnicaDTO(cpf, "teste", "Teste", "Teste", perfilTeste);
         Field usuario = Sessao.class.getDeclaredField("usuarioLogado");
         usuario.setAccessible(true);
         usuario.set(null, contaTeste);

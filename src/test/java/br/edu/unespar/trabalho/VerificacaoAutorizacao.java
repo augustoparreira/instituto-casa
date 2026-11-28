@@ -19,9 +19,15 @@ public class VerificacaoAutorizacao {
         assert AutorizacaoService.pode(Operacao.FREQUENCIA_REGISTRAR);
         assert AutorizacaoService.pode(Operacao.USUARIO_GERENCIAR) == (perfil == NivelAcesso.ADMINISTRADOR);
         for (Operacao op : Operacao.values()) {
-            if (perfil == NivelAcesso.ADMINISTRADOR) assert AutorizacaoService.pode(op);
+            boolean permitido = switch (perfil) {
+                case ADMINISTRADOR -> true;
+                case EQUIPE_TECNICA -> op != Operacao.EQUIPE_CONSULTAR && op != Operacao.USUARIO_GERENCIAR;
+                case EDUCADOR -> op == Operacao.FREQUENCIA_CONSULTAR || op == Operacao.FREQUENCIA_REGISTRAR
+                        || op == Operacao.SENHA_PROPRIA_ALTERAR;
+            };
+            assert AutorizacaoService.pode(op) == permitido : perfil + " · " + op;
             assert AutorizacaoService.pode(op, new ContextoAcesso(2L, 1, 1L, true))
-                    == (perfil == NivelAcesso.ADMINISTRADOR);
+                    == (permitido && perfil != NivelAcesso.EDUCADOR) : perfil + " · sigilo · " + op;
         }
         assert !AutorizacaoService.pode(null);
     }

@@ -13,7 +13,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
-import javafx.scene.control.PasswordField;
 import javafx.scene.layout.VBox;
 import javafx.event.ActionEvent;
 import javafx.scene.input.KeyEvent;
@@ -150,20 +149,18 @@ public final class SegurancaInterface {
         Dialog<ButtonType> dialogo = new Dialog<>();
         dialogo.initOwner(principal);
         dialogo.setTitle("Alterar minha senha");
-        PasswordField atual = new PasswordField(), nova = new PasswordField(), confirmar = new PasswordField();
-        ValidacaoFormulario.limitarSenha(atual,Senhas.MAXIMO_AUTENTICACAO);
-        ValidacaoFormulario.limitarSenha(nova,Senhas.MAXIMO_NOVA);
-        ValidacaoFormulario.limitarSenha(confirmar,Senhas.MAXIMO_NOVA);
+        CampoSenha atual = new CampoSenha("senha atual", Senhas.MAXIMO_AUTENTICACAO);
+        FormularioNovaSenha senhas = new FormularioNovaSenha();
         Label mensagem = new Label();
-        dialogo.getDialogPane().setContent(new VBox(8, new Label("Senha atual"), atual,
-                new Label("Nova senha (12 a 128 caracteres)"), nova,
-                new Label("Confirme a nova senha"), confirmar, mensagem));
+        mensagem.setWrapText(true);
+        dialogo.getDialogPane().setContent(new VBox(8, new Label("Senha atual *"), atual,
+                senhas, mensagem));
         dialogo.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialogo.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(
+                atual.textoProperty().isEmpty().or(atual.erroProperty().isNotEmpty()).or(senhas.prontaProperty().not()));
         dialogo.getDialogPane().lookupButton(ButtonType.OK).addEventFilter(ActionEvent.ACTION, evento -> {
             try {
-                if (!nova.getText().equals(confirmar.getText()))
-                    throw new IllegalArgumentException("As senhas não coincidem.");
-                new br.edu.unespar.trabalho.dao.EquipeTecnicaDAO().trocarMinhaSenha(atual.getText(), nova.getText());
+                new br.edu.unespar.trabalho.dao.EquipeTecnicaDAO().trocarMinhaSenha(atual.getTexto(), senhas.senhaValidada());
             } catch (RuntimeException erro) {
                 mensagem.setText(erro.getMessage());
                 evento.consume();
@@ -175,9 +172,8 @@ public final class SegurancaInterface {
                 new Alert(Alert.AlertType.INFORMATION, "Senha alterada. Entre novamente.").showAndWait();
             }
         } finally {
-            atual.clear();
-            nova.clear();
-            confirmar.clear();
+            atual.limpar();
+            senhas.limpar();
         }
     }
 }

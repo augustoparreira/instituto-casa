@@ -60,6 +60,10 @@
 .main-content {
     -fx-background-color: #f9f8f4;
 }
+.painel-scroll, .painel-scroll > .viewport {
+    -fx-background-color: #f9f8f4;
+    -fx-padding: 0;
+}
 .page-title {
     -fx-font-family: "Georgia", serif;
     -fx-font-size: 26px;

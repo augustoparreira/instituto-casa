@@ -7,6 +7,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
 import javafx.util.Duration;
 import java.util.function.Predicate;
+import java.util.function.Consumer;
 
 /** Regras compartilhadas dos campos de cadastro. */
 public final class ValidacaoFormulario {
@@ -17,7 +18,22 @@ public final class ValidacaoFormulario {
     }
 
     public static void limitarSenha(TextInputControl campo, int limite) {
-        filtrar(campo, texto -> texto.length()<=limite, mensagemLimite("Senha",limite));
+        limitarSenha(campo, limite, mensagem -> { });
+    }
+
+    static void limitarSenha(TextInputControl campo, int limite, Consumer<String> informar) {
+        campo.setTextFormatter(new TextFormatter<>(mudanca -> {
+            if (!mudanca.isContentChange()) return mudanca;
+            String texto = mudanca.getControlNewText();
+            String erro = "";
+            if (Senhas.tamanho(texto) > limite) erro = mensagemLimite("Senha", limite);
+            else if (texto.chars().anyMatch(c -> c < 32 || c == 127))
+                erro = "Use uma senha sem tabulações, quebras de linha ou caracteres de controle.";
+            informar.accept(erro);
+            if (erro.isEmpty()) return mudanca;
+            recusarEdicao(campo, erro);
+            return null;
+        }));
     }
 
     public static void limitarDigitos(TextInputControl campo, int limite, String rotulo) {

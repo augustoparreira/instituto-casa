@@ -10,6 +10,7 @@ import javax.crypto.spec.PBEKeySpec;
 
 /** PBKDF2-HMAC-SHA256 nativo, salt individual e parâmetros junto ao hash. */
 public final class Senhas {
+    public static final int MINIMO_NOVA = 12;
     public static final int MAXIMO_NOVA = 128;
     public static final int MAXIMO_AUTENTICACAO = 1024;
     private static final int ITERACOES = 600_000;
@@ -17,8 +18,17 @@ public final class Senhas {
     private Senhas() { }
 
     public static void validarNova(String senha) {
-        if (senha == null || senha.length() < 12 || senha.length() > MAXIMO_NOVA || senha.isBlank())
-            throw new IllegalArgumentException("A senha deve ter entre 12 e 128 caracteres.");
+        if (!novaValida(senha))
+            throw new IllegalArgumentException("A senha deve ter entre " + MINIMO_NOVA + " e " + MAXIMO_NOVA
+                    + " caracteres e não pode conter apenas espaços em branco.");
+    }
+
+    public static boolean novaValida(String senha) {
+        return senha != null && tamanho(senha) >= MINIMO_NOVA && tamanho(senha) <= MAXIMO_NOVA && !senha.isBlank();
+    }
+
+    public static int tamanho(String senha) {
+        return senha.length();
     }
 
     public static String gerarHash(String senha) {

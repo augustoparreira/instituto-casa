@@ -5,14 +5,15 @@ import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.Sessao;
 import br.edu.unespar.trabalho.util.Senhas;
 import br.edu.unespar.trabalho.util.ValidacaoFormulario;
+import br.edu.unespar.trabalho.util.CampoSenha;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
@@ -21,21 +22,24 @@ import javafx.stage.Stage;
 public class LoginController {
 
     @FXML private TextField txtLogin;
-    @FXML private PasswordField txtSenha;
+    @FXML private VBox areaSenha;
     @FXML private Button btnEntrar;
+    private final CampoSenha campoSenha = new CampoSenha("senha", Senhas.MAXIMO_AUTENTICACAO);
 
     @FXML
     public void initialize() {
         ValidacaoFormulario.limitarTexto(txtLogin,100,"Login");
-        ValidacaoFormulario.limitarSenha(txtSenha,Senhas.MAXIMO_AUTENTICACAO);
+        campoSenha.estilizarLogin();
+        areaSenha.getChildren().add(campoSenha);
     }
 
     @FXML
     public void fazerLogin(ActionEvent event) {
         String usuario = txtLogin.getText();
-        String senha = txtSenha.getText();
+        String senha = campoSenha.getTexto();
+        campoSenha.ocultar();
 
-        if (usuario == null || usuario.trim().isEmpty() || senha == null || senha.trim().isEmpty()) {
+        if (usuario == null || usuario.trim().isEmpty() || senha.trim().isEmpty()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Campos Inválidos", "Por favor, preencha o login e a senha.");
             return;
         }
@@ -66,7 +70,7 @@ public class LoginController {
             Sessao.limparSessao();
             mostrarAlerta(Alert.AlertType.ERROR, "Falha ao entrar", "Não foi possível iniciar o acesso. Confira a conexão, a migração de segurança e a configuração da conta.");
         } finally {
-            txtSenha.clear();
+            campoSenha.limpar();
         }
     }
 

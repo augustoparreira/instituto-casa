@@ -87,7 +87,7 @@ public class EquipeTecnicaController {
         DatasFormulario.configurarDigitacao(nascimento);
         configurarSeletorPerfil(perfil);
         CheckBox ativo=new CheckBox("Conta ativa"); ativo.setSelected(true);
-        PasswordField senha=new PasswordField(),confirmar=new PasswordField();
+        FormularioNovaSenha senhas = existente == null ? new FormularioNovaSenha() : null;
         Label erro=new Label(); erro.setWrapText(true); erro.setMaxWidth(480); erro.setStyle("-fx-text-fill: #a02020;");
         String[] rotulos={"CPF *","Nome completo *","Nascimento *","Telefone com DDD","E-mail","Cargo / função *","Login *","Perfil *"};
         javafx.scene.Node[] campos={cpf,nome,nascimento,contato,email,funcao,login,perfil};
@@ -101,9 +101,7 @@ public class EquipeTecnicaController {
         ValidacaoFormulario.limitarTexto(funcao.getEditor(),60,"Cargo ou função");
         ValidacaoFormulario.filtrar(login,texto -> texto.matches("[a-zA-Z0-9._-]{0,100}"),
                 "Login: até 100 letras sem acento, números, ponto, hífen ou sublinhado.");
-        ValidacaoFormulario.limitarSenha(senha,Senhas.MAXIMO_NOVA);
-        ValidacaoFormulario.limitarSenha(confirmar,Senhas.MAXIMO_NOVA);
-        if(existente==null) { grade.addRow(9,new Label("Senha (12 a 128 caracteres)"),senha); grade.addRow(10,new Label("Confirme a senha"),confirmar); }
+        if(senhas!=null) grade.add(senhas,0,9,2,1);
         else {
             cpf.setText(String.format("%011d",existente.getCpf()));
             cpf.setDisable(true); nome.setText(existente.getNomeCompleto());
@@ -111,9 +109,19 @@ public class EquipeTecnicaController {
             nascimento.setValue(existente.getDataNascimento()); email.setText(existente.getEmail());
             funcao.setValue(existente.getCargoFuncao()); ValidacaoFormulario.carregarExistente(login,existente.getLogin()); perfil.setValue(existente.getNivelAcesso()); ativo.setSelected(existente.isAtivo());
         }
-        grade.add(erro,0,11,2,1); dialogo.getDialogPane().setContent(grade);
+        grade.add(erro,0,10,2,1);
+        if (senhas == null) {
+            dialogo.getDialogPane().setContent(grade);
+        } else {
+            ScrollPane rolagem = new ScrollPane(grade);
+            rolagem.setFitToWidth(true);
+            rolagem.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            rolagem.setPrefViewportHeight(Math.max(220, Math.min(610, dialogo.getOwner().getHeight() - 110)));
+            dialogo.getDialogPane().setContent(rolagem);
+        }
         ButtonType salvar=new ButtonType("Salvar",ButtonBar.ButtonData.OK_DONE);
         dialogo.getDialogPane().getButtonTypes().addAll(salvar,ButtonType.CANCEL);
+        if (senhas != null) dialogo.getDialogPane().lookupButton(salvar).disableProperty().bind(senhas.prontaProperty().not());
         dialogo.getDialogPane().lookupButton(salvar).addEventFilter(ActionEvent.ACTION,event -> {
             try {
                 AutorizacaoService.exigir(USUARIO_GERENCIAR);
@@ -128,10 +136,7 @@ public class EquipeTecnicaController {
                 EquipeTecnica m=new EquipeTecnica(); m.setCpf(Long.parseLong(cpfDigitos)); m.setNomeCompleto(ValidacaoFormulario.texto(nome.getText(),80,"Nome",true));
                 m.setDataNascimento(nascimento.getValue()); m.setContato(telefone); m.setEmail(ValidacaoFormulario.email(email.getText(),existente==null ? null : existente.getEmail()));
                 m.setCargoFuncao(cargoSelecionado); m.setLogin(login.getText()); m.setNivelAcesso(perfil.getValue()); m.setAtivo(ativo.isSelected());
-                if(existente==null) {
-                    if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");
-                    m.setSenha(senha.getText());
-                }
+                if(senhas!=null) m.setSenha(senhas.senhaValidada());
                 try { if(existente==null) dao.inserir(m); else dao.atualizar(m); }
                 finally { m.setSenha(null); }
                 if(Sessao.validarContaAtual()) atualizar();
@@ -139,7 +144,8 @@ public class EquipeTecnicaController {
                 erro.setText(DatasFormulario.DATA_INVALIDA); event.consume();
             } catch(RuntimeException ex) { erro.setText(ex.getMessage()); event.consume(); }
         });
-        dialogo.showAndWait(); senha.clear(); confirmar.clear();
+        try { dialogo.showAndWait(); }
+        finally { if (senhas != null) senhas.limpar(); }
     }
 
     private void configurarSeletorPerfil(ComboBox<NivelAcesso> perfil) {
@@ -178,18 +184,19 @@ public class EquipeTecnicaController {
     private void redefinirSenha(EquipeTecnica m) {
         AutorizacaoService.exigir(USUARIO_GERENCIAR);
         Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle("Redefinir senha"); dialogo.initOwner(listMembros.getScene().getWindow());
-        PasswordField senha=new PasswordField(),confirmar=new PasswordField(); Label erro=new Label();
-        ValidacaoFormulario.limitarSenha(senha,Senhas.MAXIMO_NOVA);
-        ValidacaoFormulario.limitarSenha(confirmar,Senhas.MAXIMO_NOVA);
-        dialogo.getDialogPane().setContent(new VBox(10,new Label("Nova senha (12 a 128 caracteres)"),senha,new Label("Confirmação"),confirmar,erro));
+        FormularioNovaSenha senhas = new FormularioNovaSenha();
+        Label erro=new Label();
+        erro.setWrapText(true);
+        dialogo.getDialogPane().setContent(new VBox(8,senhas,erro));
         dialogo.getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);
+        dialogo.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(senhas.prontaProperty().not());
         dialogo.getDialogPane().lookupButton(ButtonType.OK).addEventFilter(ActionEvent.ACTION,event -> {
             try {
-                if(!senha.getText().equals(confirmar.getText())) throw new IllegalArgumentException("As senhas não coincidem.");
-                dao.redefinirSenha(m.getCpf(),senha.getText());
+                dao.redefinirSenha(m.getCpf(),senhas.senhaValidada());
             } catch(RuntimeException ex) { erro.setText(ex.getMessage()); event.consume(); }
         });
-        dialogo.showAndWait(); senha.clear(); confirmar.clear();
+        try { dialogo.showAndWait(); }
+        finally { senhas.limpar(); }
     }
     @FXML public void irParaPainel(ActionEvent e) { NavegacaoUtil.mudarTela(e,"/View/Dashboard.fxml","Painel"); }
     @FXML public void irParaDashboard(ActionEvent e) { irParaPainel(e); }

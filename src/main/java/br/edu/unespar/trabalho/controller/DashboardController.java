@@ -8,6 +8,7 @@ import br.edu.unespar.trabalho.model.EventoAgenda;
 import br.edu.unespar.trabalho.dao.EventoAgendaDAO;
 import br.edu.unespar.trabalho.model.StatusAdolescente;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
+import br.edu.unespar.trabalho.util.ListaAdolescentesPainel;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -41,7 +42,7 @@ public class DashboardController {
     @FXML private Label lblTotalPsc;
     @FXML private Label lblTotalLa;
 
-    @FXML private VBox vboxAdolescentes;
+    @FXML private ListaAdolescentesPainel vboxAdolescentes;
     @FXML private VBox vboxAgenda;
 
     @FXML private VBox cardPrazoGabriel;
@@ -81,7 +82,7 @@ public class DashboardController {
             vboxAdolescentes.getChildren().clear();
         }
 
-        for (int i = 0; i < jovensCadastrados.size(); i++) {
+        for (int i = 0; i < Math.min(ListaAdolescentesPainel.LIMITE, jovensCadastrados.size()); i++) {
             AdolescenteDTO jovem = jovensCadastrados.get(i);
 
             HBox row = new HBox(15);
@@ -97,6 +98,7 @@ public class DashboardController {
             avatar.getChildren().addAll(circle, initials);
 
             VBox infoBox = new VBox(4);
+            infoBox.setMinWidth(0);
             HBox.setHgrow(infoBox, Priority.ALWAYS);
 
             Label lblNome = new Label(jovem.getNome());
@@ -109,6 +111,7 @@ public class DashboardController {
             progressBox.setAlignment(Pos.CENTER_LEFT);
 
             ProgressBar pb = new ProgressBar(jovem.getProgresso());
+            pb.setMinWidth(0);
             pb.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(pb, Priority.ALWAYS);
             pb.setStyle("-fx-accent: #0f8558; -fx-control-inner-background: #e8f3ee;");

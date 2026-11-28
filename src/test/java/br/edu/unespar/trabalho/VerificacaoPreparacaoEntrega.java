@@ -27,6 +27,7 @@ public class VerificacaoPreparacaoEntrega {
     public static void main(String[] args) throws Exception {
         String url=System.getProperty("casa.db.url");
         if(url==null || url.contains("currentSchema=")) throw new IllegalArgumentException("Informe explicitamente o servidor de testes sem currentSchema.");
+        boolean somenteUsabilidade = List.of(args).contains("--usabilidade");
         String schema="casa_entrega_"+UUID.randomUUID().toString().replace("-","");
         try(Connection admin=ConnectionFactory.getConnection(); Statement sql=admin.createStatement()) {
             sql.execute("CREATE SCHEMA "+schema);
@@ -35,6 +36,10 @@ public class VerificacaoPreparacaoEntrega {
                 try(Connection c=ConnectionFactory.getConnection(); Statement ddl=c.createStatement()) {
                     for(String arquivo:List.of("src/test/resources/schema_original.sql","sql/ajustes_cadastro_frequencia.sql","sql/agenda.sql","sql/relatorios_acompanhamento.sql","sql/usuarios_seguranca.sql"))
                         ddl.execute(Files.readString(Path.of(arquivo)));
+                    if (somenteUsabilidade) {
+                        ddl.execute("INSERT INTO Pessoa(cpf,nome_completo,data_nascimento) VALUES(10000000001,'Adolescente fictício','2009-02-28')");
+                        ddl.execute("INSERT INTO Adolescente(cpf_adolescente,naturalidade,cor_raca,status) VALUES(10000000001,'Apucarana','Parda','Ativo')");
+                    }
                 }
                 var adminTeste = VerificacaoContas.conta(85555555551L, "teste.entrega", NivelAcesso.ADMINISTRADOR);
                 adminTeste.setNomeCompleto("Profissional de teste");
@@ -43,7 +48,11 @@ public class VerificacaoPreparacaoEntrega {
                 CompletableFuture<Void> fim=new CompletableFuture<>();
                 Platform.startup(() -> Platform.setImplicitExit(false));
                 Platform.runLater(() -> {
-                    try { executar(); fim.complete(null); }
+                    try {
+                        if (!somenteUsabilidade) executar();
+                        VerificacaoUsabilidade.executar();
+                        fim.complete(null);
+                    }
                     catch(Throwable t) { fim.completeExceptionally(t); }
                 });
                 try { fim.get(120,TimeUnit.SECONDS); } finally { Platform.exit(); }
@@ -53,7 +62,7 @@ public class VerificacaoPreparacaoEntrega {
                 sql.execute("DROP SCHEMA "+schema+" CASCADE");
             }
         }
-        System.out.println("OK: "+verificacoes+" verificações dirigidas da preparação.");
+        if (!somenteUsabilidade) System.out.println("OK: "+verificacoes+" verificações dirigidas da preparação.");
     }
 
     private static FXMLLoader carregar(String nome) throws Exception {

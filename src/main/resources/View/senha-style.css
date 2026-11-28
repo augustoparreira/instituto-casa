@@ -1,0 +1,17 @@
+.senha-alternar {
+    -fx-min-width: 75px;
+    -fx-pref-width: 75px;
+    -fx-background-color: white;
+    -fx-border-color: #b8c9c0;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-text-fill: #19523e;
+    -fx-cursor: hand;
+}
+.senha-alternar:hover {
+    -fx-background-color: #eef6f1;
+}
+.senha-alternar:focused {
+    -fx-border-color: #19523e;
+    -fx-border-width: 2px;
+}

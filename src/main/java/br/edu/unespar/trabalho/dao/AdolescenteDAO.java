@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Persiste e consulta adolescentes; salva o cadastro completo em uma transação JDBC.
@@ -59,23 +60,14 @@ public class AdolescenteDAO {
     public boolean atualizar(Adolescente adolescente) {
         exigir(ADOLESCENTE_EDITAR);
 
-        String sqlPessoa = "UPDATE Pessoa SET nome_completo = ?, data_nascimento = ?, contato = ?, email = ? WHERE cpf = ?";
         String sqlAdolescente = "UPDATE Adolescente SET naturalidade = ?, genero = ?, cor_raca = ? WHERE cpf_adolescente = ?";
 
         Connection conn = null;
         try {
             conn = ConnectionFactory.getConnection();
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             conn.setAutoCommit(false);
-            exigirEdicaoDePessoa(conn,adolescente.getCpf());
-
-            try (PreparedStatement stmtPessoa = conn.prepareStatement(sqlPessoa)) {
-                stmtPessoa.setString(1, adolescente.getNomeCompleto());
-                stmtPessoa.setDate(2, Date.valueOf(adolescente.getDataNascimento()));
-                stmtPessoa.setString(3, ContatoPessoaDAO.validar(conn,adolescente.getCpf(),adolescente.getContato(),true,true));
-                stmtPessoa.setString(4, adolescente.getEmail());
-                stmtPessoa.setLong(5, adolescente.getCpf());
-                stmtPessoa.executeUpdate();
-            }
+            atualizarPessoaSeAlterada(conn, adolescente);
 
             try (PreparedStatement stmtAdolescente = conn.prepareStatement(sqlAdolescente)) {
                 stmtAdolescente.setString(1, adolescente.getNaturalidade());
@@ -315,15 +307,14 @@ public class AdolescenteDAO {
             throw new IllegalArgumentException("Telefone é obrigatório.");
         estudo.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
+            if (edicao) c.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             c.setAutoCommit(false);
             try {
                 if (edicao) {
-                    exigirEdicaoDePessoa(c,a.getCpf());
+                    atualizarPessoaSeAlterada(c, a);
                     if (executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,imm=?,vale_transporte=?,medida_protetiva=? WHERE cpf_adolescente=?",
                             a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.isImm(),a.isValeTransporte(),a.isMedidaProtetiva(),a.getCpf()) != 1)
                         throw new IllegalArgumentException("Cadastro não encontrado.");
-                    executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
-                            a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),true,true),a.getEmail(),a.getCpf());
                 } else {
                     executarCadastro(c,"INSERT INTO Pessoa(cpf,nome_completo,data_nascimento,contato,email) VALUES(?,?,?,?,?)",
                             a.getCpf(),a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),false,true),a.getEmail());
@@ -364,13 +355,11 @@ public class AdolescenteDAO {
         social.validarCadastro();
         saude.validar(); estudo.validar();
         try(Connection c=ConnectionFactory.getConnection()) {
+            if (edicao) c.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             c.setAutoCommit(false);
             try {
                 if(edicao) {
-                    exigirEdicaoDePessoa(c,a.getCpf());
-                    if(executarCadastro(c,"UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
-                            a.getNomeCompleto(),a.getDataNascimento(),ContatoPessoaDAO.validar(c,a.getCpf(),a.getContato(),true,true),a.getEmail(),a.getCpf())!=1)
-                        throw new SQLException("Cadastro não encontrado.");
+                    atualizarPessoaSeAlterada(c, a);
                     if(executarCadastro(c,"UPDATE Adolescente SET naturalidade=?,genero=?,cor_raca=?,observacoes=?,imm=?,vale_transporte=?,pia_enviado=?,medida_protetiva=? WHERE cpf_adolescente=?",
                             a.getNaturalidade(),a.getGenero(),a.getCorRaca(),a.getObservacoes(),a.isImm(),a.isValeTransporte(),a.isPiaEnviado(),a.isMedidaProtetiva(),a.getCpf())!=1)
                         throw new IllegalArgumentException("O cadastro do adolescente não existe mais. Recarregue a lista antes de editar.");
@@ -402,12 +391,28 @@ public class AdolescenteDAO {
         }
     }
 
-    private void exigirEdicaoDePessoa(Connection c,long cpf) throws SQLException {
-        if (pode(USUARIO_GERENCIAR)) return;
-        try (PreparedStatement s=c.prepareStatement("SELECT 1 FROM EquipeTecnica WHERE cpf_equipe=?")) {
-            s.setLong(1,cpf);
-            try (ResultSet r=s.executeQuery()) {
-                if (r.next()) throw new br.edu.unespar.trabalho.service.AcessoNegadoException();
+    private void atualizarPessoaSeAlterada(Connection c, Adolescente a) throws SQLException {
+        long cpf = a.getCpf();
+        // O bloqueio da pessoa também serializa a criação de contas que referenciem este CPF.
+        try (PreparedStatement consulta = c.prepareStatement(
+                "SELECT nome_completo,data_nascimento,contato,email FROM Pessoa WHERE cpf=? FOR UPDATE")) {
+            consulta.setLong(1, cpf);
+            try (ResultSet atual = consulta.executeQuery()) {
+                if (!atual.next()) throw new SQLException("Cadastro não encontrado.");
+                String contato = ContatoPessoaDAO.validar(c, cpf, a.getContato(), true, true);
+                if (Objects.equals(a.getNomeCompleto(), atual.getString("nome_completo"))
+                        && Objects.equals(a.getDataNascimento(), atual.getObject("data_nascimento", LocalDate.class))
+                        && Objects.equals(contato, atual.getString("contato"))
+                        && Objects.equals(a.getEmail(), atual.getString("email"))) return;
+
+                try (PreparedStatement conta = c.prepareStatement("SELECT 1 FROM EquipeTecnica WHERE cpf_equipe=?")) {
+                    conta.setLong(1, cpf);
+                    try (ResultSet vinculo = conta.executeQuery()) {
+                        if (vinculo.next()) exigir(USUARIO_GERENCIAR);
+                    }
+                }
+                executarCadastro(c, "UPDATE Pessoa SET nome_completo=?,data_nascimento=?,contato=?,email=? WHERE cpf=?",
+                        a.getNomeCompleto(), a.getDataNascimento(), contato, a.getEmail(), cpf);
             }
         }
     }

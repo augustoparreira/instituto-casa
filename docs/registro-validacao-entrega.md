@@ -1,5 +1,32 @@
 # Registro de validação da entrega
 
+## Correção experimental de CPF compartilhado
+
+A branch `feature/correcoes-permissoes-equipe-tecnica` parte de `feda43a` e
+inclui a usabilidade corrigida por merge. Passaram 262 verificações gerais,
+78 de preparação, 338 de usabilidade, 172 de Relatórios para cada um dos
+perfis Administrador e Equipe Técnica e a negação das 48 operações sem sessão.
+A matriz permaneceu com 48 operações para o Administrador, 46 para a Equipe
+Técnica e 3 para o Educador.
+
+O ensaio de CPF compartilhou uma `Pessoa` fictícia entre adolescente,
+responsável e conta. Conferiu o salvamento pelo formulário com e-mail
+nulo, atualizações apenas do adolescente, bloqueio de mudanças mistas,
+permissão do Administrador, preservação do vínculo familiar e reversão após
+falha intermediária. Uma segunda conexão verificou que a criação de conta
+para o mesmo CPF precisa aguardar o bloqueio em `Pessoa`.
+Na comparação com `feda43a`, a versão anterior recusou a edição exclusiva
+da naturalidade e aceitava quebra de linha na validação final da senha. A
+linha corrigida salvou a naturalidade sem atualizar `Pessoa` e recusou a
+quebra de linha.
+
+O teste nativo desta linha gerou um PDF A4 de uma página pelo Microsoft
+Print to PDF com uma conta fictícia da Equipe Técnica. O texto e a numeração
+foram conferidos. Os ensaios nativos de `feda43a` incluem o Administrador,
+um PDF de uma página, outro de três páginas com os 105 itens e o bloqueio
+após revogação durante impressão e exportação. Esses ensaios anteriores
+foram preservados. Ainda não houve ensaio com impressão em papel.
+
 ## Correções de usabilidade
 
 A linha `feature/correcoes-usabilidade` parte de `3278044` e pode ser revisada

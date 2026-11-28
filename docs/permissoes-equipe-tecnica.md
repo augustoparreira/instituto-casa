@@ -1,7 +1,7 @@
 # Proposta experimental de permissões da Equipe Técnica
 
-Esta branch de demonstração parte de `3278044` e reúne os ajustes de painel,
-senha e usabilidade. A política é experimental e depende de aprovação da ONG.
+Esta linha parte da proposta `feda43a` e incorpora por merge as correções de
+usabilidade. A política é experimental e depende de aprovação da ONG.
 Use a versão em ambiente fictício para demonstrar a proposta.
 
 | Área | Equipe Técnica na matriz anterior | Equipe Técnica no experimento | Administrador e Educador |
@@ -22,9 +22,14 @@ a saída de relatórios do sistema. `SENHA_PROPRIA_ALTERAR` é de uso pessoal.
 `EQUIPE_CONSULTAR` e `USUARIO_GERENCIAR` permanecem administrativas.
 
 O seletor de referência e o da Agenda recebem CPF para vincular, nome e
-cargo. A consulta omite login, perfil, senha e demais dados de conta.
-A edição de responsáveis e adolescentes protege os dados de conta quando
-um cadastro legado usa o mesmo CPF. O utilitário de instalação e
+cargo. O seletor de referência mostra nome e cargo. A consulta omite login,
+perfil, senha e demais dados de conta.
+Quando um cadastro legado de adolescente compartilha CPF com uma conta, a
+Equipe Técnica pode editar os dados do adolescente sem regravar `Pessoa`.
+Se a mesma solicitação tenta editar também os dados pessoais compartilhados,
+o aplicativo recusa a gravação inteira. Alterações em vínculos familiares
+continuam autorizadas e os dados pessoais de contas continuam protegidos.
+O utilitário de instalação e
 migração continua sendo um procedimento externo com
 credenciais PostgreSQL e console. A migração de senhas dentro de uma sessão
 autenticada exige a permissão administrativa.
@@ -48,6 +53,9 @@ autenticada exige a permissão administrativa.
 - Confirmar consulta, edição, impressão e exportação do relatório completo.
 - Confirmar quem pode alterar situação, inativar cadastros, encerrar ou
   reabrir medidas, excluir registros e remover vínculos.
+- Confirmar se um profissional com conta desativada pode receber novas
+  atribuições como referência. O seletor mantém o comportamento existente e as
+  referências históricas.
 
 A interface existente do PIA registra a confirmação de envio, sem geração de
 documento. As operações de documentos usam os DAOs existentes e não há tela
@@ -56,14 +64,15 @@ nova. O relatório completo mantém as regras de rascunho ligadas à sessão.
 ## Validação da proposta
 
 - Java 21, JavaFX e PostgreSQL descartável com dados fictícios. A suíte principal
-  passou com 248 verificações, incluindo login e logout dos três perfis, cadastro
+  passou com 262 verificações, incluindo login e logout dos três perfis, cadastro
   completo, relatórios, exclusão de frequência, alterações de Agenda e bloqueio
   administrativo na navegação e nos DAOs.
-- Passaram as 78 verificações de preparação, as 141 de usabilidade e a negação
+- Passaram as 78 verificações de preparação, as 338 de usabilidade e a negação
   sem sessão. A matriz foi conferida com login real. A suíte verificou também
   expiração, revogação, mudança de perfil e troca da própria senha.
 - Passaram 172 verificações de Relatórios para cada um dos perfis Administrador
   e Equipe Técnica, com tela e monitor reais e falhas JDBC simuladas.
-- A distribuição Windows abriu com as três contas fictícias. A prévia A4 e a
-  exportação TXT foram verificadas. A saída pelo driver de impressão ou pelo
-  Microsoft Print to PDF fica para verificação manual no Windows.
+- A revisão de `feda43a` conferiu a distribuição Windows, o PDF nativo com
+  Administrador e a revogação durante impressão e exportação. Nesta linha,
+  uma conta fictícia da Equipe Técnica gerou um PDF A4 de uma página pelo
+  Microsoft Print to PDF. A impressão em papel ficou fora dos ensaios.

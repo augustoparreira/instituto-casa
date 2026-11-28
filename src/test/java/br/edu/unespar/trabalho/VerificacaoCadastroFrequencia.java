@@ -883,11 +883,157 @@ public class VerificacaoCadastroFrequencia {
                     }
                 }
                 verificarInterfacePermissoesOperacionais();
+                verificarCpfCompartilhado();
                 VerificacaoImpressao.executar();
                 fim.complete(null);
             } catch(Throwable t) { fim.completeExceptionally(t); }
         });
         try { fim.get(180,TimeUnit.SECONDS); } finally { Platform.exit(); }
+    }
+
+    private static void verificarCpfCompartilhado() throws Exception {
+        long cpf = 85555555557L;
+        Stage janela = new Stage();
+        var dao = new AdolescenteDAO();
+        var conta = VerificacaoContas.conta(cpf, "administrador-legado-teste", NivelAcesso.ADMINISTRADOR);
+        conta.setContato("43999990001");
+        try {
+            VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
+            new EquipeTecnicaDAO().inserir(conta);
+            try (var c = ConnectionFactory.getConnection(); var s = c.createStatement()) {
+                s.execute("INSERT INTO Adolescente(cpf_adolescente,naturalidade,genero,cor_raca,status) VALUES (" + cpf
+                        + ",'Origem fictícia','Não informado','Parda','ATIVO')");
+                s.execute("INSERT INTO Responsavel(cpf_responsavel,parentesco,contato_principal) VALUES (" + cpf + ",'Tio',false)");
+                s.execute("INSERT INTO Responsabiliza(cpf_adolescente,cpf_responsavel,parentesco_vinculo,principal) VALUES ("
+                        + CPF + "," + cpf + ",'Tio',false)");
+            }
+            var pessoaAntes = carregarPessoaDeTeste(cpf);
+            VerificacaoContas.entrar("agenda_teste", "senha fictícia");
+
+            var tela = abrirCadastroCompartilhado(janela, cpf);
+            ((TextField)tela.lookup("#txtNaturalidade")).setText("Naturalidade revisada");
+            ((TextField)tela.lookup("#txtEndereco")).setText("Endereço fictício");
+            ((TextField)tela.lookup("#txtBairro")).setText("Bairro fictício");
+            ((TextField)tela.lookup("#txtRenda")).setText("1,5");
+            salvarCadastroCompartilhado(tela);
+            verifica(janela.getScene().getRoot()!=tela && dao.buscarPorCpf(cpf).getNaturalidade().equals("Naturalidade revisada"),
+                    "Equipe Técnica salva naturalidade pelo formulário com e-mail legado nulo");
+            verifica(carregarPessoaDeTeste(cpf).equals(pessoaAntes), "Formulário preserva Pessoa sem emitir UPDATE");
+
+            var adolescente = dao.buscarPorCpf(cpf);
+            adolescente.setValeTransporte(true);
+            var educacao = new EducacaoTrabalhoDAO().buscarPorCpf(cpf);
+            educacao.setEstuda(true); educacao.setEscola("Escola fictícia");
+            verifica(dao.salvarDadosOperacionais(adolescente,educacao) && dao.buscarPorCpf(cpf).isValeTransporte()
+                    && new EducacaoTrabalhoDAO().buscarPorCpf(cpf).isEstuda() && carregarPessoaDeTeste(cpf).equals(pessoaAntes),
+                    "Edição técnica de outros dados exclusivos não regrava Pessoa");
+            verifica(dao.atualizar(dao.buscarPorCpf(cpf)) && carregarPessoaDeTeste(cpf).equals(pessoaAntes),
+                    "DAO simples aceita salvar sem alterações nos dados compartilhados");
+
+            tela = abrirCadastroCompartilhado(janela, cpf);
+            ((TextField)tela.lookup("#txtNaturalidade")).setText("Mudança permitida junto com a proibida");
+            ((TextField)tela.lookup("#txtNome")).setText("Nome proibido na conta");
+            salvarCadastroCompartilhado(tela);
+            verifica(janela.getScene().getRoot()==tela && dao.buscarPorCpf(cpf).getNaturalidade().equals("Naturalidade revisada")
+                    && carregarPessoaDeTeste(cpf).equals(pessoaAntes), "Formulário com mudanças mistas é revertido integralmente");
+
+            adolescente.setContato("43999990002");
+            rejeita(SecurityException.class,()->dao.atualizar(adolescente),"DAO direto não altera contato de conta administrativa");
+            adolescente.setContato(conta.getContato()); adolescente.setDataNascimento(LocalDate.of(1991,1,1));
+            rejeita(SecurityException.class,()->dao.salvarDadosOperacionais(adolescente,educacao),
+                    "DAO operacional não altera nascimento de conta administrativa");
+            adolescente.setDataNascimento(conta.getDataNascimento()); adolescente.setEmail("proibido@example.invalid");
+            rejeita(SecurityException.class,()->dao.salvarCadastro(adolescente,social(),new Saude(),educacao,true,false),
+                    "DAO completo não altera e-mail de conta administrativa");
+            verifica(carregarPessoaDeTeste(cpf).equals(pessoaAntes), "As chamadas diretas rejeitadas preservaram Pessoa e a conta");
+
+            var responsaveis = new ResponsavelDAO();
+            var vinculo = responsaveis.listarResponsaveis(CPF).stream().filter(r -> r.getCpf()==cpf).findFirst().orElseThrow();
+            vinculo.setParentesco("Tia"); vinculo.setNomeCompleto("Mudança de pessoa não autorizada");
+            verifica(!responsaveis.podeEditarDadosPessoais(cpf) && responsaveis.atualizar(vinculo,CPF)
+                    && responsaveis.listarResponsaveis(CPF).stream().anyMatch(r -> r.getCpf()==cpf && "Tia".equals(r.getParentesco()))
+                    && carregarPessoaDeTeste(cpf).equals(pessoaAntes), "Parentesco de responsável legado pode mudar sem atingir a conta");
+
+            VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
+            adolescente.setEmail("revisado@example.invalid");
+            verifica(dao.atualizar(adolescente)
+                    && "revisado@example.invalid".equals(new EquipeTecnicaDAO().buscarPorCpf(cpf).getEmail()),
+                    "Administrador salva uma alteração autorizada em Pessoa compartilhada");
+            var pessoaRevisada = carregarPessoaDeTeste(cpf);
+            var falha = new Saude(); falha.setUbsReferencia("UBS de falha fictícia");
+            try (var c = ConnectionFactory.getConnection(); var s = c.createStatement()) {
+                s.execute("ALTER TABLE Saude ADD CONSTRAINT teste_rollback_pessoa CHECK (ubs_referencia <> 'UBS de falha fictícia')");
+            }
+            adolescente.setNomeCompleto("Nome que deve ser revertido");
+            adolescente.setNaturalidade("Naturalidade que deve ser revertida");
+            rejeita(IllegalStateException.class,()->dao.salvarCadastro(adolescente,social(),falha,educacao,true,false),
+                    "Falha intermediária ocorre depois das atualizações de Pessoa e Adolescente");
+            verifica(carregarPessoaDeTeste(cpf).equals(pessoaRevisada)
+                    && dao.buscarPorCpf(cpf).getNaturalidade().equals("Naturalidade revisada"),
+                    "A mesma transação reverte os dados compartilhados e exclusivos");
+            verificarBloqueioCriacaoConta(cpf);
+        } finally {
+            janela.close();
+            VerificacaoContas.entrar("admin-teste", VerificacaoContas.SENHA);
+        }
+    }
+
+    private static Parent abrirCadastroCompartilhado(Stage janela, long cpf) throws Exception {
+        FXMLLoader loader = new FXMLLoader(VerificacaoCadastroFrequencia.class.getResource("/View/CadastroAdolescenteView.fxml"));
+        Parent formulario = loader.load();
+        if (janela.getScene()==null) janela.setScene(new Scene(formulario,1280,850));
+        else janela.getScene().setRoot(formulario);
+        ((CadastroAdolescenteController)loader.getController()).carregarParaEdicao(cpf);
+        formulario.applyCss(); formulario.layout();
+        return formulario;
+    }
+
+    private static void salvarCadastroCompartilhado(Parent formulario) {
+        fecharProximoDialogo(ButtonType.OK);
+        ((Button)formulario.lookupAll(".button").stream()
+                .filter(n -> n instanceof Button b && "Salvar cadastro".equalsIgnoreCase(b.getText()))
+                .findFirst().orElseThrow()).fire();
+    }
+
+    private record PessoaTeste(String nome, LocalDate nascimento, String contato, String email, String versao) { }
+
+    private static PessoaTeste carregarPessoaDeTeste(long cpf) throws SQLException {
+        try (var c = ConnectionFactory.getConnection(); var consulta = c.prepareStatement(
+                "SELECT nome_completo,data_nascimento,contato,email,xmin::text FROM Pessoa WHERE cpf=?")) {
+            consulta.setLong(1,cpf);
+            try (var linha = consulta.executeQuery()) {
+                if (!linha.next()) throw new AssertionError("Pessoa fictícia ausente.");
+                return new PessoaTeste(linha.getString(1),linha.getObject(2,LocalDate.class),linha.getString(3),
+                        linha.getString(4),linha.getString(5));
+            }
+        }
+    }
+
+    private static void verificarBloqueioCriacaoConta(long cpfConta) throws SQLException {
+        try (var c1 = ConnectionFactory.getConnection(); var c2 = ConnectionFactory.getConnection()) {
+            c1.setAutoCommit(false); c2.setAutoCommit(false);
+            try (var trava = c1.prepareStatement("SELECT cpf FROM Pessoa WHERE cpf=? FOR UPDATE");
+                 var sessao2 = c2.createStatement();
+                 var inserir = c2.prepareStatement("INSERT INTO EquipeTecnica(cpf_equipe,login,senha,cargo_funcao,nivel_acesso,senha_formato) "
+                         + "SELECT ?, 'conta-concorrente-teste',senha,cargo_funcao,nivel_acesso,senha_formato FROM EquipeTecnica WHERE cpf_equipe=?")) {
+                trava.setLong(1,CPF);
+                try (var pessoa = trava.executeQuery()) {
+                    if (!pessoa.next()) throw new AssertionError("Fixture de concorrência ausente.");
+                }
+                sessao2.execute("SET LOCAL lock_timeout='200ms'");
+                inserir.setLong(1,CPF); inserir.setLong(2,cpfConta);
+                try {
+                    inserir.executeUpdate();
+                    throw new AssertionError("A nova conta deveria aguardar a edição de Pessoa.");
+                } catch (SQLException bloqueio) {
+                    verifica("55P03".equals(bloqueio.getSQLState()),
+                            "Chave estrangeira faz a criação concorrente de conta aguardar a trava em Pessoa");
+                }
+            } finally {
+                c2.rollback();
+                c1.rollback();
+            }
+        }
     }
 
     private static void verificarInterfacePermissoesOperacionais() throws Exception {

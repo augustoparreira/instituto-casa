@@ -24,12 +24,24 @@ projeções limitadas e sem acesso a correções, exclusões, horas de PSC ou da
 As operações protegidas exigem sessão válida. Autoria e vínculo por si sós
 continuam sem conceder permissões. A ampliação desta branch é uma
 [proposta experimental](docs/permissoes-equipe-tecnica.md) pendente de aprovação.
+Das 48 operações da matriz, o Administrador tem 48, a Equipe Técnica tem 46 e o
+Educador tem 3. `EQUIPE_CONSULTAR` e `USUARIO_GERENCIAR` são exclusivas do
+Administrador. Operações novas precisam de concessão explícita para a Equipe
+Técnica e para o Educador.
 
 Usar `pode` na apresentação e `exigir` ANTES das consultas e das mutações. Uma tela que
 mistura dados comuns e sigilosos precisa separar as consultas; nunca carregar tudo e apenas
 ocultar a aba. Aplicar guarda também no DAO/entrada de negócio para impedir chamadas diretas.
 Operações compostas exigem todas as permissões envolvidas. Frequência com horas de PSC
 exige adicionalmente HORAS_PSC_REGISTRAR; edição e exclusão têm permissões próprias.
+
+No cadastro de adolescentes, nome, nascimento, contato e e-mail são atributos
+de `Pessoa`. A edição compara os valores persistidos sob bloqueio da linha
+em PostgreSQL. Alterar esses atributos quando o CPF pertence a uma conta exige
+`USUARIO_GERENCIAR`. Quando os valores coincidem, a edição autorizada dos
+dados do adolescente segue na mesma transação, sem atualizar `Pessoa`.
+`ResponsavelDAO` mantém a proteção de dados pessoais e permite a edição
+autorizada do vínculo familiar.
 
 Operações disponíveis (ver enum para compilação): PAINEL_CONSULTAR; ADOLESCENTE_CONSULTAR,
 CADASTRAR, EDITAR, EXCLUIR (com prefixo ADOLESCENTE_); ADOLESCENTE_SITUACAO_ALTERAR;

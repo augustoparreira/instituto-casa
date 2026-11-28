@@ -43,6 +43,19 @@ As credenciais ficam fora do Git. Use `PGPASSWORD` somente em processo local
 temporário ou um arquivo `pgpass` protegido. Não registre senhas no terminal,
 em capturas ou na documentação.
 
+## Linha experimental de permissões
+
+Use a nova branch de correções para demonstrar a proposta com dados fictícios.
+A versão publicada de integração e a linha exclusiva de usabilidade mantêm
+a matriz anterior. A proposta experimental ainda depende de aprovação da ONG.
+
+Use contas de teste dos três perfis. O Administrador abre a administração de
+contas. A Equipe Técnica abre o cadastro completo, as fichas protegidas, a
+confirmação do PIA e os Relatórios. O Educador continua com o registro geral
+de frequência, sem vincular medida ou creditar horas. Para testar um CPF
+compartilhado, prepare um registro legado só no ambiente descartável e
+verifique a edição dos dados exclusivos do adolescente.
+
 ## Revalidação na versão integrada (27/11/2026)
 
 Em PostgreSQL 18.6 descartável, o arquivo inteiro completou a carga na base

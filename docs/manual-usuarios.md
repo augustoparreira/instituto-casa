@@ -1,8 +1,9 @@
 # Manual rápido para a equipe do Instituto C.A.S.A.
 
-Este manual descreve a versão integrada com os ajustes finais de usabilidade
-e sua matriz provisória de permissões. As contas e dados de exemplos devem ser fictícios. O técnico
-responsável entrega o atalho ou a pasta de execução e o login individual.
+Este manual descreve a linha experimental de permissões, pendente de aprovação
+da ONG. A versão integrada publicada usa a matriz anterior. Use contas e dados
+fictícios na demonstração. O técnico responsável entrega o atalho ou a pasta
+de execução e o login individual.
 
 ## Abrir, entrar e sair
 
@@ -37,8 +38,8 @@ conjunto completo de registros.
 
 | Perfil | Uso principal nesta versão |
 | --- | --- |
-| Administrador | Gerencia contas e cadastro completo; pode consultar e editar dados protegidos, medidas, frequência, Agenda, PIA e Relatórios. |
-| Equipe Técnica | Consulta e edita o cadastro operacional, família permitida, educação, medidas abertas, frequência e Agenda; gera o relatório operacional. Não acessa saúde, renda, PIA ou relatórios completos protegidos. |
+| Administrador | Gerencia contas e cadastro completo. Pode consultar e editar dados protegidos, medidas, frequência, Agenda, PIA e Relatórios. |
+| Equipe Técnica | Usa cadastro completo, família, dados sociais e de saúde, medidas, frequência, Agenda, confirmação do PIA e Relatórios. Pode trocar a própria senha. A administração de contas é exclusiva do Administrador. |
 | Educador | Consulta e registra frequência. Não corrige nem exclui lançamentos existentes e não registra horas de PSC. |
 
 Se um botão não aparece ou a operação é recusada, peça apoio ao Administrador.
@@ -47,37 +48,36 @@ Não use a conta de outra pessoa. A política ainda precisa de confirmação da 
 ## Adolescentes e medidas
 
 No menu **Adolescentes**, procure a pessoa pelo nome ou filtros da tela e abra
-seu perfil. Confira os dados e a medida antes de alterar algo. O Administrador
-pode fazer o cadastro completo e editar as fichas protegidas. A Equipe Técnica
-pode criar e editar o cadastro operacional; campos sociais e de saúde não são
-preenchidos nesse fluxo. O Educador não faz cadastro.
+seu perfil. Administrador e Equipe Técnica podem criar e editar o cadastro
+completo e alterar a situação na edição. Se um CPF legado também pertence a
+uma conta, a Equipe Técnica pode alterar as informações próprias do adolescente
+ou de um vínculo familiar. Alterações nos dados pessoais compartilhados
+exigem o Administrador. O Educador não faz cadastro.
 
 No perfil, consulte as medidas PSC e LA conforme o acesso exibido. A Equipe
-Técnica pode cadastrar ou editar medidas abertas; o encerramento e alterações
-restritas cabem ao Administrador. As regras de encerramento ainda dependem de
-decisão institucional. Não trate uma previsão de prazo como encerramento
-automático.
+Técnica pode cadastrar, editar, encerrar e reabrir medidas pelas regras
+existentes. A previsão de prazo é apenas informativa. Os critérios de
+encerramento ainda dependem de decisão institucional.
 
 ## Frequência e Agenda
 
 Abra a frequência pelo adolescente. Confira atividade, data e status antes de
 **Salvar frequência**. O Educador registra presença ou falta, com justificativa
 quando solicitada, mas não corrige nem exclui o lançamento depois. A Equipe
-Técnica pode corrigir frequência e registrar horas de PSC dentro dos limites
-do sistema. O Administrador possui as ações de gestão. Quando uma correção
-envolver texto protegido, solicite apoio ao Administrador.
+Técnica e o Administrador podem corrigir e excluir lançamentos, revisar
+justificativas e registrar horas de PSC dentro dos limites do sistema.
 
-Em **Agenda**, Administrador e Equipe Técnica podem consultar, criar e editar
-compromissos permitidos. Confira data e horário antes de salvar. O Educador
-não usa esse módulo nesta matriz.
+Em **Agenda**, Administrador e Equipe Técnica podem consultar, criar, editar,
+concluir, cancelar e excluir compromissos. Confira data e horário antes de
+salvar. O Educador não usa esse módulo nesta matriz.
 
 ## Relatórios e documentos
 
-O Administrador acessa **Relatórios** para revisar a competência, salvar o
-rascunho e usar **Imprimir / salvar PDF**. Antes de sair ou fechar a janela,
-salve o texto necessário. A Equipe Técnica usa o **relatório operacional**
-disponível em sua planilha; ele não substitui o relatório completo protegido.
-O Educador não gera relatórios nesta versão.
+Administrador e Equipe Técnica acessam **Relatórios** para revisar a
+competência, salvar o rascunho, exportar em TXT e usar **Imprimir / salvar PDF**.
+A Equipe Técnica também pode usar o relatório operacional da planilha. O
+Educador não gera relatórios nesta versão. Na aba **PIA**, Administrador e
+Equipe Técnica registram a confirmação de envio.
 
 Ao tentar sair de Relatórios, trocar de tela ou fechar a janela com X ou
 Alt+F4, o aplicativo pede confirmação se houver alterações não salvas.
@@ -89,8 +89,8 @@ aplicativo for encerrado à força. Use **Salvar rascunho** para persistir o
 trabalho. Em outros formulários, salve antes de sair ou trocar de tela.
 
 Na janela de impressão do Windows, escolha a impressora ou **Microsoft Print
-to PDF** e confirme o destino. O arquivo PDF salvo pelo driver ainda precisa
-de verificação física antes de uso institucional.
+to PDF** e confirme o destino. Os ensaios nativos disponíveis estão registrados
+com a versão e o perfil usados no [registro de validação](registro-validacao-entrega.md).
 
 ## Mensagens e ajuda
 

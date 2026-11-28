@@ -57,7 +57,7 @@ public class CadastroAdolescenteController {
     private Saude saudeAtual;
 
     private StatusAdolescente situacaoOriginal;
-    private String contatoOriginal, emailOriginal;
+    private String nomeOriginal, contatoOriginal, emailOriginal;
     private AdolescenteDAO adolescenteDAO = new AdolescenteDAO();
 
     @FXML
@@ -141,7 +141,8 @@ public class CadastroAdolescenteController {
         EducacaoTrabalho et=new EducacaoTrabalhoDAO().buscarPorCpf(cpf);
         edicao=true; lblTitulo.setText("Editar cadastro"); txtCpf.setDisable(true);
         lblCpf.setText("CPF");
-        txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(a.getNomeCompleto());
+        nomeOriginal = a.getNomeCompleto();
+        txtCpf.setText(String.format("%011d",cpf)); txtNome.setText(nomeOriginal);
         dpNascimento.setValue(a.getDataNascimento());
         contatoOriginal=a.getContato();
         MascarasFormulario.carregarTelefoneExistente(txtContato,contatoOriginal);
@@ -195,12 +196,12 @@ public class CadastroAdolescenteController {
 
             Adolescente a=new Adolescente();
             a.setCpf(Long.parseLong(cpf));
-            a.setNomeCompleto(nome);
+            a.setNomeCompleto(preservarOriginal(nome, nomeOriginal));
             a.setDataNascimento(dpNascimento.getValue());
-            a.setContato(ValidacaoFormulario.texto(txtContato.getText(),30,"Telefone",true));
+            a.setContato(preservarOriginal(ValidacaoFormulario.texto(txtContato.getText(),30,"Telefone",true), contatoOriginal));
             if (!MascarasFormulario.telefoneValidoOuExistente(a.getContato(),contatoOriginal))
                 throw new IllegalArgumentException(MascarasFormulario.TELEFONE_INVALIDO);
-            a.setEmail(email);
+            a.setEmail(preservarOriginal(email, emailOriginal));
             a.setNaturalidade(texto(txtNaturalidade,120,"Naturalidade"));
             a.setGenero(cmbGenero.getValue()==null ? "Não informado" : cmbGenero.getValue());
             a.setCorRaca(cmbCorRaca.getValue()==null ? "Não informada" : cmbCorRaca.getValue());
@@ -246,6 +247,11 @@ public class CadastroAdolescenteController {
             e.printStackTrace();
             mostrarAlerta(Alert.AlertType.ERROR,"Erro ao salvar",e.getMessage());
         }
+    }
+
+    private String preservarOriginal(String validado, String original) {
+        // O formulário converte nulo em vazio e remove espaços externos ao validar.
+        return edicao && validado.equals(original == null ? "" : original.strip()) ? original : validado;
     }
 
     private SituacaoSocial lerSituacaoSocial() {

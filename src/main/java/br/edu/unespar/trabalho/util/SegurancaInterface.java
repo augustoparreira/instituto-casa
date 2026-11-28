@@ -4,6 +4,7 @@ import br.edu.unespar.trabalho.model.Operacao;
 import br.edu.unespar.trabalho.service.AutorizacaoService;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -43,7 +44,8 @@ public final class SegurancaInterface {
         monitor = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             for (Window janela : List.copyOf(Window.getWindows())) observar(janela.getScene());
             if (!autenticado) return;
-            boolean haviaRascunho = protecaoRascunho != null && principal.getScene().getRoot() == protecaoRascunho.raiz();
+            boolean haviaRascunho = protecaoRascunho != null && principal.getScene() != null
+                    && principal.getScene().getRoot() == protecaoRascunho.raiz();
             if (!Sessao.existeSessao() || (haviaRascunho && !Sessao.rascunhoDaSessaoAtual())) {
                 NavegacaoUtil.encerrarSessao(principal, haviaRascunho);
             } else if (++segundos % 5 == 0) {
@@ -71,6 +73,19 @@ public final class SegurancaInterface {
 
     public static boolean possuiRascunho(Parent raiz) {
         return protecaoRascunho != null && protecaoRascunho.raiz() == raiz && Sessao.rascunhoDaSessaoAtual();
+    }
+
+    // Validações fora do monitor também podem detectar suspensão ou invalidação.
+    static void atualizarRascunhoNaInterface() {
+        Platform.runLater(() -> {
+            var protecao = protecaoRascunho;
+            if (!autenticado || protecao == null) return;
+            Scene cena = protecao.raiz().getScene();
+            if (cena == null || cena.getRoot() != protecao.raiz()
+                    || !(cena.getWindow() instanceof Stage janela) || !janela.isShowing()) return;
+            if (!Sessao.rascunhoDaSessaoAtual()) NavegacaoUtil.encerrarSessao(janela, true);
+            else protecao.atualizarBloqueio().accept(Sessao.rascunhoBloqueado());
+        });
     }
 
     public static void liberarRascunho(Parent raiz) {

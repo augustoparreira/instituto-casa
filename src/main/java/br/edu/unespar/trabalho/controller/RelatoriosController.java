@@ -8,7 +8,8 @@ import br.edu.unespar.trabalho.model.RelatorioAcompanhamento.Campo;
 import br.edu.unespar.trabalho.util.*;
 import javafx.collections.FXCollections;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -48,7 +49,8 @@ public class RelatoriosController {
     private RelatorioAcompanhamento documento;
     private boolean carregando, alterado;
     private Alert dialogoSaida;
-    private boolean rascunhoBloqueado;
+    private Dialog<?> dialogoEdicao;
+    private final BooleanProperty rascunhoBloqueado = new SimpleBooleanProperty();
     private static final String CONFIRMAR_SAIDA = "Descartar as alterações não salvas e sair de Relatórios?";
     private static final String CONEXAO_INDISPONIVEL =
             "Conexão indisponível. O rascunho está em memória e a edição aguarda a revalidação da sessão.";
@@ -93,7 +95,7 @@ public class RelatoriosController {
         int linha=0;
         for(Campo campo:Campo.values()) {
             TextField texto=new TextField(); texto.setId("campo"+campo.name()); texto.getStyleClass().add("search-field");
-            texto.textProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
+            texto.textProperty().addListener((o,a,b)-> marcarEdicao());
             Label rotulo=new Label(campo.getRotulo()); rotulo.setWrapText(true); rotulo.getStyleClass().add("form-label-mini");
             gridIdentificacao.addRow(linha++,rotulo,texto); campos.put(campo,texto);
         }
@@ -106,9 +108,12 @@ public class RelatoriosController {
                 }
             });
         }
-        txtRegistroFrequencia.textProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
-        txtDescumprimento.textProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
-        dpEmissao.valueProperty().addListener((o,a,b)-> { if(!carregando) alterado=true; });
+        txtRegistroFrequencia.textProperty().addListener((o,a,b)-> marcarEdicao());
+        txtDescumprimento.textProperty().addListener((o,a,b)-> marcarEdicao());
+        dpEmissao.valueProperty().addListener((o,a,b)-> marcarEdicao());
+        dpEmissao.getEditor().textProperty().addListener((o,a,b)-> {
+            if (!Objects.equals(b, dpEmissao.getConverter().toString(dpEmissao.getValue()))) marcarEdicao();
+        });
         txtPesquisa.textProperty().addListener((o,a,b)->filtrar());
         listRelatorios.setCellFactory(l->new ListCell<>() {
             @Override protected void updateItem(RelatorioAcompanhamento r,boolean vazio) {
@@ -185,7 +190,8 @@ public class RelatoriosController {
         for(Campo campo:Campo.values()) campos.get(campo).setText(r.getCampo(campo));
         txtRegistroFrequencia.setText(r.getRegistroFrequencia()); txtDescumprimento.setText(r.getDescumprimento()); dpEmissao.setValue(r.getDataEmissao());
         lblStatusEdicao.setText((r.getIdRelatorio()==0?"Novo relatório":"Relatório #"+r.getIdRelatorio())+" · "+r.getCampo(Campo.NOME)+" · "+r.getCompetencia());
-        carregando=false; alterado=false;
+        carregando=false;
+        atualizarEdicao(r.getIdRelatorio()==0);
     }
     private RelatorioAcompanhamento lerFormulario() {
         return lerFormulario(false);
@@ -225,7 +231,7 @@ public class RelatoriosController {
         try {
             if(!dao.excluir(documento.getIdRelatorio())) throw new IllegalArgumentException("O relatório não existe mais.");
             documento=null; carregando=true; campos.values().forEach(TextField::clear); txtRegistroFrequencia.clear(); txtDescumprimento.clear();
-            carregando=false; alterado=false; atualizarLista(); lblStatusEdicao.setText("Prepare um relatório"); lblMensagem.setText("Relatório excluído.");
+            carregando=false; atualizarEdicao(false); atualizarLista(); lblStatusEdicao.setText("Prepare um relatório"); lblMensagem.setText("Relatório excluído.");
         } catch(RuntimeException e) { erro(e); }
     }
     @FXML public void exportarTexto() {
@@ -240,8 +246,13 @@ public class RelatoriosController {
             FileChooser escolha=new FileChooser(); escolha.setTitle("Salvar relatório de acompanhamento");
             escolha.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documento de texto","*.txt"));
             escolha.setInitialFileName("acompanhamento-"+r.getCompetencia()+"-"+r.getCpfAdolescente()+".txt");
-            var arquivo=escolha.showSaveDialog(gridIdentificacao.getScene().getWindow());
-            if(arquivo!=null) { salvarTexto(r,arquivo.toPath()); lblMensagem.setText("Texto salvo. Confira o documento antes de encaminhar."); }
+            Scene cena = gridIdentificacao.getScene();
+            Parent raiz = cena.getRoot();
+            var sessao = Sessao.getUsuarioLogado();
+            var arquivo=escolha.showSaveDialog(cena.getWindow());
+            if(arquivo!=null && sessao!=null && Sessao.getUsuarioLogado()==sessao && cena.getRoot()==raiz) {
+                salvarTexto(r,arquivo.toPath()); lblMensagem.setText("Texto salvo. Confira o documento antes de encaminhar.");
+            }
         } catch(Exception e) { lblMensagem.setText(e.getMessage()); }
     }
     public void exportarPara(Path destino) throws java.io.IOException {
@@ -325,19 +336,53 @@ public class RelatoriosController {
             }
             ScrollPane scroll=new ScrollPane(paginas); scroll.setPrefViewportWidth(650); scroll.setPrefViewportHeight(600);
             Dialog<ButtonType> dialogo=new Dialog<>(); dialogo.setTitle("Prévia do conteúdo do relatório"); dialogo.getDialogPane().setContent(scroll);
-            dialogo.getDialogPane().getButtonTypes().add(ButtonType.CLOSE); dialogo.setResizable(true); dialogo.showAndWait();
+            dialogo.getDialogPane().getButtonTypes().add(ButtonType.CLOSE); dialogo.setResizable(true);
+            mostrarDialogoDeEdicao(dialogo);
         } catch(RuntimeException e) { erro(e); }
     }
-    private boolean confirmar(String texto) { return new Alert(Alert.AlertType.CONFIRMATION,texto,ButtonType.YES,ButtonType.NO).showAndWait().orElse(ButtonType.NO)==ButtonType.YES; }
+
+    private void marcarEdicao() {
+        if (!carregando && !alterado) atualizarEdicao(true);
+    }
+
+    private void atualizarEdicao(boolean pendente) {
+        alterado = pendente;
+        Scene cena = gridIdentificacao.getScene();
+        if (cena == null) return;
+        Parent raiz = cena.getRoot();
+        if (pendente) registrarRascunho(raiz);
+        else SegurancaInterface.liberarRascunho(raiz);
+    }
+
+    private boolean registrarRascunho(Parent raiz) {
+        return SegurancaInterface.protegerRascunho(raiz, bloqueado -> atualizarBloqueio(raiz, bloqueado));
+    }
+
+    private ButtonType mostrarDialogoDeEdicao(Dialog<ButtonType> dialogo) {
+        if (dialogoEdicao != null || dialogoSaida != null || rascunhoBloqueado.get()) return ButtonType.CANCEL;
+        dialogo.initOwner(gridIdentificacao.getScene().getWindow());
+        dialogoEdicao = dialogo;
+        try { return dialogo.showAndWait().orElse(ButtonType.CANCEL); }
+        finally { dialogoEdicao = null; }
+    }
+
+    private boolean confirmar(String texto) {
+        Scene cena = gridIdentificacao.getScene();
+        Parent raiz = cena.getRoot();
+        var sessao = Sessao.getUsuarioLogado();
+        return sessao != null && mostrarDialogoDeEdicao(new Alert(Alert.AlertType.CONFIRMATION, texto, ButtonType.YES, ButtonType.NO)) == ButtonType.YES
+                && cena.getRoot() == raiz && Sessao.getUsuarioLogado() == sessao;
+    }
+
     private boolean confirmarSaida(Parent raiz, boolean descarteLocal) {
-        if (dialogoSaida != null) return false;
+        if (dialogoSaida != null || dialogoEdicao != null) return false;
         if (!alterado) return true;
-        if (!SegurancaInterface.protegerRascunho(raiz, bloqueado -> atualizarBloqueio(raiz, bloqueado))) return false;
+        if (!registrarRascunho(raiz)) return false;
 
         Scene cena = raiz.getScene();
         Alert alerta = new Alert(Alert.AlertType.CONFIRMATION, mensagemSaida(), ButtonType.YES, ButtonType.NO);
         alerta.initOwner(cena.getWindow());
-        if (!descarteLocal) alerta.getDialogPane().lookupButton(ButtonType.YES).disableProperty().bind(raiz.disabledProperty());
+        if (!descarteLocal) alerta.getDialogPane().lookupButton(ButtonType.YES).disableProperty().bind(rascunhoBloqueado);
         dialogoSaida = alerta;
         try {
             return alerta.showAndWait().orElse(ButtonType.NO) == ButtonType.YES
@@ -345,55 +390,85 @@ public class RelatoriosController {
                     && (descarteLocal || Sessao.getUsuarioLogado() != null);
         } finally {
             dialogoSaida = null;
-            SegurancaInterface.liberarRascunho(raiz);
         }
     }
 
     private String mensagemSaida() {
-        return rascunhoBloqueado ? CONFIRMAR_SAIDA + "\n\n" + CONEXAO_INDISPONIVEL : CONFIRMAR_SAIDA;
+        return rascunhoBloqueado.get() ? CONFIRMAR_SAIDA + "\n\n" + CONEXAO_INDISPONIVEL : CONFIRMAR_SAIDA;
     }
 
     private void atualizarBloqueio(Parent raiz, boolean bloqueado) {
-        if (rascunhoBloqueado == bloqueado) return;
-        rascunhoBloqueado = bloqueado;
-        raiz.setDisable(bloqueado);
+        if (rascunhoBloqueado.get() == bloqueado) return;
+        rascunhoBloqueado.set(bloqueado);
         if (raiz instanceof BorderPane tela) {
             tela.getCenter().setVisible(!bloqueado);
+            tela.getCenter().setDisable(bloqueado);
             tela.getLeft().setVisible(!bloqueado);
+            tela.getLeft().setDisable(bloqueado);
             if (bloqueado) {
                 Label aviso = new Label(CONEXAO_INDISPONIVEL);
                 aviso.setWrapText(true);
-                aviso.setStyle("-fx-padding: 20;");
-                tela.setTop(aviso);
+                Button sair = new Button("Sair do sistema");
+                sair.setOnAction(this::fazerLogout);
+                VBox mensagem = new VBox(10, aviso, sair);
+                mensagem.setStyle("-fx-padding: 20;");
+                tela.setTop(mensagem);
             } else tela.setTop(null);
         }
         if (dialogoSaida != null) dialogoSaida.setContentText(mensagemSaida());
-        else if (!bloqueado) SegurancaInterface.liberarRascunho(raiz);
+        if (bloqueado && dialogoEdicao != null) dialogoEdicao.close();
+    }
+
+    private void descartarEdicao() {
+        if (gridIdentificacao == null) return;
+        carregando = true;
+        alterado = false;
+        documento = null;
+        salvos = List.of();
+        campos.values().forEach(TextField::clear);
+        txtRegistroFrequencia.clear();
+        txtDescumprimento.clear();
+        dpEmissao.setValue(null);
+        dpEmissao.getEditor().clear();
+        cmbAdolescente.getItems().clear();
+        cmbAdolescente.setValue(null);
+        listRelatorios.getItems().clear();
+        lblStatusEdicao.setText("");
+        txtPesquisa.clear();
+        carregando = false;
     }
 
     private void protegerFechamento(Scene scene, Window janela) {
         if(!(janela instanceof Stage stage)) return;
         Parent raiz=scene.getRoot();
+        if (alterado) registrarRascunho(raiz);
         EventHandler<WindowEvent> fechar = e -> {
             if (stage.getScene() != scene || scene.getRoot() != raiz) return;
-            if (dialogoSaida != null) {
+            if (dialogoSaida != null || dialogoEdicao != null) {
                 e.consume();
                 return;
             }
-            if (!alterado || (Sessao.getUsuarioLogado() == null && !rascunhoBloqueado)) return;
+            if (!alterado || (Sessao.getUsuarioLogado() == null && !SegurancaInterface.possuiRascunho(raiz))) return;
             if (confirmarSaida(raiz, true)) SegurancaInterface.desvincularRascunho(raiz);
             else e.consume();
         };
         stage.setOnCloseRequest(fechar);
-        scene.rootProperty().addListener(new ChangeListener<Parent>() {
-            @Override public void changed(ObservableValue<? extends Parent> obs, Parent antes, Parent depois) {
-                if (depois == raiz) return;
+        class VinculoFechamento {
+            final ChangeListener<Parent> trocaRaiz = (obs, antes, depois) -> { if (depois != raiz) remover(); };
+            final ChangeListener<Window> trocaJanela = (obs, antes, depois) -> { if (antes == stage && depois != stage) remover(); };
+            void remover() {
                 if (stage.getOnCloseRequest() == fechar) stage.setOnCloseRequest(null);
-                scene.rootProperty().removeListener(this);
+                scene.rootProperty().removeListener(trocaRaiz);
+                scene.windowProperty().removeListener(trocaJanela);
                 SegurancaInterface.desvincularRascunho(raiz);
+                descartarEdicao();
                 if (dialogoSaida != null && dialogoSaida.isShowing()) dialogoSaida.close();
+                if (dialogoEdicao != null && dialogoEdicao.isShowing()) dialogoEdicao.close();
             }
-        });
+        }
+        VinculoFechamento vinculo = new VinculoFechamento();
+        scene.rootProperty().addListener(vinculo.trocaRaiz);
+        scene.windowProperty().addListener(vinculo.trocaJanela);
     }
     private void sairPara(ActionEvent e, String caminho, String titulo) {
         if (e.getSource() instanceof Node origem && origem.getScene()!=null

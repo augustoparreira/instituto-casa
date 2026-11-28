@@ -96,10 +96,14 @@ public final class ImpressaoRelatorio {
             return;
         }
         if(!job.showPrintDialog(owner)) { job.cancelJob(); return; }
-        if (usuario != Sessao.getUsuarioLogado() || !br.edu.unespar.trabalho.service.AutorizacaoService.pode(
-                br.edu.unespar.trabalho.model.Operacao.RELATORIO_EXPORTAR)) {
+        try {
+            if (usuario != Sessao.getUsuarioLogado())
+                throw new br.edu.unespar.trabalho.service.AcessoNegadoException();
+            br.edu.unespar.trabalho.service.AutorizacaoService.exigir(
+                    br.edu.unespar.trabalho.model.Operacao.RELATORIO_EXPORTAR);
+        } catch (br.edu.unespar.trabalho.service.AcessoNegadoException negado) {
             job.cancelJob();
-            throw new br.edu.unespar.trabalho.service.AcessoNegadoException();
+            throw negado;
         }
         PageLayout layout=job.getPrinter().createPageLayout(Paper.A4,PageOrientation.PORTRAIT,36,36,36,36);
         job.getJobSettings().setPageLayout(layout);

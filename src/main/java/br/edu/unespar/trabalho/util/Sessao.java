@@ -12,6 +12,7 @@ public class Sessao {
     private static EquipeTecnicaDTO usuarioLogado;
     private static EquipeTecnicaDTO sessaoComRascunho;
     private static boolean revalidacaoPendente;
+    private static long revisaoDaFalha;
     private static long ultimaAtividade;
     private static final ThreadLocal<EquipeTecnicaDTO> sessaoDaConsulta = new ThreadLocal<>();
     private static Duration limite = Duration.ofMinutes(Math.max(1, Long.getLong("casa.sessao.minutos", 15L)));
@@ -55,12 +56,18 @@ public class Sessao {
     }
 
     static synchronized boolean protegerRascunho() {
-        sessaoComRascunho = getUsuarioLogado();
-        return sessaoComRascunho != null;
+        var atual = getUsuarioLogado();
+        if (atual == null) return false;
+        sessaoComRascunho = atual;
+        return true;
     }
 
     static synchronized boolean rascunhoDaSessaoAtual() {
         return sessaoComRascunho != null && sessaoComRascunho == identidadeAtual();
+    }
+
+    static synchronized boolean rascunhoBloqueado() {
+        return rascunhoDaSessaoAtual() && revalidacaoPendente;
     }
 
     static synchronized boolean liberarRascunho() {
@@ -79,10 +86,12 @@ public class Sessao {
 
     private static Verificacao verificarConta(boolean monitor) {
         EquipeTecnicaDTO atual;
+        long revisaoInicial;
         synchronized (Sessao.class) {
             atual = identidadeAtual();
             if (atual == null) return Verificacao.INVALIDA;
             if (revalidacaoPendente && !monitor) return Verificacao.INDISPONIVEL;
+            revisaoInicial = revisaoDaFalha;
         }
 
         Verificacao resultado;
@@ -95,6 +104,8 @@ public class Sessao {
         synchronized (Sessao.class) {
             if (identidadeAtual() != atual) return Verificacao.INVALIDA;
             if (resultado == Verificacao.INDISPONIVEL && sessaoComRascunho == atual) {
+                revisaoDaFalha++;
+                if (!revalidacaoPendente) SegurancaInterface.atualizarRascunhoNaInterface();
                 revalidacaoPendente = true;
                 return Verificacao.INDISPONIVEL;
             }
@@ -102,7 +113,8 @@ public class Sessao {
                 limparSessao();
                 return Verificacao.INVALIDA;
             }
-            if (monitor) revalidacaoPendente = false;
+            // Uma verificação iniciada antes de outra falha não desfaz a suspensão.
+            if (monitor && revisaoInicial == revisaoDaFalha) revalidacaoPendente = false;
             return revalidacaoPendente ? Verificacao.INDISPONIVEL : Verificacao.VALIDA;
         }
     }
@@ -118,6 +130,7 @@ public class Sessao {
     }
 
     public static synchronized void limparSessao() {
+        if (sessaoComRascunho != null) SegurancaInterface.atualizarRascunhoNaInterface();
         usuarioLogado = null;
         sessaoComRascunho = null;
         revalidacaoPendente = false;

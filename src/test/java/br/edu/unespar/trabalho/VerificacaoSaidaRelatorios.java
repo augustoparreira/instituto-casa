@@ -4,6 +4,7 @@ import br.edu.unespar.trabalho.controller.RelatoriosController;
 import br.edu.unespar.trabalho.model.EquipeTecnicaDTO;
 import br.edu.unespar.trabalho.model.NivelAcesso;
 import br.edu.unespar.trabalho.model.Operacao;
+import br.edu.unespar.trabalho.model.RelatorioAcompanhamento;
 import br.edu.unespar.trabalho.service.AcessoNegadoException;
 import br.edu.unespar.trabalho.service.AutorizacaoService;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
@@ -34,6 +35,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLTransientConnectionException;
 import java.time.Duration;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -42,13 +44,14 @@ import java.util.function.Function;
 
 /** Verifica a saída de um rascunho sem depender de um banco de dados. */
 public class VerificacaoSaidaRelatorios {
-    private enum Conta { ATIVA, SEM_CONEXAO, REVOGADA }
+    private enum Conta { ATIVA, SEM_CONEXAO, REVOGADA, DESATIVADA, PERFIL_ALTERADO }
     private enum Saida { JANELA, NAVEGACAO, LOGOUT }
     private static final String URL_TESTE = "jdbc:verificacao:fechamento";
     private static final String RASCUNHO = "Relatório fictício não salvo";
     private static Throwable falhaDialogo;
     private static Conta conta = Conta.ATIVA;
     private static Runnable aposConsulta;
+    private static int verificacoes;
 
     public static void main(String[] args) throws Exception {
         configurarJdbcSimulado();
@@ -69,13 +72,178 @@ public class VerificacaoSaidaRelatorios {
                 verificarEncerramentoDuranteDialogo(Conta.ATIVA);
                 verificarEncerramentoDuranteDialogo(Conta.REVOGADA);
                 verificarRespostaAntigaDepoisDaTrocaDeSessao();
+                verificarRecuperacaoAntesDaSaida();
+                for (Conta estado : List.of(Conta.ATIVA, Conta.REVOGADA, Conta.DESATIVADA, Conta.PERFIL_ALTERADO)) {
+                    verificarPerdaDeAcessoAntesDaSaida(estado, false);
+                    verificarPerdaDeAcessoAntesDaSaida(estado, true);
+                }
+                verificarFalhaSemRascunho(false);
+                verificarFalhaSemRascunho(true);
+                verificarPreviaDuranteFalha();
                 fim.complete(null);
             }
             catch (Throwable erro) { fim.completeExceptionally(erro); }
         });
-        try { fim.get(30, TimeUnit.SECONDS); }
+        try { fim.get(60, TimeUnit.SECONDS); }
         finally { Platform.exit(); }
-        System.out.println("OK: fechamento, navegação e logout de Relatórios com o monitor real, recuperação, expiração e revogação.");
+        System.out.println("OK: " + verificacoes + " verificações de Relatórios com JavaFX e monitor reais e JDBC simulado.");
+    }
+
+    private static void esperarMonitor(boolean expiracaoLocal) throws Exception {
+        Object ciclo = new Object();
+        if (expiracaoLocal) {
+            var espera = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.25));
+            espera.setOnFinished(e -> Platform.exitNestedEventLoop(ciclo, null));
+            espera.play();
+        } else {
+            aposConsulta = () -> Platform.exitNestedEventLoop(ciclo, null);
+            anteciparRevalidacao();
+        }
+        Platform.enterNestedEventLoop(ciclo);
+    }
+
+    private static boolean formularioBloqueado(Parent raiz) {
+        var tela = (BorderPane) raiz;
+        return tela.getCenter().isDisabled() && !tela.getCenter().isVisible()
+                && tela.getLeft().isDisabled() && !tela.getLeft().isVisible();
+    }
+
+    private static void verificarRecuperacaoAntesDaSaida() throws Exception {
+        conta = Conta.ATIVA;
+        var sessao = iniciarSessao(Duration.ZERO);
+        Stage janela = abrirTelaComMonitor();
+        Parent raiz = janela.getScene().getRoot();
+        var texto = (TextArea) raiz.lookup("#txtRegistroFrequencia");
+        texto.setText(RASCUNHO);
+        try {
+            verificar(dialogosDeSaida().isEmpty() && SegurancaInterface.possuiRascunho(raiz),
+                    "A primeira edição protege o rascunho sem abrir confirmação.");
+            conta = Conta.SEM_CONEXAO;
+            for (int tentativa = 0; tentativa < 2; tentativa++) {
+                esperarMonitor(false);
+                verificar(janela.getScene().getRoot() == raiz && formularioBloqueado(raiz)
+                                && RASCUNHO.equals(texto.getText()) && dialogosDeSaida().isEmpty(),
+                        "Falha antes do diálogo ou durante a nova tentativa mantém o texto oculto.");
+                verificar(((BorderPane) raiz).getTop().lookupAll(".label").stream().anyMatch(no ->
+                                no instanceof Label aviso && aviso.getText().contains("Conexão indisponível")),
+                        "O bloqueio deve informar a indisponibilidade.");
+                verificarOperacaoProtegidaNegada();
+                verificar(!AutorizacaoService.pode(Operacao.AGENDA_CONSULTAR)
+                                && !AutorizacaoService.pode(Operacao.RELATORIO_EXPORTAR),
+                        "Não se pode navegar para outro módulo protegido nem exportar.");
+            }
+            var agenda = procurarBotao(raiz, "Agenda", false);
+            agenda.fire();
+            verificar(agenda.isDisabled() && janela.getScene().getRoot() == raiz && dialogosDeSaida().isEmpty(),
+                    "Tentar navegar com o formulário suspenso não troca de tela nem abre confirmação.");
+            responderProximoDialogo(ButtonType.NO);
+            solicitarFechamento(janela);
+            verificar(falhaDialogo == null && janela.isShowing() && RASCUNHO.equals(texto.getText()),
+                    "Cancelar o fechamento durante a suspensão mantém o rascunho.");
+            conta = Conta.ATIVA;
+            esperarMonitor(false);
+            verificar(Sessao.getUsuarioLogado() == sessao && !formularioBloqueado(raiz)
+                            && RASCUNHO.equals(texto.getText()) && SegurancaInterface.possuiRascunho(raiz),
+                    "O monitor revalida a mesma sessão e mantém a proteção do texto que continua não salvo.");
+            AutorizacaoService.exigir(Operacao.RELATORIO_ALTERAR);
+
+            conta = Conta.SEM_CONEXAO;
+            esperarMonitor(false);
+            responderProximoDialogo(ButtonType.YES);
+            solicitarSaida(janela, Saida.LOGOUT);
+            verificar(falhaDialogo == null && janela.getScene().getRoot().lookup("#btnEntrar") != null
+                    && texto.getText().isEmpty(), "O logout explícito durante a suspensão pode descartar o rascunho.");
+        } finally {
+            encerrarSondagem(janela);
+        }
+    }
+
+    private static void verificarPerdaDeAcessoAntesDaSaida(Conta estado, boolean duranteSuspensao) throws Exception {
+        conta = Conta.ATIVA;
+        iniciarSessao(Duration.ZERO);
+        Stage janela = abrirTelaComMonitor();
+        Parent raiz = janela.getScene().getRoot();
+        var texto = (TextArea) raiz.lookup("#txtDescumprimento");
+        texto.setText(RASCUNHO);
+        try {
+            if (duranteSuspensao) {
+                conta = Conta.SEM_CONEXAO;
+                esperarMonitor(false);
+                verificar(formularioBloqueado(raiz) && RASCUNHO.equals(texto.getText()), "A suspensão deve preservar o rascunho.");
+            }
+            if (estado == Conta.ATIVA) Sessao.configurarInatividade(Duration.ofNanos(1));
+            else conta = estado;
+            esperarMonitor(estado == Conta.ATIVA);
+            Parent login = janela.getScene().getRoot();
+            verificar(login.lookup("#btnEntrar") != null && dialogosDeSaida().isEmpty()
+                            && texto.getScene() == null && texto.getText().isEmpty(),
+                    "A invalidação deve trocar a tela, limpar o texto e dispensar diálogo: " + estado);
+            var aviso = (Label) login.lookup("#mensagem-login");
+            verificar(aviso.getText().contains("não puderam ser recuperadas") && !aviso.getText().contains(RASCUNHO),
+                    "O login informa a perda sem revelar o rascunho.");
+            verificarOperacaoProtegidaNegada();
+            conta = Conta.ATIVA;
+            Sessao.configurarInatividade(Duration.ofMinutes(15));
+            iniciarSessao(2L, Duration.ZERO);
+            NavegacaoUtil.trocarRaiz(janela, carregarTelaRelatorios(), "Relatórios");
+            janela.getScene().getRoot().applyCss();
+            var outroTexto = (TextArea) janela.getScene().getRoot().lookup("#txtDescumprimento");
+            verificar(outroTexto.getText().isEmpty(), "Outra conta não recebe conteúdo da sessão inválida.");
+        } finally {
+            encerrarSondagem(janela);
+        }
+    }
+
+    private static void verificarFalhaSemRascunho(boolean aposSalvar) throws Exception {
+        conta = Conta.ATIVA;
+        iniciarSessao(Duration.ZERO);
+        Stage janela = abrirTelaComMonitor();
+        Parent raiz = janela.getScene().getRoot();
+        try {
+            if (aposSalvar) {
+                prepararRascunho(raiz);
+                procurarBotao(raiz, "Salvar rascunho", false).fire();
+                verificar(((Label) raiz.lookup("#lblMensagem")).getText().equals("Rascunho salvo no banco."),
+                        "O formulário salvou o relatório através do DAO e JDBC simulado.");
+            }
+            verificar(!SegurancaInterface.possuiRascunho(raiz), "A tela sem edições pendentes não registra proteção.");
+            conta = Conta.SEM_CONEXAO;
+            esperarMonitor(false);
+            var aviso = (Label) janela.getScene().getRoot().lookup("#mensagem-login");
+            verificar(aviso != null && !aviso.getText().contains("não foram salvas"),
+                    "Uma falha sem rascunho encerra a sessão sem aviso de perda.");
+        } finally {
+            encerrarSondagem(janela);
+        }
+    }
+
+    private static void verificarPreviaDuranteFalha() throws Exception {
+        conta = Conta.ATIVA;
+        iniciarSessao(Duration.ZERO);
+        Stage janela = abrirTelaComMonitor();
+        Parent raiz = janela.getScene().getRoot();
+        try {
+            prepararRascunho(raiz);
+            Platform.runLater(() -> conta = Conta.SEM_CONEXAO);
+            procurarBotao(raiz, "Visualizar", false).fire();
+            verificar(formularioBloqueado(raiz)
+                            && Window.getWindows().stream().filter(Window::isShowing).count() == 1,
+                    "A prévia protegida deve fechar quando a sessão é suspensa.");
+            verificarOperacaoProtegidaNegada();
+        } finally {
+            encerrarSondagem(janela);
+        }
+    }
+
+    private static void prepararRascunho(Parent raiz) throws Exception {
+        var rascunho = new RelatorioAcompanhamento();
+        rascunho.setCpfAdolescente(1L);
+        rascunho.setCompetencia(YearMonth.of(2026, 11));
+        rascunho.setCampo(RelatorioAcompanhamento.Campo.NOME, "Adolescente fictício");
+        rascunho.setRegistroFrequencia(RASCUNHO);
+        var exibir = RelatoriosController.class.getDeclaredMethod("exibir", RelatorioAcompanhamento.class);
+        exibir.setAccessible(true);
+        exibir.invoke(raiz.getProperties().get("controllerTeste"), rascunho);
     }
 
     private static void verificarSaidas() throws Exception {
@@ -213,7 +381,7 @@ public class VerificacaoSaidaRelatorios {
                     verificar(dialogosDeSaida().equals(List.of(aberto)), "Deve existir apenas uma confirmação de saída.");
                     verificar(confirmar.isDisabled() == (saida == Saida.NAVEGACAO), "Somente o descarte local pode prosseguir sem conexão.");
                     verificar(aberto.getContentText().contains("Conexão indisponível"), "A confirmação deve explicar a falha.");
-                    verificar(raiz.isDisabled() && !((BorderPane) raiz).getCenter().isVisible()
+                    verificar(formularioBloqueado(raiz)
                             && RASCUNHO.equals(texto.getText()), "A indisponibilidade deve ocultar o formulário, bloquear a edição e preservar o texto.");
                     verificar(!AutorizacaoService.pode(Operacao.RELATORIO_CONSULTAR), "Uma autorização anterior não deve valer sem conexão.");
                     verificarOperacaoProtegidaNegada();
@@ -229,7 +397,7 @@ public class VerificacaoSaidaRelatorios {
                 verificarOperacaoProtegidaNegada();
                 return;
             }
-            verificar(janela.isShowing() && janela.getScene().getRoot() == raiz && raiz.isDisabled()
+            verificar(janela.isShowing() && janela.getScene().getRoot() == raiz && formularioBloqueado(raiz)
                     && RASCUNHO.equals(texto.getText()), "Cancelar deve preservar o rascunho bloqueado: " + saida);
             verificarOperacaoProtegidaNegada();
 
@@ -238,7 +406,7 @@ public class VerificacaoSaidaRelatorios {
             aposConsulta = () -> Platform.exitNestedEventLoop(recuperacao, null);
             anteciparRevalidacao();
             Platform.enterNestedEventLoop(recuperacao);
-            verificar(Sessao.getUsuarioLogado() == usuario && !raiz.isDisabled()
+            verificar(Sessao.getUsuarioLogado() == usuario && !formularioBloqueado(raiz)
                             && ((BorderPane) raiz).getCenter().isVisible() && RASCUNHO.equals(texto.getText()),
                     "A revalidação deve liberar a edição para a mesma sessão: " + saida);
             AutorizacaoService.exigir(Operacao.RELATORIO_ALTERAR);
@@ -308,7 +476,10 @@ public class VerificacaoSaidaRelatorios {
     }
 
     private static Parent carregarTelaRelatorios() throws Exception {
-        return FXMLLoader.load(VerificacaoSaidaRelatorios.class.getResource("/View/RelatoriosView.fxml"));
+        FXMLLoader loader = new FXMLLoader(VerificacaoSaidaRelatorios.class.getResource("/View/RelatoriosView.fxml"));
+        Parent raiz = loader.load();
+        raiz.getProperties().put("controllerTeste", loader.getController());
+        return raiz;
     }
 
     private static Stage abrirTelaComMonitor() throws Exception {
@@ -332,11 +503,17 @@ public class VerificacaoSaidaRelatorios {
             case JANELA -> solicitarFechamento(janela);
             case NAVEGACAO, LOGOUT -> {
                 String rotulo = saida == Saida.NAVEGACAO ? "Agenda" : "Sair do sistema";
-                janela.getScene().getRoot().lookupAll(".button").stream()
-                        .filter(no -> no instanceof Button botao && rotulo.equals(botao.getText()))
-                        .map(Button.class::cast).findFirst().orElseThrow().fire();
+                procurarBotao(janela.getScene().getRoot(), rotulo, saida == Saida.LOGOUT).fire();
             }
         }
+    }
+
+    private static Button procurarBotao(Parent raiz, String rotulo, boolean logout) {
+        if (logout && formularioBloqueado(raiz)) raiz = (Parent) ((BorderPane) raiz).getTop();
+        raiz.applyCss();
+        return raiz.lookupAll(".button").stream()
+                .filter(no -> no instanceof Button botao && rotulo.equals(botao.getText()))
+                .map(Button.class::cast).findFirst().orElseThrow();
     }
 
     private static List<DialogPane> dialogosDeSaida() {
@@ -383,9 +560,13 @@ public class VerificacaoSaidaRelatorios {
                         return Connection.class.cast(Proxy.newProxyInstance(Connection.class.getClassLoader(),
                                 new Class<?>[]{Connection.class}, (c, operacao, parametros) -> {
                                     if (!operacao.getName().equals("prepareStatement")) return null;
-                                    boolean consultaSessao = ((String) parametros[0]).contains("versao_sessao");
+                                    String sql = (String) parametros[0];
+                                    boolean consultaSessao = sql.contains("versao_sessao");
                                     if (consultaSessao) sinalizarConsulta();
-                                    ResultSet linhas = simular(ResultSet.class, nome -> consultaSessao && conta != Conta.REVOGADA);
+                                    boolean salvamento = sql.contains("RETURNING id_relatorio");
+                                    ResultSet linhas = simular(ResultSet.class,
+                                            nome -> nome.equals("getInt") && salvamento ? (Object) 1
+                                                    : (consultaSessao && conta == Conta.ATIVA) || salvamento);
                                     return simular(PreparedStatement.class, nome -> linhas);
                                 }));
                     }
@@ -422,5 +603,6 @@ public class VerificacaoSaidaRelatorios {
 
     private static void verificar(boolean condicao, String mensagem) {
         if (!condicao) throw new AssertionError(mensagem);
+        verificacoes++;
     }
 }

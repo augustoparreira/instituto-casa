@@ -51,7 +51,7 @@ public class NavegacaoUtil {
         try {
             Parent raiz=FXMLLoader.load(NavegacaoUtil.class.getResource("/View/Login.fxml"));
             if (haviaRascunho && raiz.lookup("#mensagem-login") instanceof Label mensagem) {
-                mensagem.setText("A sessão terminou. Havia alterações de Relatórios que não foram salvas.");
+                mensagem.setText("A sessão terminou. Havia alterações de Relatórios que não foram salvas e não puderam ser recuperadas.");
             }
             trocarRaiz(principal,raiz,"Instituto C.A.S.A. - Login");
         } catch(java.io.IOException e) { principal.close(); }

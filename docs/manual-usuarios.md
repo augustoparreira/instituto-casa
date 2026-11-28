@@ -1,6 +1,6 @@
 # Manual rápido para a equipe do Instituto C.A.S.A.
 
-Este manual descreve a versão de base `1fb176b` e sua matriz provisória de
+Este manual descreve a versão integrada `8fea887` e sua matriz provisória de
 permissões. As contas e dados de exemplos devem ser fictícios. O técnico
 responsável entrega o atalho ou a pasta de execução e o login individual.
 
@@ -12,9 +12,9 @@ responsável entrega o atalho ou a pasta de execução e o login individual.
 2. Para mudar sua senha, use **Alterar minha senha** no menu lateral. Informe a
    senha atual e a nova senha quando solicitado. Entre novamente se a sessão
    for encerrada após a troca.
-3. Salve o rascunho de Relatórios antes de escolher **Sair do sistema**.
-   Nesta versão, o logout pode descartar o texto sem confirmação. Uma sessão
-   expirada exige novo login.
+3. Salve o trabalho antes de escolher **Sair do sistema**. Em Relatórios, se
+   houver alterações pendentes, confirme o descarte ou cancele a saída para
+   voltar ao rascunho. Uma sessão encerrada exige novo login.
 
 ## O que cada perfil pode fazer
 
@@ -61,6 +61,15 @@ rascunho e usar **Imprimir / salvar PDF**. Antes de sair ou fechar a janela,
 salve o texto necessário. A Equipe Técnica usa o **relatório operacional**
 disponível em sua planilha; ele não substitui o relatório completo protegido.
 O Educador não gera relatórios nesta versão.
+
+Ao tentar sair de Relatórios, trocar de tela ou fechar a janela com X ou
+Alt+F4, o aplicativo pede confirmação se houver alterações não salvas.
+Se a conexão falhar durante a edição, o formulário fica oculto e as ações
+protegidas ficam bloqueadas. O texto permanece em memória e volta à tela
+quando a conexão retorna e a mesma sessão é validada. Se a sessão terminar,
+o login avisa sobre as alterações perdidas. O texto também é perdido se o
+aplicativo for encerrado à força. Use **Salvar rascunho** para persistir o
+trabalho. Em outros formulários, salve antes de sair ou trocar de tela.
 
 Na janela de impressão do Windows, escolha a impressora ou **Microsoft Print
 to PDF** e confirme o destino. O arquivo PDF salvo pelo driver ainda precisa

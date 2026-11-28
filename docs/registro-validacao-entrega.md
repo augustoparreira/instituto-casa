@@ -1,4 +1,31 @@
-# Registro de verificação da branch independente
+# Registro de validação da entrega
+
+## Integração local (27/11/2026)
+
+- Código integrado validado antes do commit de documentação
+  `8fea8872654a41b4f4a657e0a4403c90f990e651`.
+- Base `1fb176bb38bb55b6a7cddcf1c91feb6c7c602a3f`. Fast-forward de
+  Relatórios até `4c0fbbf` e merge de `1986a0c` sem conflitos.
+- Árvore do código validado `d2ef242c6cae9165e6c0d1f84921d6a1ed753f49`,
+  idêntica à aprovada na revisão independente.
+
+| Ensaio | Resultado local |
+| --- | --- |
+| Aplicação após fast-forward e novamente após o merge | Em cada etapa, 218 verificações gerais e 78 dirigidas passaram no Java 21 com PostgreSQL 18.6 isolado. Incluem login, logout e permissões dos três perfis, cadastro, PSC e LA, frequência, Agenda, PIA e usuários. |
+| Relatórios e autorização após cada etapa | 172 verificações com JavaFX e monitor reais e JDBC simulado passaram em cada etapa. A verificação de autorização sem sessão confirmou a negação de todas as operações protegidas. |
+| Carga fictícia | 10 adolescentes, 10 responsáveis, 5 frequências e 147 restrições. Nos destinos recusados e na falha provocada no meio da carga, dados e esquema permaneceram iguais com `ON_ERROR_STOP=0` e `ON_ERROR_ROLLBACK` desligado e ligado. |
+| Backup e restauração | URI e string de conexão recusadas. Catálogo e SHA-256 conferidos. A base com função preexistente foi preservada. Restauração na base nova com 20 tabelas, duas sequências, 147 restrições e dados iguais. |
+| Distribuição sem IDE | Pacote reconstruído com Java 21, iniciado em novo caminho com espaços e com JDBC configurado externamente. Login, Painel, Agenda, Relatórios e logout exercitados por automação JavaFX usando os artefatos distribuídos e o banco restaurado. |
+
+As suítes automatizadas conferiram a prévia A4 curta e longa com margens e
+paginação. A revisão independente informou teste físico do X, Alt+F4,
+cancelamento do descarte e abertura e cancelamento do seletor de exportação.
+O Microsoft Print to PDF chegou ao seletor de saída naquele ensaio, sem
+arquivo gerado. Permanecem pendentes a verificação física do PDF gravado,
+a revogação ou queda JDBC com diálogo nativo aberto e a execução em
+outro Windows. Todos os ensaios locais de banco usaram dados fictícios.
+
+## Histórico da branch independente (25/11/2026)
 
 Base: `feature/integracao-final` em `1fb176b`. Trabalho local:
 `codex/estabilizacao-entrega`. Data: 25/11/2026. Todo PostgreSQL usado nos
@@ -21,7 +48,7 @@ somente na normalização textual de três expressões `CHECK` pelo PostgreSQL;
 as restrições e os dados foram preservados. O teste de igualdade dos dados
 removeu apenas o token aleatório `\\restrict`/`\\unrestrict` do pg_dump 18.
 
-## Ainda não executado
+### Pendências no ensaio de 25/11/2026
 
 - Uso físico do X/Alt+F4 e impressão via Microsoft Print to PDF; os testes
   JavaFX programáticos da revisão de Relatórios são registrados à parte.

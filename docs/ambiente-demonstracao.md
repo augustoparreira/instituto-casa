@@ -43,6 +43,14 @@ As credenciais ficam fora do Git. Use `PGPASSWORD` somente em processo local
 temporário ou um arquivo `pgpass` protegido. Não registre senhas no terminal,
 em capturas ou na documentação.
 
+## Revalidação na versão integrada (27/11/2026)
+
+Em PostgreSQL 18.6 descartável, o arquivo inteiro completou a carga na base
+marcada e recusou tanto uma base com nome proibido quanto a base correta
+sem marcador. As recusas e uma falha forçada no meio da carga preservaram
+dados e esquema com `ON_ERROR_STOP=0` e `ON_ERROR_ROLLBACK` ligado ou
+desligado. O cliente executou uma consulta posterior em todos esses cenários.
+
 ## Ensaio anterior à correção (25/11/2026)
 
 - `casa_proibida_teste`: base nova, esquema completo e uma pessoa fictícia

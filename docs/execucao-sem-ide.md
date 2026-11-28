@@ -35,7 +35,18 @@ absoluto de outro computador. Ele afeta a ação de execução desse perfil no
 NetBeans, mas não esta distribuição. Nenhuma alteração nele é necessária para
 iniciar sem IDE.
 
-## Validação local de 25/11/2026
+## Validação na versão integrada (27/11/2026)
+
+A distribuição foi gerada com Java 21 e movida para outro caminho com
+espaços. O inicializador recusou a configuração JDBC ausente e abriu a
+aplicação quando recebeu a configuração externa do cluster de testes.
+Um ensaio automatizado usando as classes e bibliotecas instaladas no
+pacote fez login JDBC com conta fictícia na base restaurada, abriu o Painel,
+a Agenda e Relatórios, e fez logout.
+A instalação em outro Windows, o login manual pelo inicializador e a
+gravação efetiva em Microsoft Print to PDF ainda precisam de ensaio.
+
+## Validação histórica de 25/11/2026
 
 - Java 21 e `javac --release 21`: compilação aprovada.
 - Distribuição criada em `target/CASA teste portatil`, em caminho com espaços;

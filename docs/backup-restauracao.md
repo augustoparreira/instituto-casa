@@ -63,7 +63,16 @@ restrições e sequências com a origem. A conta usada precisa de privilégios
 para criar os objetos na base descartável. Um erro de restauração impede a
 mensagem de sucesso.
 
-## Ensaio local com dados fictícios (25/11/2026)
+## Revalidação na versão integrada (27/11/2026)
+
+O ciclo em PostgreSQL 18.6 isolado aceitou uma origem literal e recusou URI e
+string de conexão. O catálogo e o SHA-256 foram conferidos. Um destino que já
+continha função foi recusado e preservado. A restauração em base exclusiva
+reproduziu os dados, os valores e os parâmetros das sequências e os catálogos
+de colunas e restrições. O ensaio serve para a recuperação técnica em
+ambiente de teste. Uma restauração operacional exige planejamento separado.
+
+## Ensaio anterior com dados fictícios (25/11/2026)
 
 No cluster PostgreSQL 18.6 isolado da porta 55493, a origem descartável
 `casa_apresentacao` foi copiada para a base nova `casa_restore_validacao_251125`.

@@ -7,9 +7,9 @@ Aplicação Java 21 com JavaFX 21.0.2, JDBC PostgreSQL 42.7.2, FXML e CSS.
 DAOs e modelos; `src/main/resources/View` contém telas, estilos e imagem;
 `sql` contém migrações e carga fictícia; `scripts` contém verificações,
 distribuição e backup. Registre o hash Git e a versão das ferramentas junto
-com qualquer distribuição entregue. A branch independente deste guia parte
-de `feature/integracao-final` em `1fb176b` e **não** contém a correção
-`f3cfdeb` de Relatórios.
+com qualquer distribuição entregue. A versão de código validada é
+`8fea8872654a41b4f4a657e0a4403c90f990e651`, na `feature/integracao-final`.
+Ela reúne as correções de Relatórios e os scripts de estabilização.
 
 ## Preparar e atualizar uma base
 
@@ -28,6 +28,13 @@ Se já existirem contas sem Administrador ativo, a recuperação exige análise 
 responsável pelo banco; não recrie uma conta por edição direta. O Administrador
 gerencia contas no menu **Equipe Técnica** e cada pessoa troca sua própria
 senha no menu lateral. Revogação e expiração de sessão protegem operações.
+
+Relatórios vincula a edição pendente à sessão desde a primeira alteração.
+Se a conexão falhar, o acesso fica bloqueado até a revalidação da mesma
+sessão. Expiração, revogação, inativação ou mudança de perfil invalidam a
+sessão e limpam o rascunho, com aviso no login. A proteção é em memória.
+Cadastros, formulários do perfil, Agenda e registro de frequência podem
+perder edições não salvas quando a sessão termina.
 
 ## Iniciar e diagnosticar
 
@@ -89,10 +96,9 @@ aplicação está em `CONTRATO_AUTORIZACAO.md` e depende de confirmação da ONG
 
 ## Evidência e pendências
 
-Em 25/11/2026 passaram a compilação Java 21, o teste do script SQL com cliente
-que continua após erro, e o ciclo de backup/restauração no PostgreSQL 18.6
-isolado com dados fictícios. O ensaio de distribuição sem IDE iniciou sem erro
-imediato, mas não substitui login visual, impressão PDF e instalação limpa em
-outro Windows. A suíte JavaFX/JDBC e sua contagem constam do registro da etapa
-de testes. A implantação, o número de computadores, a política de backup,
+Em 27/11/2026 a versão integrada passou nas suítes JavaFX/JDBC, nos cenários
+dirigidos de Relatórios, na proteção SQL e no ciclo de backup e restauração.
+Os resultados e as pendências de validação física estão no
+[registro de validação](registro-validacao-entrega.md). A implantação, o
+número de computadores, a política de backup,
 as regras de encerramento PSC/LA e permissões definitivas seguem em aberto.

@@ -1,5 +1,6 @@
 package br.edu.unespar.trabalho.util;
 
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 
@@ -7,6 +8,10 @@ import javafx.scene.layout.Pane;
 public final class ListaAdolescentesPainel extends Pane {
     public static final int LIMITE = 5;
     private static final double ESPACAMENTO = 10;
+
+    @Override public Orientation getContentBias() {
+        return Orientation.HORIZONTAL;
+    }
 
     @Override protected double computeMinHeight(double largura) {
         return 0;

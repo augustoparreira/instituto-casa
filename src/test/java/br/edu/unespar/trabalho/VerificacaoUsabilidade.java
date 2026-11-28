@@ -14,6 +14,7 @@ import br.edu.unespar.trabalho.util.Senhas;
 import br.edu.unespar.trabalho.util.Sessao;
 import br.edu.unespar.trabalho.util.SegurancaInterface;
 import javafx.application.Platform;
+import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -25,6 +26,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -73,6 +79,26 @@ final class VerificacaoUsabilidade {
             verificar(lista.getChildrenUnmodifiable().stream().anyMatch(n -> !n.isVisible()),
                     "A resolução menor deve reduzir a quantidade exibida.");
             capturar(raiz, "painel-compacto.png");
+            var jovensVariados = IntStream.range(0, 8).mapToObj(i -> new AdolescenteDTO(
+                    i % 2 == 0 ? "Nome curto " + i : "Nome fictício longo composto por vários sobrenomes " + i,
+                    Integer.toString(i + 1), List.of("LA", "PSC", "LA/PSC").get(i % 3), .25,
+                    i % 3 == 2 ? "3/6 meses · 10/40h" : i % 3 == 0 ? "3/6 meses" : "10/40h",
+                    "Técnico fictício de referência", "Ativo", "", "", "")).toList();
+            preencher.invoke(loader.getController(), jovensVariados);
+            for (int[] tamanho : new int[][]{{680,650},{800,650},{1024,768},{1366,768},{1920,1080},{680,650},{1366,700}}) {
+                verificarLayout(raiz, lista, jovensVariados, tamanho[0], tamanho[1], -1);
+                var linhas = lista.getChildrenUnmodifiable().stream().filter(Node::isVisible).toList();
+                verificar(!linhas.isEmpty() && lista.getChildrenUnmodifiable().size() == 5,
+                        "Redimensionar não perde todas as linhas nem duplica componentes a "
+                                + tamanho[0] + " × " + tamanho[1] + " (lista " + lista.getWidth() + " × " + lista.getHeight() + ").");
+                for (Node linha : linhas) {
+                    var jovem = (AdolescenteDTO) linha.getUserData();
+                    var rotulos = linha.lookupAll(".label").stream().filter(Node::isVisible)
+                            .map(no -> ((Label)no).getText()).toList();
+                    verificar(rotulos.containsAll(List.of(jovem.getNome(), jovem.getMedida(), jovem.getTextoProgresso())),
+                            "A linha mantém nome, medida e progresso em uma janela estreita.");
+                }
+            }
             janela.setMaximized(true);
             VerificacaoPreparacaoEntrega.aguardarInterface(janela::isMaximized);
             raiz.applyCss();
@@ -119,9 +145,19 @@ final class VerificacaoUsabilidade {
         for (Node no : visiveis) {
             double finalLinha = no.localToScene(no.getLayoutBounds()).getMaxY();
             verificar(finalLinha <= fundo + .5 && finalLinha <= altura + .5, "Uma linha ficou cortada.");
+            var limites = no.localToScene(no.getLayoutBounds());
+            verificar(contidoHorizontalmente(no, limites.getMinX(), limites.getMaxX()),
+                    "Um elemento ultrapassou os limites horizontais da linha.");
             verificar(no.lookup(".progress-bar") instanceof ProgressBar barra
                     && barra.getProgress() == ((AdolescenteDTO) no.getUserData()).getProgresso(), "Progresso foi perdido.");
         }
+    }
+
+    private static boolean contidoHorizontalmente(Node no, double esquerda, double direita) {
+        var caixa = no.localToScene(no.getLayoutBounds());
+        return caixa.getMinX() >= esquerda - .75 && caixa.getMaxX() <= direita + .75
+                && (!(no instanceof Pane pane) || pane.getChildrenUnmodifiable().stream()
+                        .filter(Node::isVisible).allMatch(filho -> contidoHorizontalmente(filho, esquerda, direita)));
     }
 
     private static void verificarSenhas() throws Exception {
@@ -160,6 +196,7 @@ final class VerificacaoUsabilidade {
             verificar(editor(senha) == oculto && oculto.getText().equals(ficticia) && visivel.getText().isEmpty()
                             && oculto.getAnchor() == 3 && oculto.getCaretPosition() == 8,
                     "Ocultar deve devolver a seleção ao campo protegido.");
+            verificarTransferencia(senha, ficticia);
             oculto.selectAll();
             oculto.replaceSelection("x".repeat(129));
             verificar(oculto.getText().equals(ficticia) && !grupo.prontaProperty().get(),
@@ -183,7 +220,73 @@ final class VerificacaoUsabilidade {
                     "O hash existente precisa preservar os espaços e o conteúdo Unicode.");
             rejeitar(() -> Senhas.validarNova("x".repeat(11)));
             rejeitar(() -> Senhas.validarNova("x".repeat(129)));
+            for (char caractere : new char[]{'\n', '\r', '\t', 0, 31, 127, 133, 0x2028, 0x2029}) {
+                String proposta = "frase fictícia " + caractere + " de teste";
+                rejeitar(() -> Senhas.validarNova(proposta));
+                verificar(!Senhas.novaValida(proposta), "Validação recusa nova senha com controle ou quebra.");
+                editor(confirmacao).selectAll();
+                String anterior = confirmacao.getTexto();
+                editor(confirmacao).replaceSelection(proposta);
+                verificar(confirmacao.getTexto().equals(anterior) && !grupo.prontaProperty().get(),
+                        "Campo recusa o valor inteiro sem remover controles silenciosamente.");
+            }
+            rejeitar(() -> new EquipeTecnicaDAO().redefinirSenha(Sessao.getUsuarioLogado().getCpfEquipe(),
+                    "frase fictícia\n inválida"));
+            var novaConta = VerificacaoContas.conta(12345678909L, "controle.invalido",
+                    br.edu.unespar.trabalho.model.NivelAcesso.EDUCADOR);
+            novaConta.setSenha("frase fictícia\u0085 inválida");
+            rejeitar(() -> new EquipeTecnicaDAO().inserir(novaConta));
+            verificar(new EquipeTecnicaDAO().buscarPorCpf(novaConta.getCpf()) == null,
+                    "A tentativa de cadastrar senha incompatível não cria conta.");
         } finally { janela.close(); }
+    }
+
+    private static void verificarTransferencia(CampoSenha senha, String ficticia) {
+        Clipboard area = Clipboard.getSystemClipboard();
+        ClipboardContent original = new ClipboardContent();
+        for (var formato : area.getContentTypes()) {
+            Object conteudo = area.getContent(formato);
+            if (conteudo != null) original.put(formato, conteudo);
+        }
+        String marcador = "Colagem fictícia do ensaio";
+        ClipboardContent teste = new ClipboardContent();
+        teste.putString(marcador);
+        verificar(area.setContent(teste), "A área de transferência aceita a entrada fictícia do teste.");
+        try {
+            for (int modo = 0; modo < 2; modo++) {
+                TextField campo = editor(senha);
+                campo.selectAll();
+                campo.copy();
+                campo.cut();
+                for (KeyEvent tecla : List.of(atalho(KeyCode.C, true, false), atalho(KeyCode.X, true, false),
+                        atalho(KeyCode.INSERT, true, false), atalho(KeyCode.DELETE, false, true),
+                        atalho(KeyCode.COPY, false, false), atalho(KeyCode.CUT, false, false))) {
+                    Event.fireEvent(campo, tecla);
+                    verificar(marcador.equals(area.getString()) && ficticia.equals(campo.getText()),
+                            "Copiar e recortar preservam a senha e a área de transferência.");
+                }
+                var menu = campo.getContextMenu();
+                verificar(menu != null && menu.getItems().stream().noneMatch(i -> List.of("Copiar", "Recortar").contains(i.getText())),
+                        "O menu do campo não oferece cópia ou recorte.");
+                campo.selectAll();
+                Event.fireEvent(campo, atalho(KeyCode.V, true, false));
+                verificar(marcador.equals(campo.getText()), "O atalho de colar permanece disponível.");
+                campo.selectAll();
+                menu.getItems().stream().filter(i -> "Colar".equals(i.getText())).findFirst().orElseThrow().fire();
+                verificar(marcador.equals(campo.getText()), "A colagem pelo menu permanece disponível.");
+                campo.setText(ficticia);
+                alternar(senha).fire();
+            }
+        } finally {
+            String atual = area.getString();
+            if (marcador.equals(atual) || ficticia.equals(atual)) {
+                if (original.isEmpty()) area.clear(); else area.setContent(original);
+            }
+        }
+    }
+
+    private static KeyEvent atalho(KeyCode codigo, boolean controle, boolean shift) {
+        return new KeyEvent(KeyEvent.KEY_PRESSED,"","",codigo,shift,controle,false,false);
     }
 
     private static TextField editor(CampoSenha senha) {

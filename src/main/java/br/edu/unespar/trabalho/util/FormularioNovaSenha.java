@@ -6,8 +6,8 @@ import javafx.scene.layout.VBox;
 
 /** Campos e requisitos compartilhados por criação, alteração e redefinição de senha. */
 public final class FormularioNovaSenha extends VBox {
-    private final CampoSenha senha = new CampoSenha("nova senha", Senhas.MAXIMO_NOVA);
-    private final CampoSenha confirmacao = new CampoSenha("confirmação da senha", Senhas.MAXIMO_NOVA);
+    private final CampoSenha senha = new CampoSenha("nova senha");
+    private final CampoSenha confirmacao = new CampoSenha("confirmação da senha");
     private final BooleanBinding pronta = new BooleanBinding() {
         {
             bind(senha.textoProperty(), confirmacao.textoProperty(), senha.erroProperty(), confirmacao.erroProperty());

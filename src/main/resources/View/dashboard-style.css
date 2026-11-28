@@ -3,6 +3,10 @@
     -fx-border-color: #eaeaea;
     -fx-border-width: 0 1px 0 0;
 }
+.painel .sidebar {
+    -fx-pref-width: 240;
+    -fx-padding: 25 20;
+}
 .sidebar-logo-sub {
     -fx-text-fill: #555555;
     -fx-font-size: 11px;
@@ -60,9 +64,30 @@
 .main-content {
     -fx-background-color: #f9f8f4;
 }
+.painel .main-content {
+    -fx-padding: 30 40;
+}
 .painel-scroll, .painel-scroll > .viewport {
     -fx-background-color: #f9f8f4;
     -fx-padding: 0;
+}
+.painel .painel-scroll {
+    -fx-min-width: 205;
+    -fx-pref-width: 320;
+}
+.painel:compacto .sidebar {
+    -fx-pref-width: 170;
+    -fx-padding: 22 12;
+}
+.painel:compacto .main-content {
+    -fx-padding: 22 16;
+}
+.painel:compacto .painel-scroll {
+    -fx-min-width: 145;
+    -fx-pref-width: 170;
+}
+.painel:compacto .content-box, .painel:compacto .stat-card {
+    -fx-padding: 10;
 }
 .page-title {
     -fx-font-family: "Georgia", serif;

@@ -18,17 +18,17 @@ public final class ValidacaoFormulario {
     }
 
     public static void limitarSenha(TextInputControl campo, int limite) {
-        limitarSenha(campo, limite, mensagem -> { });
+        limitarSenha(campo, limite, false, mensagem -> { });
     }
 
-    static void limitarSenha(TextInputControl campo, int limite, Consumer<String> informar) {
+    static void limitarSenha(TextInputControl campo, int limite, boolean senhaNova, Consumer<String> informar) {
         campo.setTextFormatter(new TextFormatter<>(mudanca -> {
             if (!mudanca.isContentChange()) return mudanca;
             String texto = mudanca.getControlNewText();
             String erro = "";
             if (Senhas.tamanho(texto) > limite) erro = mensagemLimite("Senha", limite);
-            else if (texto.chars().anyMatch(c -> c < 32 || c == 127))
-                erro = "Use uma senha sem tabulações, quebras de linha ou caracteres de controle.";
+            else if (senhaNova ? Senhas.contemControle(texto) : texto.chars().anyMatch(c -> c < 32 || c == 127))
+                erro = Senhas.MENSAGEM_CONTROLE;
             informar.accept(erro);
             if (erro.isEmpty()) return mudanca;
             recusarEdicao(campo, erro);

@@ -9,6 +9,7 @@ import br.edu.unespar.trabalho.dao.EventoAgendaDAO;
 import br.edu.unespar.trabalho.model.StatusAdolescente;
 import br.edu.unespar.trabalho.util.NavegacaoUtil;
 import br.edu.unespar.trabalho.util.ListaAdolescentesPainel;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -17,6 +18,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -33,6 +35,9 @@ import java.util.List;
  * Apresenta os indicadores de adolescentes, as medidas e os compromissos do painel principal.
  */
 public class DashboardController {
+    private static final PseudoClass COMPACTO = PseudoClass.getPseudoClass("compacto");
+
+    @FXML private BorderPane raizPainel;
 
     @FXML private Label lblNomeUsuario;
     @FXML private Label lblCargoUsuario;
@@ -56,6 +61,8 @@ public class DashboardController {
     @FXML
     public void initialize() {
         exigir(PAINEL_CONSULTAR);
+        raizPainel.widthProperty().addListener((obs, anterior, largura) ->
+                raizPainel.pseudoClassStateChanged(COMPACTO, largura.doubleValue() < 900));
         if (lblDataAtualizacao != null) {
             lblDataAtualizacao.setText("Atualizado em " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy")));
         }
@@ -85,8 +92,7 @@ public class DashboardController {
         for (int i = 0; i < Math.min(ListaAdolescentesPainel.LIMITE, jovensCadastrados.size()); i++) {
             AdolescenteDTO jovem = jovensCadastrados.get(i);
 
-            HBox row = new HBox(15);
-            row.setAlignment(Pos.CENTER_LEFT);
+            VBox row = new VBox(6);
             row.setStyle("-fx-background-color: white; -fx-padding: 10 15; -fx-border-color: #eeeeee; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
             row.setUserData(jovem);
             row.setOnMouseClicked(this::clicarAdolescentePainel);
@@ -103,11 +109,18 @@ public class DashboardController {
 
             Label lblNome = new Label(jovem.getNome());
             lblNome.setStyle("-fx-font-weight: bold; -fx-text-fill: #2b2b2b; -fx-font-size: 13px;");
+            lblNome.setWrapText(true);
+            lblNome.setMinWidth(0);
 
             Label lblTech = new Label(jovem.getTecnico() != null ? jovem.getTecnico() : "Sem técnico");
             lblTech.setStyle("-fx-text-fill: #757575; -fx-font-size: 11px;");
+            lblTech.setWrapText(true);
+            lblTech.setMinWidth(0);
+            infoBox.getChildren().addAll(lblNome, lblTech);
+            HBox identificacao = new HBox(8, avatar, infoBox);
+            identificacao.setAlignment(Pos.CENTER_LEFT);
 
-            HBox progressBox = new HBox(10);
+            HBox progressBox = new HBox(6);
             progressBox.setAlignment(Pos.CENTER_LEFT);
 
             ProgressBar pb = new ProgressBar(jovem.getProgresso());
@@ -118,21 +131,20 @@ public class DashboardController {
 
             Label lblProgText = new Label(jovem.getTextoProgresso());
             lblProgText.setStyle("-fx-text-fill: #757575; -fx-font-size: 11px; -fx-font-weight: bold;");
-            progressBox.getChildren().addAll(pb, lblProgText);
-
-            infoBox.getChildren().addAll(lblNome, lblTech, progressBox);
+            lblProgText.setWrapText(true);
+            lblProgText.setMinWidth(0);
 
             Label lblBadge = new Label(jovem.getMedida());
+            lblBadge.setWrapText(true);
+            lblBadge.setMinWidth(0);
             if ("LA".equalsIgnoreCase(jovem.getMedida())) {
                 lblBadge.setStyle("-fx-background-color: #f3e8f3; -fx-text-fill: #8d118d; -fx-padding: 4 8; -fx-background-radius: 10; -fx-font-size: 11px; -fx-font-weight: bold;");
             } else {
                 lblBadge.setStyle("-fx-background-color: #e8f0f3; -fx-text-fill: #11598d; -fx-padding: 4 8; -fx-background-radius: 10; -fx-font-size: 11px; -fx-font-weight: bold;");
             }
 
-            Label chevron = new Label(">");
-            chevron.setStyle("-fx-text-fill: #a0a0a0; -fx-font-weight: bold;");
-
-            row.getChildren().addAll(avatar, infoBox, lblBadge, chevron);
+            progressBox.getChildren().addAll(lblBadge, lblProgText, pb);
+            row.getChildren().addAll(identificacao, progressBox);
 
             if (vboxAdolescentes != null) {
                 vboxAdolescentes.getChildren().add(row);

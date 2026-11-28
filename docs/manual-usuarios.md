@@ -18,16 +18,18 @@ responsável entrega o atalho ou a pasta de execução e o login individual.
 
 Use **Mostrar** para conferir a senha digitada e **Ocultar** para voltar à
 exibição protegida. Cada formulário abre com a senha oculta. É possível colar
-o texto. Ao criar, redefinir ou alterar uma senha, preencha de 12 a 128
-caracteres e repita o mesmo valor. Confira os indicadores antes de salvar.
-Prefira uma frase-senha longa e fácil de lembrar. Maiúsculas, números e
-símbolos são opcionais.
+pelos atalhos ou pelo menu do campo. Copiar e recortar ficam bloqueados nos
+dois modos. Ao criar, redefinir ou alterar uma senha, use de 12 a 128 unidades
+UTF-16 e repita o valor. Alguns emojis ocupam duas unidades. Frases-senha e
+espaços são permitidos. A senha deve ter algum conteúdo além de espaços e
+ficar em uma única linha. Maiúsculas, números e símbolos são opcionais.
 
 ## Painel de controle
 
 O cartão **Adolescentes em acompanhamento** mostra até cinco adolescentes na
 ordem da lista. Em uma janela mais baixa, são exibidas somente as linhas que
-couberem inteiras. Clique em uma linha para abrir o perfil ou em **Ver todos**
+couberem inteiras. Em uma janela estreita, nome, medida e progresso se ajustam
+à largura da linha. Clique em uma linha para abrir o perfil ou em **Ver todos**
 para consultar a lista completa. Os indicadores numéricos consideram o
 conjunto completo de registros.
 

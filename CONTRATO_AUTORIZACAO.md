@@ -16,11 +16,14 @@ os pontos de aplicação nos módulos serão integrados nas branches de desenvol
 - Sessão existente em `util.Sessao`. O DTO agora distingue `getLogin()`, `getNomeCompleto()`
   e `getPerfil()` (enum). O getter textual e construtor antigo permanecem compatíveis.
 
-Administrador: todas as operações, inclusive sigilo. Equipe Técnica: matriz operacional
-provisória no EnumSet TECNICA do serviço. Educador: consulta/registro de frequência e troca
-da própria senha; sem edição/exclusão ou horas de PSC. Sem sessão/perfil válido: negar tudo.
-Saúde, renda/social, PIA, documentos e relatórios completos ficam restritos ao Administrador
-até existir classificação segura das informações e matriz aprovada. Autoria não libera sigilo.
+Administrador: todas as operações, inclusive sigilo. Equipe Técnica: concessões
+operacionais e de sigilo listadas explicitamente no EnumSet TECNICA. A gestão
+e a listagem administrativa de contas permanecem exclusivas do Administrador.
+Educador: consulta e registro de frequência e troca da própria senha, com as
+projeções limitadas e sem acesso a correções, exclusões, horas de PSC ou dados sigilosos.
+As operações protegidas exigem sessão válida. Autoria e vínculo por si sós
+continuam sem conceder permissões. A ampliação desta branch é uma
+[proposta experimental](docs/permissoes-equipe-tecnica.md) pendente de aprovação.
 
 Usar `pode` na apresentação e `exigir` ANTES das consultas e das mutações. Uma tela que
 mistura dados comuns e sigilosos precisa separar as consultas; nunca carregar tudo e apenas
@@ -39,20 +42,20 @@ PIA_CONSULTAR/ALTERAR; DOCUMENTO_CONSULTAR/ALTERAR; RELATORIO_OPERACIONAL_GERAR;
 EQUIPE_CONSULTAR; USUARIO_GERENCIAR; REFERENCIA_DEFINIR; SIGILOSO_CONSULTAR/ALTERAR;
 SENHA_PROPRIA_ALTERAR.
 
-Não implementar outra matriz, `pode` ou `exigir` nos módulos. Não alterar lógica de PIA/PDF
-para integrar este contrato. Expiração e revalidação da conta serão adicionadas mantendo as assinaturas.
+Use a matriz central e as verificações de `AutorizacaoService` nos módulos.
+`Sessao` continua responsável pela expiração e pela revalidação da conta.
 
 `VerificacaoAutorizacao` verifica a recusa sem sessão com `-ea`. O cenário integrado com PostgreSQL verifica a matriz e o contexto sigiloso após login real dos três perfis.
 
 
-Na política provisória, a Equipe Técnica cria o cadastro operacional sem gravar fichas
-sociais ou de saúde, edita medidas abertas e corrige frequência sem ler ou sobrescrever
-justificativas protegidas. Justificativas novas podem ser registradas quando não há
-texto reservado no lançamento. Remoções familiares, alterações manuais de situação
-e mudanças nos dados pessoais de responsáveis compartilhados ficam com o Administrador.
+Na matriz anterior, a Equipe Técnica criava o cadastro operacional sem gravar fichas
+sociais ou de saúde, editava medidas abertas e corrigia frequência com acesso
+restrito a justificativas protegidas. A matriz permitia registrar justificativa se o
+lançamento ainda estivesse sem texto reservado. Remoções familiares, alterações manuais
+de situação e edição de responsáveis compartilhados ficavam com o Administrador.
 
 A geração operacional na planilha usa a competência, a identificação do adolescente
 e os lançamentos com medida e horas autorizadas. A prévia interna omite justificativas
-e independe dos rascunhos do relatório completo. A ONG ainda precisa validar o acesso
-técnico a campos protegidos, a autorização para confirmar o envio do PIA e o alcance
-da frequência do Educador.
+e independe dos rascunhos do relatório completo. Na proposta experimental,
+a Equipe Técnica pode usar os dois relatórios. O âmbito da frequência do
+Educador continua sujeito à confirmação institucional.
